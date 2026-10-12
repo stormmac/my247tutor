@@ -1,0 +1,176 @@
+import { SKILLS, getSkill, skillsFor } from "../curriculum/skills";
+import type { Skill, Stage, Subject, YearLevel } from "../curriculum/types";
+import { yearToStage } from "../curriculum/types";
+
+export interface SkillState {
+  /** Estimated probability the student can do this skill unaided, 0–1. */
+  mastery: number;
+  attempts: number;
+  correct: number;
+  /** Consecutive correct answers without hints. */
+  streak: number;
+  mastered: boolean;
+  /** True when mastery came from the placement check rather than practice. */
+  placed?: boolean;
+  lastPracticed?: number;
+  /** Spaced review: when a mastered skill should next be checked. */
+  nextReview?: number;
+  reviewIntervalDays?: number;
+}
+
+export interface AttemptRecord {
+  skillId: string;
+  at: number;
+  correct: boolean;
+  hintsUsed: number;
+}
+
+export interface WellbeingFlag {
+  at: number;
+  /** What the student wrote, kept so a parent can follow up. */
+  message: string;
+}
+
+export interface WritingRecord {
+  skillId: string;
+  at: number;
+  summary: string;
+  levels: Record<string, string>;
+}
+
+export interface LearnerProfile {
+  version: 1;
+  name: string;
+  yearLevel: YearLevel;
+  createdAt: number;
+  skills: Record<string, SkillState>;
+  placementDone: Partial<Record<Subject, boolean>>;
+  history: AttemptRecord[];
+  wellbeingFlags: WellbeingFlag[];
+  writing: WritingRecord[];
+}
+
+export const MASTERY_THRESHOLD = 0.8;
+export const MIN_ATTEMPTS_FOR_MASTERY = 5;
+export const STREAK_FOR_MASTERY = 3;
+const LEARNING_RATE = 0.3;
+const DAY = 24 * 60 * 60 * 1000;
+const MAX_HISTORY = 1000;
+
+export function newProfile(name: string, yearLevel: YearLevel, now = Date.now()): LearnerProfile {
+  return { version: 1, name, yearLevel, createdAt: now, skills: {}, placementDone: {}, history: [], wellbeingFlags: [], writing: [] };
+}
+
+export function skillState(profile: LearnerProfile, skillId: string): SkillState {
+  return profile.skills[skillId] ?? { mastery: 0.3, attempts: 0, correct: 0, streak: 0, mastered: false };
+}
+
+/**
+ * Updates mastery after one answer. A correct answer after hints counts for less,
+ * because the hints did some of the work.
+ */
+export function recordAttempt(
+  profile: LearnerProfile,
+  skillId: string,
+  correct: boolean,
+  hintsUsed: number,
+  now = Date.now(),
+): LearnerProfile {
+  const prev = skillState(profile, skillId);
+  const target = correct ? (hintsUsed === 0 ? 1 : Math.max(0.5, 0.85 - 0.15 * hintsUsed)) : 0;
+  const mastery = prev.mastery + LEARNING_RATE * (target - prev.mastery);
+  const streak = correct && hintsUsed === 0 ? prev.streak + 1 : 0;
+  const attempts = prev.attempts + 1;
+
+  let next: SkillState = { ...prev, mastery, streak, attempts, correct: prev.correct + (correct ? 1 : 0), lastPracticed: now };
+  const isReview = prev.mastered && prev.nextReview !== undefined && prev.nextReview <= now;
+
+  if (!prev.mastered && mastery >= MASTERY_THRESHOLD && attempts >= MIN_ATTEMPTS_FOR_MASTERY && streak >= STREAK_FOR_MASTERY) {
+    next = { ...next, mastered: true, placed: false, reviewIntervalDays: 1, nextReview: now + DAY };
+  } else if (prev.mastered && mastery < 0.6) {
+    // Forgotten: back into regular practice.
+    next = { ...next, mastered: false, placed: false, nextReview: undefined, reviewIntervalDays: undefined };
+  } else if (isReview) {
+    const interval = correct ? Math.min((prev.reviewIntervalDays ?? 1) * 2, 30) : 1;
+    next = { ...next, reviewIntervalDays: interval, nextReview: now + interval * DAY };
+  }
+
+  const history = [...profile.history, { skillId, at: now, correct, hintsUsed }].slice(-MAX_HISTORY);
+  return { ...profile, skills: { ...profile.skills, [skillId]: next }, history };
+}
+
+export function isUnlocked(profile: LearnerProfile, skill: Skill): boolean {
+  return skill.prerequisites.every((id) => skillState(profile, id).mastered);
+}
+
+export type NextReason = "review" | "continue" | "new" | "stretch" | "revise";
+
+export interface NextSkill {
+  skill: Skill;
+  reason: NextReason;
+}
+
+/**
+ * Chooses what the student should practise next in a subject:
+ * due reviews first, then the skill already in progress, then the next unlocked skill
+ * at or below the student's stage, then stretch work from the next stage.
+ */
+export function pickNextSkill(
+  profile: LearnerProfile,
+  subject: Subject,
+  now = Date.now(),
+  options: { includeWriting?: boolean } = {},
+): NextSkill | null {
+  const stage: Stage = yearToStage(profile.yearLevel);
+  const candidates = skillsFor(subject).filter((s) => options.includeWriting || s.practice !== "writing");
+
+  const due = candidates
+    .filter((s) => {
+      const st = skillState(profile, s.id);
+      return st.mastered && st.nextReview !== undefined && st.nextReview <= now;
+    })
+    .sort((a, b) => skillState(profile, a.id).nextReview! - skillState(profile, b.id).nextReview!);
+  if (due.length) return { skill: due[0], reason: "review" };
+
+  const open = candidates.filter((s) => !skillState(profile, s.id).mastered && isUnlocked(profile, s));
+  const atStage = open.filter((s) => s.stage <= stage);
+
+  const inProgress = atStage
+    .filter((s) => skillState(profile, s.id).attempts > 0)
+    .sort((a, b) => skillState(profile, b.id).mastery - skillState(profile, a.id).mastery);
+  if (inProgress.length) return { skill: inProgress[0], reason: "continue" };
+  if (atStage.length) return { skill: atStage[0], reason: "new" };
+  if (open.length) return { skill: open[0], reason: "stretch" };
+
+  const revise = candidates
+    .filter((s) => skillState(profile, s.id).mastered)
+    .sort((a, b) => (skillState(profile, a.id).lastPracticed ?? 0) - (skillState(profile, b.id).lastPracticed ?? 0));
+  return revise.length ? { skill: revise[0], reason: "revise" } : null;
+}
+
+/** Progress grouped by NESA outcome, for the parent report. */
+export function outcomeProgress(profile: LearnerProfile, subject: Subject) {
+  const groups = new Map<string, { skills: Skill[]; mastered: number; practised: number }>();
+  for (const skill of SKILLS.filter((s) => s.subject === subject)) {
+    const g = groups.get(skill.outcome) ?? { skills: [], mastered: 0, practised: 0 };
+    const st = skillState(profile, skill.id);
+    g.skills.push(skill);
+    if (st.mastered) g.mastered++;
+    if (st.attempts > 0 || st.mastered) g.practised++;
+    groups.set(skill.outcome, g);
+  }
+  return [...groups.entries()].map(([outcome, g]) => ({
+    outcome,
+    total: g.skills.length,
+    mastered: g.mastered,
+    status: g.mastered === g.skills.length ? "secure" : g.practised > 0 ? "developing" : "not started",
+  })) as { outcome: string; total: number; mastered: number; status: "secure" | "developing" | "not started" }[];
+}
+
+export function recentAccuracy(profile: LearnerProfile, skillId: string, last = 10): number | null {
+  const attempts = profile.history.filter((h) => h.skillId === skillId).slice(-last);
+  if (!attempts.length) return null;
+  return attempts.filter((a) => a.correct).length / attempts.length;
+}
+
+export { getSkill };
