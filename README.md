@@ -31,6 +31,9 @@ npm run dev                  # http://localhost:3000
 Without an API key, practice and marking still work; the chat and writing feedback say they are
 switched off. Set `TUTOR_MOCK=1` to use canned tutor replies for demos.
 
+Set `SITE_PASSWORD` to put a password screen in front of the whole site while it's in testing.
+Anyone with the password stays signed in on that device for 30 days. Leave it unset to turn the gate off.
+
 ```bash
 npm test          # unit tests (curriculum graph, generators, checker, mastery, safety)
 npm run typecheck
