@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { SetupStatus } from "@/components/SetupStatus";
+import { useAccount } from "@/components/useAccount";
 import type { Role } from "@/lib/auth/rules";
 
 interface Row {
@@ -18,6 +20,20 @@ const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en
 
 /** Admins manage accounts: roles, turning accounts off, and password resets. */
 export default function AdminPage() {
+  const account = useAccount();
+  if (!account.loaded) return <p className="muted">Loading…</p>;
+  if (!account.enabled) {
+    return (
+      <div className="stack" style={{ maxWidth: 720 }}>
+        <h1>Admin</h1>
+        <SetupStatus />
+      </div>
+    );
+  }
+  return <Accounts />;
+}
+
+function Accounts() {
   const [users, setUsers] = useState<Row[] | null>(null);
   const [me, setMe] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +97,7 @@ export default function AdminPage() {
           aria-label="Search accounts"
         />
       </div>
+      <SetupStatus compact />
       {notice && (
         <div className="feedback good" role="status">
           {notice}

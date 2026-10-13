@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useAccount } from "@/components/useAccount";
 import { MIN_PASSWORD_LENGTH, safeNextPath } from "@/lib/auth/rules";
 
 /** The sign-in and sign-up forms, which differ only in a name field and where they post. */
@@ -15,6 +16,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const signup = mode === "signup";
+  const account = useAccount();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +45,11 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   return (
     <form className="card narrow stack" style={{ margin: "40px auto" }} onSubmit={submit}>
       <h1>{signup ? "Create a parent account" : "Sign in"}</h1>
+      {account.loaded && !account.enabled && (
+        <div className="feedback warn">
+          Logins aren't switched on for this site yet. <Link href="/admin">See what's left to set up</Link>.
+        </div>
+      )}
       <p className="muted" style={{ margin: 0 }}>
         {signup
           ? "Your child's progress is saved to your account, so you can see it on any device."
