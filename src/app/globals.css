@@ -327,6 +327,34 @@ label {
   border-color: var(--bad);
   background: var(--bad-tint);
 }
+.ordering {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  counter-reset: order;
+}
+.ordering .choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: default;
+  counter-increment: order;
+}
+.ordering .choice::before {
+  content: counter(order) ".";
+  font-weight: 700;
+  color: var(--muted);
+}
+.ordering .choice > span:first-of-type {
+  flex: 1;
+}
+.order-buttons {
+  display: flex;
+  gap: 6px;
+}
 .feedback {
   margin-top: 16px;
   padding: 14px 16px;
@@ -423,4 +451,37 @@ th {
   font-size: 0.85rem;
   color: var(--muted);
   font-weight: 700;
+}
+
+/* Topic tree */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tab {
+  font: inherit;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.tab.active {
+  border-color: var(--brand);
+  background: var(--brand-tint);
+}
+.subtopics {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.subtopic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
 }

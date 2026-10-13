@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { TutorChat } from "@/components/TutorChat";
 import { useProfile } from "@/components/useProfile";
 import { getOutcome } from "@/lib/curriculum/outcomes";
@@ -13,8 +14,20 @@ import type { WritingFeedback } from "@/lib/tutor/claude";
 const LEVEL_LABEL = { beginning: "Beginning", developing: "Developing", secure: "Secure" } as const;
 
 export default function WritingPage() {
+  return (
+    <Suspense>
+      <Writing />
+    </Suspense>
+  );
+}
+
+function Writing() {
   const { profile, setProfile, loaded } = useProfile();
-  const [skillId, setSkillId] = useState<string | null>(null);
+  // A task chosen from the topic tree arrives as ?skill=…
+  const requested = useSearchParams().get("skill");
+  const [skillId, setSkillId] = useState<string | null>(() =>
+    SKILLS.some((s) => s.id === requested && s.practice === "writing") ? requested : null,
+  );
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

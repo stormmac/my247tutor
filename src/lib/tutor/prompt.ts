@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getOutcome } from "../curriculum/outcomes";
-import { getSkill } from "../curriculum/skills";
+import { SKILLS } from "../curriculum/skills";
+import { subtopicPath } from "../content/tree";
 
 /** Stable instructions shared by every tutor conversation (kept identical so it caches). */
 export const TUTOR_SYSTEM_PROMPT = `You are Wattle, the friendly AI tutor inside my247tutor, helping NSW primary students in Years 3 to 6 with Mathematics and English. You follow the NSW (NESA) syllabus.
@@ -24,6 +25,7 @@ Staying safe and on task:
 export const TutorContextSchema = z.object({
   studentName: z.string().max(40),
   yearLevel: z.union([z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
+  /** A skill id, or a content-tree subtopic id for written question sets. */
   skillId: z.string().max(60),
   question: z
     .object({
@@ -41,13 +43,7 @@ export type TutorContext = z.infer<typeof TutorContextSchema>;
 
 /** Per-session details, sent after the cached instructions. */
 export function buildContextPrompt(ctx: TutorContext): string {
-  const skill = getSkill(ctx.skillId);
-  const outcome = getOutcome(skill.outcome);
-  const lines = [
-    `Student: ${ctx.studentName}, Year ${ctx.yearLevel}.`,
-    `Current skill: ${skill.title}. ${skill.description}`,
-    `NESA outcome: ${outcome.code} (${outcome.focusArea}: ${outcome.summary}).`,
-  ];
+  const lines = [`Student: ${ctx.studentName}, Year ${ctx.yearLevel}.`, ...topicLines(ctx.skillId)];
   if (ctx.question) {
     if (ctx.question.passage) lines.push(`Reading passage:\n${ctx.question.passage}`);
     lines.push(`Practice question on screen: ${ctx.question.prompt}`);
@@ -59,4 +55,21 @@ export function buildContextPrompt(ctx: TutorContext): string {
   }
   if (ctx.writingTask) lines.push(`Writing task: ${ctx.writingTask}`);
   return lines.join("\n");
+}
+
+function topicLines(id: string): string[] {
+  const skill = SKILLS.find((s) => s.id === id);
+  if (skill) {
+    const outcome = getOutcome(skill.outcome);
+    return [
+      `Current skill: ${skill.title}. ${skill.description}`,
+      `NESA outcome: ${outcome.code} (${outcome.focusArea}: ${outcome.summary}).`,
+    ];
+  }
+  const path = subtopicPath(id);
+  if (path) {
+    const { subject, year, topic, subtopic } = path;
+    return [`Current topic: ${subject.name}, ${year.name}, ${topic.title}: ${subtopic.title}. ${subtopic.description}`];
+  }
+  return [];
 }

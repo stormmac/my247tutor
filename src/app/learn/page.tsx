@@ -60,9 +60,14 @@ function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; sub
             : "You've mastered everything here!"
           : "Start with a quick five-question check so we know where to begin."}
       </p>
-      <Link href={`/learn/${subject}`} className="btn">
-        {placed ? "Practise" : "Start the check"}
-      </Link>
+      <div className="row">
+        <Link href={`/learn/${subject}`} className="btn">
+          {placed ? "Practise" : "Start the check"}
+        </Link>
+        <Link href={`/learn/${subject}/topics`} className="btn secondary">
+          Browse topics
+        </Link>
+      </div>
     </div>
   );
 }
