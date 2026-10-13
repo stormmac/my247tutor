@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { QuestionView, type QuestionOutcome } from "@/components/QuestionView";
-import { TutorChat } from "@/components/TutorChat";
+import { questionFocus, useSuniFocus, useSuniSay } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { getOutcome } from "@/lib/curriculum/outcomes";
 import type { Subject } from "@/lib/curriculum/types";
@@ -20,7 +20,6 @@ import {
 } from "@/lib/learner/placement";
 import { answerText, generateQuestion } from "@/lib/practice";
 import { randomSeed } from "@/lib/practice/rng";
-import { TUTOR_NAME } from "@/lib/tutor/persona";
 
 const REASON_LABEL: Record<NextReason, string> = {
   review: "Quick review",
@@ -100,6 +99,21 @@ function Practice({
   const [justMastered, setJustMastered] = useState<string | null>(null);
 
   const question = useMemo(() => (current ? generateQuestion(current.skill.id, seed) : null), [current, seed]);
+  const say = useSuniSay();
+  useSuniFocus(
+    current && question
+      ? questionFocus({
+          profile,
+          setProfile,
+          progressKey: current.skill.id,
+          title: current.skill.title,
+          question,
+          correctAnswer: answerText(question.answer, question.choices),
+          answered,
+          hintsShown,
+        })
+      : null,
+  );
 
   if (!current || !question) {
     return (
@@ -123,7 +137,10 @@ function Practice({
     const updated = recordAttempt(profile, skill.id, o.correct && o.firstTry, o.hintsUsed);
     setProfile(updated);
     setSession((s) => ({ done: s.done + 1, correct: s.correct + (o.correct ? 1 : 0) }));
-    if (!wasMastered && skillState(updated, skill.id).mastered) setJustMastered(skill.title);
+    if (!wasMastered && skillState(updated, skill.id).mastered) {
+      setJustMastered(skill.title);
+      say(`Buzz-tastic! You've mastered ${skill.title.charAt(0).toLowerCase() + skill.title.slice(1)}!`);
+    } else if (!o.correct) say("That one was tricky. Tap me and we can go through it together.");
   }
 
   function next() {
@@ -170,25 +187,7 @@ function Practice({
           onNext={next}
           onHintsChange={setHintsShown}
           onAnsweredChange={setAnswered}
-        />
-        <TutorChat
-          key={skill.id}
-          greeting={`Hi ${profile.name}! I'm ${TUTOR_NAME}. Stuck on ${skill.title.toLowerCase()}? Ask me and we'll work it out together.`}
-          context={{
-            studentName: profile.name,
-            yearLevel: profile.yearLevel,
-            skillId: skill.id,
-            question: {
-              prompt: question.prompt + (question.choices ? ` Options: ${question.choices.join(" / ")}` : ""),
-              correctAnswer: answerText(question.answer, question.choices),
-              answered,
-              hintsShown,
-              passage: question.passage ? `${question.passage.title}\n${question.passage.text}` : undefined,
-            },
-          }}
-          onWellbeingConcern={(message) =>
-            setProfile((p) => ({ ...p, wellbeingFlags: [...p.wellbeingFlags, { at: Date.now(), message }] }))
-          }
+          onTryAgain={() => say("Not quite! Have another go, or tap me for a clue.")}
         />
       </div>
       <p className="small muted">

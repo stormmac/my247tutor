@@ -20,6 +20,9 @@ function read(): LearnerProfile | null {
   }
 }
 
+/** Fired when this tab saves the profile, so every part of the page (the page itself, Suni) stays in step. */
+const CHANGED = "my247tutor-profile-changed";
+
 function write(profile: LearnerProfile | null) {
   try {
     if (profile) localStorage.setItem(KEY, JSON.stringify(profile));
@@ -27,6 +30,7 @@ function write(profile: LearnerProfile | null) {
   } catch {
     // Storage blocked (private mode): progress lasts for this visit only.
   }
+  queueMicrotask(() => window.dispatchEvent(new Event(CHANGED)));
 }
 
 export function useProfile() {
@@ -36,11 +40,24 @@ export function useProfile() {
   useEffect(() => {
     setProfileState(read());
     setLoaded(true);
+    // If storage is blocked, read() is null; keep what we have rather than losing this visit's progress.
+    const sync = () => {
+      const stored = read();
+      if (stored) setProfileState(stored);
+    };
+    window.addEventListener(CHANGED, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(CHANGED, sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
 
   const setProfile = useCallback((update: LearnerProfile | null | ((p: LearnerProfile) => LearnerProfile)) => {
     setProfileState((prev) => {
-      const next = typeof update === "function" ? (prev ? update(prev) : prev) : update;
+      // Functional updates start from the stored profile, so Suni and the page can't undo each other's changes.
+      const base = read() ?? prev;
+      const next = typeof update === "function" ? (base ? update(base) : base) : update;
       write(next);
       return next;
     });

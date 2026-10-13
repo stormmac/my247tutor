@@ -14,11 +14,13 @@ interface Props {
   onNext: () => void;
   onHintsChange?: (hintsShown: number) => void;
   onAnsweredChange?: (answered: boolean) => void;
+  /** Called after a wrong answer when the student still has another try. */
+  onTryAgain?: () => void;
 }
 
 const MAX_TRIES = 2;
 
-export function QuestionView({ question, placement, onDone, onNext, onHintsChange, onAnsweredChange }: Props) {
+export function QuestionView({ question, placement, onDone, onNext, onHintsChange, onAnsweredChange, onTryAgain }: Props) {
   const [input, setInput] = useState("");
   const [selected, setSelected] = useState<number | null>(null);
   const [picked, setPicked] = useState<number[]>([]);
@@ -61,7 +63,7 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
       setFinished(true);
       onAnsweredChange?.(true);
       onDone({ correct: check.correct, hintsUsed: hintsShown, firstTry: nextTries === 1 });
-    }
+    } else onTryAgain?.();
   }
 
   function showHint() {

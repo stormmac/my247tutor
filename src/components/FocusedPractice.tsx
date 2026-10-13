@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { QuestionView, type QuestionOutcome } from "@/components/QuestionView";
-import { TutorChat } from "@/components/TutorChat";
+import { questionFocus, useSuniFocus, useSuniSay } from "@/components/SuniCompanion";
 import type { useProfile } from "@/components/useProfile";
 import { progressKey, toPracticeQuestion } from "@/lib/content/practice";
 import { questionsOf } from "@/lib/content/tree";
@@ -11,7 +11,6 @@ import { getOutcome } from "@/lib/curriculum/outcomes";
 import { getSkill } from "@/lib/curriculum/skills";
 import { recordAttempt, skillState, type LearnerProfile } from "@/lib/learner/model";
 import { answerText, generateQuestion } from "@/lib/practice";
-import { TUTOR_NAME } from "@/lib/tutor/persona";
 import { Rng, randomSeed } from "@/lib/practice/rng";
 
 /** Practice on one subtopic the student picked from the topic tree. */
@@ -42,6 +41,19 @@ export function FocusedPractice({
     [skill, written, order, position, seed],
   );
   const state = skillState(profile, key);
+  const say = useSuniSay();
+  useSuniFocus(
+    questionFocus({
+      profile,
+      setProfile,
+      progressKey: key,
+      title: subtopic.title,
+      question,
+      correctAnswer: answerText(question.answer, question.choices),
+      answered,
+      hintsShown,
+    }),
+  );
 
   function onDone(o: QuestionOutcome) {
     const wasMastered = skillState(profile, key).mastered;
@@ -49,7 +61,10 @@ export function FocusedPractice({
     const updated = recordAttempt(profile, key, o.correct && o.firstTry, o.hintsUsed);
     setProfile(updated);
     setSession((s) => ({ done: s.done + 1, correct: s.correct + (o.correct ? 1 : 0) }));
-    if (!wasMastered && skillState(updated, key).mastered) setJustMastered(true);
+    if (!wasMastered && skillState(updated, key).mastered) {
+      setJustMastered(true);
+      say(`Buzz-tastic! You've mastered ${subtopic.title.charAt(0).toLowerCase() + subtopic.title.slice(1)}!`);
+    } else if (!o.correct) say("That one was tricky. Tap me and we can go through it together.");
   }
 
   function next() {
@@ -108,25 +123,7 @@ export function FocusedPractice({
           onNext={next}
           onHintsChange={setHintsShown}
           onAnsweredChange={setAnswered}
-        />
-        <TutorChat
-          key={subtopic.id}
-          greeting={`Hi ${profile.name}! I'm ${TUTOR_NAME}. Stuck on ${subtopic.title.charAt(0).toLowerCase() + subtopic.title.slice(1)}? Ask me and we'll work it out together.`}
-          context={{
-            studentName: profile.name,
-            yearLevel: profile.yearLevel,
-            skillId: key,
-            question: {
-              prompt: question.prompt + (question.choices ? ` Options: ${question.choices.join(" / ")}` : ""),
-              correctAnswer: answerText(question.answer, question.choices).slice(0, 200),
-              answered,
-              hintsShown,
-              passage: question.passage ? `${question.passage.title}\n${question.passage.text}` : undefined,
-            },
-          }}
-          onWellbeingConcern={(message) =>
-            setProfile((p) => ({ ...p, wellbeingFlags: [...p.wellbeingFlags, { at: Date.now(), message }] }))
-          }
+          onTryAgain={() => say("Not quite! Have another go, or tap me for a clue.")}
         />
       </div>
     </div>

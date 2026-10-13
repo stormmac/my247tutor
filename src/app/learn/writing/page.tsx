@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { TutorChat } from "@/components/TutorChat";
+import { useSuniFocus } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { getOutcome } from "@/lib/curriculum/outcomes";
 import { SKILLS } from "@/lib/curriculum/skills";
@@ -33,6 +33,16 @@ function Writing() {
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<WritingFeedback | null>(null);
   const [wellbeing, setWellbeing] = useState<string | null>(null);
+  useSuniFocus(
+    profile && skillId
+      ? {
+          greeting: `Need ideas or stuck on a sentence, ${profile.name}? Ask me. I won't write it for you, but I'll help you get going.`,
+          context: { studentName: profile.name, yearLevel: profile.yearLevel, skillId, writingTask: WRITING_TASKS[skillId][0].prompt },
+          onWellbeingConcern: (message) =>
+            setProfile((p) => ({ ...p, wellbeingFlags: [...p.wellbeingFlags, { at: Date.now(), message }] })),
+        }
+      : null,
+  );
 
   if (!loaded) return null;
   if (!profile) {
@@ -186,13 +196,6 @@ function Writing() {
             </div>
           )}
         </div>
-        <TutorChat
-          greeting={`Need ideas or stuck on a sentence, ${profile.name}? Ask me. I won't write it for you, but I'll help you get going.`}
-          context={{ studentName: profile.name, yearLevel: profile.yearLevel, skillId, writingTask: task.prompt }}
-          onWellbeingConcern={(message) =>
-            setProfile((p) => ({ ...p, wellbeingFlags: [...p.wellbeingFlags, { at: Date.now(), message }] }))
-          }
-        />
       </div>
       <button
         className="btn secondary small"
