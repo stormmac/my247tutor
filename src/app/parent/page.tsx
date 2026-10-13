@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { ChangePassword } from "@/components/ChangePassword";
+import { useAccount } from "@/components/useAccount";
 import { useProfile } from "@/components/useProfile";
 import { getOutcome } from "@/lib/curriculum/outcomes";
 import { getSkill, skillsFor } from "@/lib/curriculum/skills";
@@ -12,6 +14,7 @@ import { COMPETENCY_LABELS, competency, recommendedPlan, subjectLevel, type Comp
 
 export default function ParentPage() {
   const { profile, setProfile, loaded } = useProfile();
+  const account = useAccount();
   const [unlocked, setUnlocked] = useState(false);
 
   if (!loaded) return null;
@@ -122,7 +125,11 @@ export default function ParentPage() {
 
       <div className="card no-print">
         <h2>Settings</h2>
-        <p className="muted small">In this early version, progress is saved in this browser only.</p>
+        <p className="muted small">
+          {account.user
+            ? `Signed in as ${account.user.email}. ${profile.name}'s progress is saved to your account.`
+            : "Progress is saved in this browser only."}
+        </p>
         <div className="row">
           <label className="row" style={{ fontWeight: 400, margin: 0 }}>
             School year
@@ -147,6 +154,11 @@ export default function ParentPage() {
             Delete learner
           </button>
         </div>
+        {account.user && (
+          <div style={{ marginTop: 20 }}>
+            <ChangePassword />
+          </div>
+        )}
       </div>
     </div>
   );

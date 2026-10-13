@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AccountMenu } from "@/components/AccountMenu";
+import { ProfileSync } from "@/components/ProfileSync";
 import { SuniCompanion, SuniProvider } from "@/components/SuniCompanion";
 import "./globals.css";
 
@@ -21,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <nav className="nav">
                 <Link href="/learn">Learn</Link>
                 <Link href="/parent">Parents</Link>
+                <AccountMenu />
               </nav>
             </div>
           </div>
@@ -28,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="container">{children}</div>
           </main>
           <SuniCompanion />
+          <ProfileSync />
         </SuniProvider>
       </body>
     </html>

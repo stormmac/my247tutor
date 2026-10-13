@@ -25,7 +25,4 @@ export function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** Only allow redirects back to a path on this site after signing in. */
-export function safeNextPath(next: string | null | undefined): string {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
-}
+export { safeNextPath } from "./rules";

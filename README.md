@@ -71,9 +71,43 @@ npm run content:sql   # writes database/005_my247tutor_content.sql (a test fails
 To load it into a myteacher database, run myteacher's migrations 001–003, then `database/004_add_skill_link.sql`,
 then `database/005_my247tutor_content.sql`. Re-running it is safe.
 
+## Accounts and admin
+
+Parent accounts follow myteacher's `users` table (same columns, with `parent` added to its
+`admin`, `teacher` and `student` roles), so the two apps can share one database later.
+
+To switch accounts on:
+
+1. Create a Postgres database. On Vercel: Storage → Create Database → Neon (free tier). Any Postgres
+   works, including Azure.
+2. In Vercel → Settings → Environment Variables, set `DATABASE_URL`, `AUTH_SECRET`
+   (`openssl rand -base64 32`) and `ADMIN_EMAILS` (your email).
+3. Run `DATABASE_URL=… npm run db:migrate` once to create the tables (`database/006_my247tutor_accounts.sql`).
+4. Redeploy, then sign up with your admin email.
+
+When both `DATABASE_URL` and `AUTH_SECRET` are set:
+
+- Parents sign up at `/signup` and sign in at `/signin`. The home page stays open; everything else,
+  including the AI tutor API, needs a signed-in parent.
+- The child's progress is saved to the parent's account and loads on any device. Progress already in
+  the browser moves into the account on first sign-in. Signing out clears it from the device.
+- Admins see `/admin`: every account, change roles, turn accounts off (signs them out at once) and
+  reset passwords to a temporary one. Admin changes are recorded in `audit_log`.
+
+Security:
+
+- Passwords are hashed with bcrypt. Sessions are signed JWTs in HttpOnly, SameSite cookies that last
+  7 days, and are checked against the database on every API call.
+- Five wrong passwords for an email (or 20 from one address) lock sign-in for 15 minutes.
+- API writes from other websites are blocked (Origin check), and pages send security headers
+  (no framing, no MIME sniffing, HSTS in production).
+- `SITE_PASSWORD` still works on top of accounts for private testing.
+
 ## Known limits of this version
 
-- Progress is stored in the browser (localStorage). Parent accounts, sign-in and a database are next.
+- Without accounts switched on, progress is stored in the browser (localStorage) only.
+- One child per parent account for now.
+- No password-reset email yet: an admin resets the password and passes on the temporary one.
 - Stage 3 outcome codes (MA3-…, EN3-…) follow the Stage 2 pattern and still need confirming
   against the NESA syllabus; they're marked with an asterisk in the parent dashboard.
 - Progress on written question sets is saved, but the parent dashboard still reports by NESA outcome only.

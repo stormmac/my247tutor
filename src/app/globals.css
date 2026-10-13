@@ -116,11 +116,13 @@ p {
   gap: 16px;
   font-size: 0.95rem;
 }
-.nav a {
+.nav a,
+.nav .link-button {
   color: var(--muted);
   text-decoration: none;
 }
-.nav a:hover {
+.nav a:hover,
+.nav .link-button:hover {
   color: var(--text);
 }
 
@@ -190,6 +192,9 @@ main {
 input[type="text"],
 input[type="number"],
 input[type="password"],
+input[type="email"],
+input[type="search"],
+input:not([type]),
 textarea,
 select {
   font: inherit;
@@ -726,4 +731,16 @@ main {
   .report {
     break-inside: auto;
   }
+}
+
+/* Accounts */
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.admin-table td {
+  vertical-align: middle;
 }
