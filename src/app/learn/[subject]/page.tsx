@@ -20,6 +20,7 @@ import {
 } from "@/lib/learner/placement";
 import { answerText, generateQuestion } from "@/lib/practice";
 import { randomSeed } from "@/lib/practice/rng";
+import { TUTOR_NAME } from "@/lib/tutor/persona";
 
 const REASON_LABEL: Record<NextReason, string> = {
   review: "Quick review",
@@ -172,7 +173,7 @@ function Practice({
         />
         <TutorChat
           key={skill.id}
-          greeting={`Hi ${profile.name}! I'm Wattle. Stuck on ${skill.title.toLowerCase()}? Ask me and we'll work it out together.`}
+          greeting={`Hi ${profile.name}! I'm ${TUTOR_NAME}. Stuck on ${skill.title.toLowerCase()}? Ask me and we'll work it out together.`}
           context={{
             studentName: profile.name,
             yearLevel: profile.yearLevel,

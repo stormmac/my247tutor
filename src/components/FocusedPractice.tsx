@@ -11,6 +11,7 @@ import { getOutcome } from "@/lib/curriculum/outcomes";
 import { getSkill } from "@/lib/curriculum/skills";
 import { recordAttempt, skillState, type LearnerProfile } from "@/lib/learner/model";
 import { answerText, generateQuestion } from "@/lib/practice";
+import { TUTOR_NAME } from "@/lib/tutor/persona";
 import { Rng, randomSeed } from "@/lib/practice/rng";
 
 /** Practice on one subtopic the student picked from the topic tree. */
@@ -110,7 +111,7 @@ export function FocusedPractice({
         />
         <TutorChat
           key={subtopic.id}
-          greeting={`Hi ${profile.name}! I'm Wattle. Stuck on ${subtopic.title.charAt(0).toLowerCase() + subtopic.title.slice(1)}? Ask me and we'll work it out together.`}
+          greeting={`Hi ${profile.name}! I'm ${TUTOR_NAME}. Stuck on ${subtopic.title.charAt(0).toLowerCase() + subtopic.title.slice(1)}? Ask me and we'll work it out together.`}
           context={{
             studentName: profile.name,
             yearLevel: profile.yearLevel,

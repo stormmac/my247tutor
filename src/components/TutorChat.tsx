@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { TUTOR_NAME } from "@/lib/tutor/persona";
 import type { TutorContext } from "@/lib/tutor/prompt";
+import { Suni } from "./Suni";
 
 type ChatMessage = { role: "user" | "assistant" | "notice"; content: string };
 
@@ -82,7 +84,10 @@ export function TutorChat({ context, onWellbeingConcern, greeting }: Props) {
 
   return (
     <div className="card chat" aria-label="Tutor chat">
-      <header>Ask Wattle, your tutor</header>
+      <header>
+        <Suni size={40} animated={busy} />
+        Ask {TUTOR_NAME}, your tutor
+      </header>
       <div className="messages" ref={scroller} aria-live="polite">
         {messages.map((m, i) => (
           <div key={i} className={`msg ${m.role}`}>

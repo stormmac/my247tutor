@@ -21,6 +21,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --suni-antenna: #8a7f76;
     --bg: #12181a;
     --surface: #1b2326;
     --surface-2: #232d31;
@@ -484,4 +485,84 @@ th {
   gap: 12px;
   padding: 12px 0;
   border-top: 1px solid var(--border);
+}
+
+/* Suni, the robot bee tutor */
+.suni {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+.suni .suni-wing {
+  transform-box: fill-box;
+}
+.suni .suni-wing-left {
+  transform-origin: 100% 80%;
+}
+.suni .suni-wing-right {
+  transform-origin: 0% 80%;
+}
+.suni .suni-arm-right {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+}
+.suni .suni-eyes {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .suni-animated .suni-hover {
+    animation: suni-hover 3s ease-in-out infinite;
+  }
+  .suni-animated .suni-wing {
+    animation: suni-flutter 0.18s ease-in-out infinite alternate;
+  }
+  .suni-animated .suni-eyes {
+    animation: suni-blink 5s infinite;
+  }
+  .suni-waving .suni-arm-right {
+    animation: suni-wave 1.2s ease-in-out 3;
+  }
+}
+@keyframes suni-hover {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes suni-flutter {
+  to {
+    transform: scaleY(0.82) rotate(-3deg);
+  }
+}
+@keyframes suni-blink {
+  0%,
+  94%,
+  100% {
+    transform: scaleY(1);
+  }
+  97% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes suni-wave {
+  50% {
+    transform: rotate(-18deg);
+  }
+}
+.chat header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hero-with-suni {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+@media (max-width: 640px) {
+  .hero-with-suni {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }

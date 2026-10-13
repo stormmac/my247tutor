@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Suni } from "@/components/Suni";
 import { useProfile } from "@/components/useProfile";
 import { newProfile, pickNextSkill, skillState, type LearnerProfile } from "@/lib/learner/model";
 import { skillsFor } from "@/lib/curriculum/skills";
@@ -14,8 +15,15 @@ export default function LearnPage() {
 
   return (
     <div className="stack">
-      <h1>Hi {profile.name}! What shall we learn?</h1>
-      <p className="muted">Year {profile.yearLevel}. Pick a subject to keep going.</p>
+      <div className="row" style={{ gap: 16, flexWrap: "nowrap" }}>
+        <Suni size={84} wave />
+        <div>
+          <h1>Hi {profile.name}! What shall we learn?</h1>
+          <p className="muted" style={{ margin: 0 }}>
+            Year {profile.yearLevel}. Pick a subject to keep going, and ask Suni if you get stuck.
+          </p>
+        </div>
+      </div>
       <div className="grid grid-2">
         <SubjectCard profile={profile} subject="maths" title="Maths" />
         <SubjectCard profile={profile} subject="english" title="English" />

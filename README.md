@@ -12,7 +12,7 @@ This is the first working version (MVP) from the product plan.
   never has to judge whether an answer is right.
 - **English practice:** spelling, vocabulary and reading comprehension (original passages),
   plus writing tasks marked by Claude against criteria written from the outcomes.
-- **Tutor chat ("Wattle")** on every question, powered by Claude. It guides with hints and is
+- **Tutor chat with Suni**, a friendly robot bumble bee, on every question, powered by Claude. It guides with hints and is
   told the answer only so it can steer, with instructions not to reveal it before the student answers.
 - **Child safety:** messages are checked before they reach the model. Signs of distress get a
   caring reply with Kids Helpline (1800 55 1800) and are flagged on the parent dashboard.

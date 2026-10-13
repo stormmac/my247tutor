@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hasWellbeingConcern, redactPersonalInfo } from "../tutor/safety";
-import { buildContextPrompt } from "../tutor/prompt";
+import { buildContextPrompt, TUTOR_SYSTEM_PROMPT } from "../tutor/prompt";
 
 describe("wellbeing check", () => {
   it.each(["i want to hurt myself", "Nobody loves me", "I'm being bullied at school", "my brother hits me", "I don't want to be alive"])(
@@ -43,5 +43,12 @@ describe("tutor context", () => {
   it("allows a full explanation once the student has answered", () => {
     const prompt = buildContextPrompt({ ...base, question: { prompt: "7 × 8 = ?", correctAnswer: "56", answered: true, hintsShown: 0 } });
     expect(prompt).toMatch(/may now explain it fully/);
+  });
+});
+
+describe("tutor persona", () => {
+  it("introduces the tutor as Suni the robot bee", () => {
+    expect(TUTOR_SYSTEM_PROMPT).toMatch(/^You are Suni, a friendly robot bumble bee/);
+    expect(TUTOR_SYSTEM_PROMPT).not.toContain("Wattle");
   });
 });
