@@ -14,6 +14,7 @@
   --bad: #b8433a;
   --bad-tint: #fbe9e6;
   --warn-tint: #fff4dc;
+  --warn-text: #8a5a00;
   --radius: 14px;
   --shadow: 0 1px 2px rgba(31, 42, 46, 0.06), 0 4px 16px rgba(31, 42, 46, 0.06);
   color-scheme: light;
@@ -36,6 +37,7 @@
     --bad: #f08a7e;
     --bad-tint: #3d1f1b;
     --warn-tint: #3a2f17;
+    --warn-text: #f2c46d;
     color-scheme: dark;
   }
 }
@@ -230,7 +232,11 @@ label {
 }
 .pill.warn {
   background: var(--warn-tint);
-  color: #8a5a00;
+  color: var(--warn-text);
+}
+.pill.bad {
+  background: var(--bad-tint);
+  color: var(--bad);
 }
 .row {
   display: flex;
@@ -671,4 +677,52 @@ th {
 /* Leave room so Suni never covers the last thing on the page. */
 main {
   padding-bottom: 120px;
+}
+
+/* Parent report */
+.report h3 {
+  margin: 0 0 8px;
+}
+.plan {
+  margin: 0;
+  padding-left: 22px;
+}
+.plan li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.plan li:last-child {
+  border-bottom: 0;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+@media (max-width: 600px) {
+  .skill-table .skill-desc,
+  .skill-table .accuracy {
+    display: none;
+  }
+  .skill-table th,
+  .skill-table td {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+}
+
+@media print {
+  .topbar,
+  .suni-companion,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding-bottom: 0;
+  }
+  .card {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+  .report {
+    break-inside: auto;
+  }
 }

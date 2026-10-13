@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useProfile } from "@/components/useProfile";
 import { getOutcome } from "@/lib/curriculum/outcomes";
-import { getSkill } from "@/lib/curriculum/skills";
-import type { Subject } from "@/lib/curriculum/types";
-import { outcomeProgress, type LearnerProfile } from "@/lib/learner/model";
+import { getSkill, skillsFor } from "@/lib/curriculum/skills";
+import type { Skill, Subject } from "@/lib/curriculum/types";
+import { SUBTOPICS } from "@/lib/content/tree";
+import { recentAccuracy, skillState, type LearnerProfile } from "@/lib/learner/model";
+import { COMPETENCY_LABELS, competency, recommendedPlan, subjectLevel, type Competency, type Standing } from "@/lib/learner/report";
 
 export default function ParentPage() {
   const { profile, setProfile, loaded } = useProfile();
@@ -31,8 +33,17 @@ export default function ParentPage() {
 
   return (
     <div className="stack">
-      <h1>{profile.name}'s progress</h1>
-      <p className="muted">Year {profile.yearLevel}. Progress is shown against NSW (NESA) syllabus outcomes.</p>
+      <div className="row spread">
+        <div>
+          <h1>{profile.name}'s progress</h1>
+          <p className="muted" style={{ margin: 0 }}>
+            Year {profile.yearLevel}. Shown against the NSW (NESA) syllabus outcomes, as of {new Date().toLocaleDateString("en-AU")}.
+          </p>
+        </div>
+        <button className="btn secondary small no-print" onClick={() => window.print()}>
+          Print or save as PDF
+        </button>
+      </div>
 
       {profile.wellbeingFlags.length > 0 && (
         <div className="card" style={{ borderColor: "var(--bad)" }}>
@@ -74,8 +85,13 @@ export default function ParentPage() {
         </div>
       </div>
 
-      <OutcomeTable profile={profile} subject="maths" title="Mathematics" />
-      <OutcomeTable profile={profile} subject="english" title="English" />
+      <SubjectReport profile={profile} subject="maths" title="Mathematics" />
+      <SubjectReport profile={profile} subject="english" title="English" />
+
+      <p className="muted small">
+        Levels and plans are estimates from {profile.name}'s practice in my247tutor, not a school assessment. They get more accurate the
+        more {profile.name} practises.
+      </p>
 
       {profile.writing.length > 0 && (
         <div className="card">
@@ -104,7 +120,7 @@ export default function ParentPage() {
         </div>
       )}
 
-      <div className="card">
+      <div className="card no-print">
         <h2>Settings</h2>
         <p className="muted small">In this early version, progress is saved in this browser only.</p>
         <div className="row">
@@ -136,53 +152,137 @@ export default function ParentPage() {
   );
 }
 
-function OutcomeTable({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
-  const rows = outcomeProgress(profile, subject);
+const STANDING: Record<Standing, { label: (year: number) => string; pill: string }> = {
+  ahead: { label: (y) => `Ahead of Year ${y}`, pill: "good" },
+  "on track": { label: (y) => `On track for Year ${y}`, pill: "good" },
+  "needs support": { label: (y) => `Working towards Year ${y}`, pill: "warn" },
+  "not enough evidence": { label: () => "Needs more practice to tell", pill: "" },
+};
+
+const COMPETENCY_PILL: Record<Competency, string> = {
+  "not started": "",
+  beginning: "bad",
+  developing: "warn",
+  competent: "good",
+  mastered: "good",
+};
+
+/** Where to practise a skill: its page in the topic tree, or the writing page. */
+function practiceHref(skill: Skill): string {
+  if (skill.practice === "writing") return `/learn/writing?skill=${skill.id}`;
+  const sub = SUBTOPICS.find((s) => s.skill_id === skill.id);
+  return sub ? `/learn/${skill.subject}/topics/${sub.id}` : `/learn/${skill.subject}`;
+}
+
+function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
+  const level = subjectLevel(profile, subject);
+  const plan = recommendedPlan(profile, subject);
+  const standing = STANDING[level.standing];
+  const skills = skillsFor(subject);
+
   return (
-    <div className="card">
-      <h2>{title}</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Outcome</th>
-            <th>What it covers</th>
-            <th>Skills mastered</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => {
-            const o = getOutcome(r.outcome);
-            return (
-              <tr key={r.outcome}>
-                <td>
-                  <strong>{o.code}</strong>
-                  {!o.codeVerified && <span className="muted small"> *</span>}
-                </td>
-                <td>
-                  {o.summary}
-                  <div className="muted small">
-                    {o.focusArea}, Stage {o.stage}
+    <div className="card stack report">
+      <div className="row spread">
+        <h2 style={{ margin: 0 }}>{title}</h2>
+        <span className={`pill ${standing.pill}`}>{standing.label(profile.yearLevel)}</span>
+      </div>
+
+      <div>
+        <div className="muted small">Curriculum level</div>
+        <div style={{ fontSize: 24, fontWeight: 800 }}>
+          {level.standing === "not enough evidence"
+            ? "Not enough practice yet"
+            : level.beyondYear6
+              ? "Working beyond Year 6"
+              : `Working at about Year ${level.workingAtYear} level`}
+        </div>
+        <div className="grid grid-2" style={{ marginTop: 12 }}>
+          {level.stages.map((s) => (
+            <div key={s.stage}>
+              <div className="small">
+                Stage {s.stage} (Years {s.stage === 2 ? "3–4" : "5–6"}): {s.secure} of {s.total} skills competent or better
+              </div>
+              <div className="progress" style={{ marginTop: 6 }}>
+                <div style={{ width: `${Math.round((s.secure / s.total) * 100)}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3>Recommended plan</h3>
+        {plan.length ? (
+          <ol className="plan">
+            {plan.map((step) => (
+              <li key={step.skill.id}>
+                <div className="row spread">
+                  <div>
+                    <strong>{step.skill.title}</strong> <span className="muted small">{getOutcome(step.skill.outcome).code}</span>
+                    <div className="small muted">{step.why}</div>
                   </div>
-                </td>
-                <td>
-                  {r.mastered} of {r.total}
-                </td>
-                <td>
-                  <span className={`pill ${r.status === "secure" ? "good" : r.status === "developing" ? "warn" : ""}`}>
-                    {r.status === "secure" ? "Secure" : r.status === "developing" ? "Developing" : "Not started"}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      {rows.some((r) => !getOutcome(r.outcome).codeVerified) && (
-        <p className="muted small" style={{ marginTop: 8 }}>
-          * Outcome code still being confirmed against the NESA syllabus.
+                  <Link className="btn secondary small no-print" href={practiceHref(step.skill)}>
+                    Practise
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="muted">Nothing to recommend yet.</p>
+        )}
+        <p className="small muted">
+          About 10 questions on the first step, a few times a week, works well. The practice page follows this plan automatically.
         </p>
-      )}
+      </div>
+
+      <div>
+        <h3>Competency in each skill</h3>
+        <div className="table-scroll">
+          <table className="skill-table">
+            <thead>
+              <tr>
+                <th>Outcome</th>
+                <th>Skill</th>
+                <th>Competency</th>
+                <th className="accuracy">Recent accuracy</th>
+              </tr>
+            </thead>
+            <tbody>
+              {skills.map((skill) => {
+                const o = getOutcome(skill.outcome);
+                const c = competency(profile, skill);
+                const accuracy = recentAccuracy(profile, skill.id);
+                return (
+                  <tr key={skill.id}>
+                    <td>
+                      <strong>{o.code}</strong>
+                      {!o.codeVerified && <span className="muted small"> *</span>}
+                      <div className="muted small">Stage {skill.stage}</div>
+                    </td>
+                    <td>
+                      {skill.title}
+                      <div className="muted small skill-desc">{skill.description}</div>
+                    </td>
+                    <td>
+                      <span className={`pill ${COMPETENCY_PILL[c]}`}>{COMPETENCY_LABELS[c]}</span>
+                      {skillState(profile, skill.id).placed && <div className="muted small">From the starting check</div>}
+                    </td>
+                    <td className="accuracy">
+                      {skill.practice === "writing" ? "–" : accuracy === null ? "–" : `${Math.round(accuracy * 100)}%`}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {skills.some((s) => !getOutcome(s.outcome).codeVerified) && (
+          <p className="muted small" style={{ marginTop: 8 }}>
+            * Outcome code still being confirmed against the NESA syllabus.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
