@@ -4,6 +4,7 @@
  */
 import { SignJWT, jwtVerify } from "jose";
 import type { Role } from "./rules";
+import { databaseUrl } from "./dburl";
 
 export const SESSION_COOKIE = "my247_session";
 export const SESSION_DAYS = 7;
@@ -17,7 +18,7 @@ export interface Session {
 
 /** Accounts switch on once a database and a signing secret are configured. Until then the site works as before. */
 export function accountsEnabled(): boolean {
-  return Boolean(process.env.DATABASE_URL && authSecret());
+  return Boolean(databaseUrl() && authSecret());
 }
 
 function authSecret(): string | null {

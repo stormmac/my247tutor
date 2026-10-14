@@ -46,16 +46,16 @@ npm run build
 
 ## Layout
 
-| Path | What's there |
-| --- | --- |
-| `src/lib/content` | The content tree (same tables and ids as the myteacher LMS database) and written questions |
-| `database/` | SQL to load the content tree into the myteacher PostgreSQL database |
-| `src/lib/curriculum` | NESA outcomes and the skill graph (prerequisites, stage, outcome code) |
-| `src/lib/practice` | Seeded question generators, answer checker, number formatting |
-| `src/lib/english/bank.ts` | Spelling, vocabulary, reading passages and writing tasks |
-| `src/lib/learner` | Mastery model, spaced review, next-skill picker, placement |
-| `src/lib/tutor` | Tutor prompt, safety checks, Claude calls |
-| `src/app` | Pages (`/learn`, `/learn/[subject]`, `/learn/writing`, `/parent`) and API routes |
+| Path                      | What's there                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| `src/lib/content`         | The content tree (same tables and ids as the myteacher LMS database) and written questions |
+| `database/`               | SQL to load the content tree into the myteacher PostgreSQL database                        |
+| `src/lib/curriculum`      | NESA outcomes and the skill graph (prerequisites, stage, outcome code)                     |
+| `src/lib/practice`        | Seeded question generators, answer checker, number formatting                              |
+| `src/lib/english/bank.ts` | Spelling, vocabulary, reading passages and writing tasks                                   |
+| `src/lib/learner`         | Mastery model, spaced review, next-skill picker, placement                                 |
+| `src/lib/tutor`           | Tutor prompt, safety checks, Claude calls                                                  |
+| `src/app`                 | Pages (`/learn`, `/learn/[subject]`, `/learn/writing`, `/parent`) and API routes           |
 
 ## Content tree and the myteacher database
 
@@ -82,7 +82,8 @@ To switch accounts on:
    works, including Azure and Supabase. On Supabase, use the **Transaction pooler** connection string
    from Connect (the direct one is IPv6 only, which Vercel can't reach).
 2. In Vercel → Settings → Environment Variables, set `DATABASE_URL`, `AUTH_SECRET`
-   (`openssl rand -base64 32`) and `ADMIN_EMAILS` (your email).
+   (`openssl rand -base64 32`) and `ADMIN_EMAILS` (your email). If Vercel's Supabase integration
+   already set `POSTGRES_URL`, that is used when `DATABASE_URL` is missing.
 3. Run `DATABASE_URL=… npm run db:migrate` once to create the tables (`database/006_my247tutor_accounts.sql`).
 4. Redeploy, then sign up with your admin email.
 
