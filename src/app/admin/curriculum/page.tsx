@@ -20,6 +20,14 @@ const TYPE_NAMES: Record<ContentQuestion["question_type"], string> = {
   ordering: "put in order",
 };
 
+const LEVEL_NAMES: Record<ContentQuestion["difficulty"], string> = {
+  very_easy: "very easy",
+  easy: "easy",
+  medium: "medium",
+  hard: "hard",
+  very_hard: "very hard",
+};
+
 const PRACTICE: Record<string, string> = {
   generated: "questions made fresh each time and marked exactly",
   comprehension: "reading passages with multiple-choice questions",
@@ -127,9 +135,9 @@ function SubtopicNode({ subtopic }: { subtopic: Subtopic }) {
       <summary>
         {subtopic.title}{" "}
         <span className="muted small">
-          {skill
-            ? `${skill.outcome} · ${questions.length ? `${plural(questions.length, "question")} + ` : ""}fresh questions`
-            : plural(questions.length, "question")}
+          {[subtopic.outcome_code, plural(questions.length, "question"), skill?.practice === "generated" && "then fresh questions"]
+            .filter(Boolean)
+            .join(" · ")}
         </span>
       </summary>
       {subtopic.description && <p className="small muted node-note">{subtopic.description}</p>}
@@ -155,7 +163,7 @@ function QuestionItem({ q }: { q: ContentQuestion }) {
     <li>
       <div>{q.question_text}</div>
       <div className="small muted">
-        {TYPE_NAMES[q.question_type]} · {q.difficulty} · {plural(q.points, "point")}
+        {TYPE_NAMES[q.question_type]} · {LEVEL_NAMES[q.difficulty]} · {plural(q.points, "point")}
       </div>
       {q.answer_options ? (
         <ul className="small">

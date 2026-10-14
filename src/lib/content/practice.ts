@@ -1,6 +1,6 @@
 import type { Question } from "../practice/types";
 import { Rng } from "../practice/rng";
-import type { ContentQuestion, Subtopic } from "./types";
+import { type ContentQuestion, DIFFICULTIES, type Subtopic } from "./types";
 
 const HINTS: Record<ContentQuestion["question_type"], string[]> = {
   multiple_choice: [
@@ -55,4 +55,13 @@ export function toPracticeQuestion(q: ContentQuestion, seed: number): Question {
 /** Progress for a subtopic is stored under its skill when it has one, otherwise under the subtopic's own id. */
 export function progressKey(subtopic: Subtopic): string {
   return subtopic.skill_id ?? subtopic.id;
+}
+
+/**
+ * The order to practise a subtopic's written questions in: easiest level first, building to the
+ * hardest, shuffled within each level so a second round isn't the same.
+ */
+export function practiceOrder(questions: ContentQuestion[], rng: Rng): number[] {
+  const rank = (q: ContentQuestion) => DIFFICULTIES.indexOf(q.difficulty);
+  return DIFFICULTIES.flatMap((_, level) => rng.shuffle(questions.flatMap((q, i) => (rank(q) === level ? [i] : []))));
 }

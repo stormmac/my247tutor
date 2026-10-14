@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { progressKey, toPracticeQuestion } from "../content/practice";
+import { practiceOrder, progressKey, toPracticeQuestion } from "../content/practice";
 import { contentSeedSql } from "../content/sql";
 import {
   COUNTRIES,
@@ -12,10 +12,13 @@ import {
   YEAR_LEVELS,
   questionsOf,
   subtopicPath,
+  subtopicsOf,
   topicsFor,
   yearsWithContent,
 } from "../content/tree";
+import { OUTCOMES } from "../curriculum/outcomes";
 import { SKILLS } from "../curriculum/skills";
+import { Rng } from "../practice/rng";
 import { checkAnswer, type Question } from "../practice";
 import { textMatches } from "../practice/checker";
 import { buildContextPrompt } from "../tutor/prompt";
@@ -161,5 +164,65 @@ describe("SQL export", () => {
 
   it("writes JSONB answers as valid JSON", () => {
     expect(contentSeedSql()).toContain(`'"b"'::jsonb`);
+  });
+});
+
+describe("question bank", () => {
+  const LEVELS = ["very_easy", "easy", "medium", "hard", "very_hard"] as const;
+
+  it("gives every Year 3 Maths standard 15 questions, three at each level", () => {
+    const year3 = topicsFor("maths", 3).flatMap((t) => subtopicsOf(t.id));
+    const stage2 = OUTCOMES.filter((o) => o.subject === "maths" && o.stage === 2);
+    expect(stage2.length).toBe(11);
+    for (const outcome of stage2) {
+      const questions = year3.filter((s) => s.outcome_code === outcome.code).flatMap((s) => questionsOf(s.id));
+      expect(questions, outcome.code).toHaveLength(15);
+      for (const level of LEVELS)
+        expect(
+          questions.filter((q) => q.difficulty === level),
+          `${outcome.code} ${level}`,
+        ).toHaveLength(3);
+    }
+  });
+
+  it("only names standards that exist", () => {
+    for (const s of SUBTOPICS) if (s.outcome_code) expect(OUTCOMES.map((o) => o.code)).toContain(s.outcome_code);
+  });
+
+  it("works out every written sum and confirms the stored answer", () => {
+    const evaluate = (expr: string) =>
+      Function(
+        `"use strict"; return (${expr
+          .replace(/×/g, "*")
+          .replace(/÷/g, "/")
+          .replace(/−/g, "-")
+          .replace(/(\d) (?=\d{3}\b)/g, "$1")});`,
+      )() as number;
+    let checked = 0;
+    for (const q of QUESTIONS) {
+      const text = q.question_text;
+      if (!/^[\d\s.+−×÷=_?]+$/.test(text) || !text.includes("=")) continue;
+      const [left, right] = text.split("=").map((side) => side.trim());
+      const answers = Array.isArray(q.correct_answer) ? q.correct_answer : [q.correct_answer];
+      if (q.question_type === "true_false") expect(String(evaluate(left) === evaluate(right)), text).toBe(q.correct_answer);
+      else if (right === "?") expect(Number(answers[0]), text).toBeCloseTo(evaluate(left), 9);
+      else {
+        const filled = (side: string) => evaluate(side.replace("___", answers[0]));
+        expect(filled(left), text).toBeCloseTo(filled(right), 9);
+      }
+      checked++;
+    }
+    expect(checked).toBeGreaterThanOrEqual(40);
+  });
+
+  it("practises the easiest questions first, building to the hardest", () => {
+    const sub = SUBTOPICS.find((s) => s.outcome_code === "MA2-CHAN-01")!;
+    const questions = questionsOf(sub.id);
+    for (const seed of [1, 2, 3]) {
+      const order = practiceOrder(questions, new Rng(seed));
+      expect([...order].sort((a, b) => a - b)).toEqual(questions.map((_, i) => i));
+      const ranks = order.map((i) => LEVELS.indexOf(questions[i].difficulty as (typeof LEVELS)[number]));
+      expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+    }
   });
 });
