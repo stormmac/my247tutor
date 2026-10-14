@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { checkAnswer, type Question } from "@/lib/practice";
+import { Picture } from "./Picture";
 
 export type QuestionOutcome = { correct: boolean; hintsUsed: number; firstTry: boolean };
 
@@ -32,6 +33,10 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
   const [finished, setFinished] = useState(false);
 
   const kind = question.answer.kind;
+  const typed = kind !== "choice" && kind !== "multi" && kind !== "order";
+  // Fill-in-the-blank: the answer box goes in the gap in the sentence.
+  const gap = typed ? question.prompt.split("___") : [];
+  const inline = gap.length === 2;
 
   function rawAnswer(): string {
     if (kind === "choice") return selected === null ? "" : String(selected);
@@ -66,6 +71,22 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
     } else onTryAgain?.();
   }
 
+  function answerBox(className?: string) {
+    return (
+      <input
+        type="text"
+        className={className}
+        inputMode={kind === "text" ? "text" : "decimal"}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        disabled={finished}
+        aria-label="Your answer"
+        autoFocus
+        autoComplete="off"
+      />
+    );
+  }
+
   function showHint() {
     const n = Math.min(hintsShown + 1, question.hints.length);
     setHintsShown(n);
@@ -80,9 +101,20 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
           {question.passage.text}
         </div>
       )}
-      <div className="question">{question.prompt}</div>
-
       <form onSubmit={submit}>
+        <div className="question">
+          {inline ? (
+            <>
+              {gap[0]}
+              {answerBox("blank-input")}
+              {gap[1]}
+            </>
+          ) : (
+            question.prompt
+          )}
+        </div>
+        {question.picture && <Picture picture={question.picture} />}
+
         {kind === "choice" && (
           <div className="choices" role="radiogroup">
             {question.choices!.map((c, i) => {
@@ -167,20 +199,7 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
             ))}
           </ol>
         )}
-        {kind !== "choice" && kind !== "multi" && kind !== "order" && (
-          <div className="answer-row">
-            <input
-              type="text"
-              inputMode={kind === "text" ? "text" : "decimal"}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={finished}
-              aria-label="Your answer"
-              autoFocus
-              autoComplete="off"
-            />
-          </div>
-        )}
+        {typed && !inline && <div className="answer-row">{answerBox()}</div>}
 
         <div className="row" style={{ marginTop: 16 }}>
           {!finished && <button className="btn">Check</button>}

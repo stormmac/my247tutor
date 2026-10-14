@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { QuestionView, type QuestionOutcome } from "@/components/QuestionView";
 import { questionFocus, useSuniFocus, useSuniSay } from "@/components/SuniCompanion";
 import type { useProfile } from "@/components/useProfile";
-import { progressKey, toPracticeQuestion } from "@/lib/content/practice";
+import { practiceOrder, progressKey, toPracticeQuestion } from "@/lib/content/practice";
 import { questionsOf } from "@/lib/content/tree";
 import type { Subtopic } from "@/lib/content/types";
 import { getOutcome } from "@/lib/curriculum/outcomes";
@@ -28,8 +28,9 @@ export function FocusedPractice({
   const written = useMemo(() => questionsOf(subtopic.id), [subtopic.id]);
 
   const [seed, setSeed] = useState(randomSeed);
-  // Written question sets go through every question in a shuffled order before any repeats.
-  const [order, setOrder] = useState(() => new Rng(randomSeed()).shuffle(written.map((_, i) => i)));
+  // Written questions come first, easiest to hardest, and all of them before any repeats.
+  // A subtopic with a skill then carries on with fresh generated questions.
+  const [order, setOrder] = useState(() => practiceOrder(written, new Rng(randomSeed())));
   const [position, setPosition] = useState(0);
   const [hintsShown, setHintsShown] = useState(0);
   const [answered, setAnswered] = useState(false);
@@ -37,7 +38,7 @@ export function FocusedPractice({
   const [justMastered, setJustMastered] = useState(false);
 
   const question = useMemo(
-    () => (skill ? generateQuestion(skill.id, seed) : toPracticeQuestion(written[order[position]], seed)),
+    () => (position < order.length ? toPracticeQuestion(written[order[position]], seed) : generateQuestion(skill!.id, seed)),
     [skill, written, order, position, seed],
   );
   const state = skillState(profile, key);
@@ -72,15 +73,13 @@ export function FocusedPractice({
     setHintsShown(0);
     setAnswered(false);
     setSeed(randomSeed());
-    if (!skill) {
-      if (position + 1 < order.length) setPosition(position + 1);
-      else {
-        // Start a new round, without repeating the question that was just shown.
-        let fresh = new Rng(randomSeed()).shuffle(written.map((_, i) => i));
-        if (fresh.length > 1 && fresh[0] === order[position]) fresh = [...fresh.slice(1), fresh[0]];
-        setOrder(fresh);
-        setPosition(0);
-      }
+    if (position + 1 < order.length || skill) setPosition(position + 1);
+    else {
+      // Start a new round, without repeating the question that was just shown.
+      let fresh = practiceOrder(written, new Rng(randomSeed()));
+      if (fresh.length > 1 && fresh[0] === order[position]) fresh = [...fresh.slice(1), fresh[0]];
+      setOrder(fresh);
+      setPosition(0);
     }
   }
 

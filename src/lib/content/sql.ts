@@ -29,8 +29,8 @@ function insert(table: string, rows: object[]): string {
 }
 
 /**
- * The whole content tree as SQL for the myteacher database (run after its migrations 001–003
- * and database/004_add_skill_link.sql). Re-running it is safe: existing rows are left alone.
+ * The whole content tree as SQL for the myteacher database (run after its migrations 001–003,
+ * database/004_add_skill_link.sql and 007_question_levels.sql). Re-running it is safe: existing rows are left alone.
  */
 export function contentSeedSql(): string {
   return [
@@ -49,6 +49,7 @@ export function contentSeedSql(): string {
         ...q,
         answer_options: new Jsonb(q.answer_options),
         correct_answer: new Jsonb(q.correct_answer),
+        picture: new Jsonb(q.picture ?? null),
         created_by: CONTENT_USER_ID,
       })),
     ),

@@ -1,6 +1,8 @@
 import { getSkill } from "../curriculum/skills";
 import type { Subject as SubjectKey, YearLevel as YearNumber } from "../curriculum/types";
-import type { ContentQuestion, Country, QuestionType, State, Subject, Subtopic, Topic, YearLevel } from "./types";
+import * as Y3 from "./bank/maths-year3";
+import { choice, multi, ordering, type QuestionSpec, trueFalse, typed } from "./spec";
+import type { ContentQuestion, Country, State, Subject, Subtopic, Topic, YearLevel } from "./types";
 
 // ---------- Reference data: copied from the myteacher seed (database/seeds/001_sample_data.sql), same ids ----------
 
@@ -68,11 +70,9 @@ export function yearLevelId(year: YearNumber): string {
  */
 const id = (prefix: string, n: number) => `${prefix}000000-0000-0000-0000-${String(n).padStart(12, "0")}`;
 
-type QuestionSpec = Omit<ContentQuestion, "id" | "subtopic_id" | "points" | "difficulty"> & {
-  n: number;
-  difficulty?: ContentQuestion["difficulty"];
-};
-type SubtopicSpec = { n: number; skill: string } | { n: number; title: string; description: string; questions: QuestionSpec[] };
+type SubtopicSpec =
+  | { n: number; skill: string; questions?: QuestionSpec[] }
+  | { n: number; title: string; description: string; outcome?: string; questions: QuestionSpec[] };
 interface TopicSpec {
   n: number;
   subject: SubjectKey;
@@ -82,44 +82,24 @@ interface TopicSpec {
   subtopics: SubtopicSpec[];
 }
 
-const LETTERS = "abcdefgh";
-const options = (texts: string[]) => texts.map((text, i) => ({ id: LETTERS[i], text }));
-
-function choice(n: number, question_text: string, texts: string[], correct: number, explanation: string): QuestionSpec {
-  return {
-    n,
-    question_text,
-    question_type: "multiple_choice",
-    answer_options: options(texts),
-    correct_answer: LETTERS[correct],
-    explanation,
-  };
-}
-function trueFalse(n: number, question_text: string, correct: boolean, explanation: string): QuestionSpec {
-  return { n, question_text, question_type: "true_false", answer_options: null, correct_answer: String(correct), explanation };
-}
-function typed(type: QuestionType, n: number, question_text: string, accepted: string | string[], explanation: string): QuestionSpec {
-  return { n, question_text, question_type: type, answer_options: null, correct_answer: accepted, explanation };
-}
-function multi(n: number, question_text: string, texts: string[], correct: number[], explanation: string): QuestionSpec {
-  const correct_answer = correct.map((i) => LETTERS[i]);
-  return { n, question_text, question_type: "multi_select", answer_options: options(texts), correct_answer, explanation };
-}
-/** Options are written in the correct order; the app shuffles them on screen. */
-function ordering(n: number, question_text: string, inOrder: string[], explanation: string): QuestionSpec {
-  const opts = options(inOrder);
-  return { n, question_text, question_type: "ordering", answer_options: opts, correct_answer: opts.map((o) => o.id), explanation };
-}
-
 const TOPIC_SPECS: TopicSpec[] = [
-  // ---------- Mathematics, Year 3 ----------
+  // ---------- Mathematics, Year 3: 15 questions for each Stage 2 standard (see bank/maths-year3.ts) ----------
   {
     n: 301,
     subject: "maths",
     year: 3,
     title: "Number and place value",
-    description: "Reading, writing and partitioning numbers.",
-    subtopics: [{ n: 30101, skill: "ma2-place-value" }],
+    description: "Reading, writing and partitioning numbers, and first steps with decimals.",
+    subtopics: [
+      { n: 30101, skill: "ma2-place-value", questions: Y3.PLACE_VALUE },
+      {
+        n: 30102,
+        title: "Tenths and hundredths",
+        description: "Reads, writes and compares decimals with tenths and hundredths.",
+        outcome: "MA2-RN-02",
+        questions: Y3.DECIMALS,
+      },
+    ],
   },
   {
     n: 302,
@@ -128,8 +108,8 @@ const TOPIC_SPECS: TopicSpec[] = [
     title: "Addition and subtraction",
     description: "Written and mental strategies for adding and subtracting.",
     subtopics: [
-      { n: 30201, skill: "ma2-add-sub" },
-      { n: 30202, skill: "ma2-missing-addend" },
+      { n: 30201, skill: "ma2-add-sub", questions: Y3.ADD_SUB },
+      { n: 30202, skill: "ma2-missing-addend", questions: Y3.MISSING_ADD },
     ],
   },
   {
@@ -137,54 +117,80 @@ const TOPIC_SPECS: TopicSpec[] = [
     subject: "maths",
     year: 3,
     title: "Multiplication and division",
-    description: "Multiplication facts and groups.",
-    subtopics: [{ n: 30301, skill: "ma2-times-tables" }],
+    description: "Multiplication facts, groups and missing numbers.",
+    subtopics: [
+      { n: 30301, skill: "ma2-times-tables", questions: Y3.TIMES },
+      {
+        n: 30302,
+        title: "Missing numbers in × and ÷",
+        description: "Finds the missing number in multiplication and division number sentences.",
+        outcome: "MA2-MR-02",
+        questions: Y3.MISSING_TIMES,
+      },
+    ],
+  },
+  {
+    n: 305,
+    subject: "maths",
+    year: 3,
+    title: "Fractions",
+    description: "Halves, quarters, eighths and fractions on a number line.",
+    subtopics: [
+      {
+        n: 30501,
+        title: "Halves, quarters and eighths",
+        description: "Names, compares and finds fractions of shapes, collections and number lines.",
+        outcome: "MA2-PF-01",
+        questions: Y3.FRACTIONS,
+      },
+    ],
   },
   {
     n: 304,
     subject: "maths",
     year: 3,
     title: "Measurement and time",
-    description: "Reading clocks and working with units of time.",
+    description: "Measuring length and working with time.",
     subtopics: [
       {
         n: 30401,
         title: "Telling the time",
         description: "Reads analog and digital times and works out how long things take.",
-        questions: [
-          choice(
-            3040101,
-            "The minute hand points to the 6 and the hour hand is halfway between the 3 and the 4. What time is it?",
-            ["6:30", "3:30", "4:30", "3:06"],
-            1,
-            "When the minute hand points to the 6, it's half past. The hour hand has passed the 3, so it's half past 3, or 3:30.",
-          ),
-          typed("short_answer", 3040102, "How many minutes are there in 1 hour?", "60", "There are 60 minutes in 1 hour."),
-          typed(
-            "short_answer",
-            3040103,
-            "How many minutes are there from 2:15 to 2:45?",
-            "30",
-            "From 15 minutes past to 45 minutes past is 45 − 15 = 30 minutes.",
-          ),
-          trueFalse(
-            3040104,
-            "Quarter past 7 is the same time as 7:15.",
-            true,
-            "A quarter of an hour is 15 minutes, so quarter past 7 is 7:15.",
-          ),
-          ordering(
-            3040105,
-            "Put these morning times in order, from earliest to latest.",
-            ["7:05", "7:50", "8:30", "9:45"],
-            "Compare the hours first, then the minutes: 7:05, 7:50, 8:30, 9:45.",
-          ),
-          typed("fill_blank", 3040106, "There are ___ days in a week.", ["7", "seven"], "A week has 7 days, Monday to Sunday."),
-        ],
+        outcome: "MA2-NSM-02",
+        questions: Y3.TIME,
+      },
+      {
+        n: 30402,
+        title: "Length",
+        description: "Measures and converts lengths in metres, centimetres and millimetres.",
+        outcome: "MA2-GM-02",
+        questions: Y3.LENGTH,
       },
     ],
   },
-
+  {
+    n: 306,
+    subject: "maths",
+    year: 3,
+    title: "Data and chance",
+    description: "Reading tables and graphs, and how likely things are.",
+    subtopics: [
+      {
+        n: 30601,
+        title: "Tables and graphs",
+        description: "Reads and compares data in tables, dot plots, picture graphs and column graphs.",
+        outcome: "MA2-DATA-02",
+        questions: Y3.DATA,
+      },
+      {
+        n: 30602,
+        title: "Chance",
+        description: "Describes how likely events are and compares chances.",
+        outcome: "MA2-CHAN-01",
+        questions: Y3.CHANCE,
+      },
+    ],
+  },
   // ---------- Mathematics, Year 4 ----------
   {
     n: 401,
@@ -732,18 +738,20 @@ for (const spec of TOPIC_SPECS) {
         description: skill.description,
         sort_order: i + 1,
         skill_id: skill.id,
+        outcome_code: skill.outcome,
       });
-      return;
+    } else {
+      SUBTOPICS.push({
+        id: subtopicId,
+        topic_id: topicId,
+        title: sub.title,
+        description: sub.description,
+        sort_order: i + 1,
+        skill_id: null,
+        outcome_code: sub.outcome ?? null,
+      });
     }
-    SUBTOPICS.push({
-      id: subtopicId,
-      topic_id: topicId,
-      title: sub.title,
-      description: sub.description,
-      sort_order: i + 1,
-      skill_id: null,
-    });
-    for (const { n, difficulty, ...q } of sub.questions) {
+    for (const { n, difficulty, ...q } of sub.questions ?? []) {
       QUESTIONS.push({ id: id("61", n), subtopic_id: subtopicId, difficulty: difficulty ?? "medium", points: 1, ...q });
     }
   });

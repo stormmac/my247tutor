@@ -7,6 +7,8 @@
  * The one addition is `skill_id` on subtopics (see database/004_add_skill_link.sql).
  */
 
+import type { Picture } from "./picture";
+
 export interface Country {
   id: string;
   name: string;
@@ -60,7 +62,16 @@ export interface Subtopic {
    * tracking this subtopic uses. Subtopics without a skill use their own written questions.
    */
   skill_id: string | null;
+  /**
+   * my247tutor extension: the NESA outcome (standard) this subtopic's questions assess. Taken from
+   * the skill when there is one (see database/007_question_levels.sql).
+   */
+  outcome_code: string | null;
 }
+
+/** Five levels, so each standard can run from very easy to very hard. */
+export const DIFFICULTIES = ["very_easy", "easy", "medium", "hard", "very_hard"] as const;
+export type Difficulty = (typeof DIFFICULTIES)[number];
 
 export type QuestionType = "multiple_choice" | "true_false" | "short_answer" | "multi_select" | "fill_blank" | "ordering";
 
@@ -74,7 +85,7 @@ export interface ContentQuestion {
   subtopic_id: string;
   question_text: string;
   question_type: QuestionType;
-  difficulty: "easy" | "medium" | "hard";
+  difficulty: Difficulty;
   /** For multiple_choice, multi_select and ordering. */
   answer_options: AnswerOption[] | null;
   /**
@@ -85,4 +96,6 @@ export interface ContentQuestion {
   correct_answer: string | string[];
   explanation: string;
   points: number;
+  /** my247tutor extension: a drawing to show with the question (see picture.ts and database/007). */
+  picture?: Picture | null;
 }
