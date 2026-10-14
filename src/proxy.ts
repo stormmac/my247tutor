@@ -1,13 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isSameOrigin } from "@/lib/auth/rules";
-import { accountsEnabled, SESSION_COOKIE, verifySession } from "@/lib/auth/session";
+import { guestAccess, isSameOrigin } from "@/lib/auth/rules";
+import { accountsEnabled, SESSION_COOKIE, TRIAL_COOKIE, verifySession, verifyTrial } from "@/lib/auth/session";
 import { AUTH_COOKIE, authToken, safeEqual, sitePassword } from "@/lib/auth/sitePassword";
 
 /** Open to everyone, even with the site password or accounts switched on. */
 const SITE_PASSWORD_PUBLIC = ["/login", "/api/login"];
-/** Need no account: the home page, signing in and up, and the site-password page. */
+/** Need no account: the home page, the trial choice, signing in and up, and the site-password page. */
 const ACCOUNT_PUBLIC = [
   "/",
+  "/start",
+  "/api/auth/trial",
   "/signin",
   "/signup",
   "/login",
@@ -27,11 +29,12 @@ function securityHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
-function denied(request: NextRequest, status: 401 | 403, message: string, page: string): NextResponse {
+function denied(request: NextRequest, status: 401 | 403, message: string, page: string, params: Record<string, string> = {}): NextResponse {
   const { pathname, search } = request.nextUrl;
   if (pathname.startsWith("/api/")) return securityHeaders(NextResponse.json({ error: message }, { status }));
   const url = new URL(page, request.url);
   url.search = "";
+  for (const [name, value] of Object.entries(params)) url.searchParams.set(name, value);
   if (status === 401) url.searchParams.set("next", pathname + search);
   return securityHeaders(NextResponse.redirect(url));
 }
@@ -54,8 +57,16 @@ export async function proxy(request: NextRequest) {
   // 2. Accounts, when a database and AUTH_SECRET are set. Route handlers check the database again.
   if (accountsEnabled() && !ACCOUNT_PUBLIC.includes(pathname)) {
     const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
-    if (!session) return denied(request, 401, "Please sign in.", "/signin");
     const adminOnly = pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin/");
+    if (!session) {
+      if (adminOnly) return denied(request, 401, "Please sign in.", "/signin");
+      // Without an account, a free trial lets a visitor try the site first.
+      const access = guestAccess(await verifyTrial(request.cookies.get(TRIAL_COOKIE)?.value));
+      if (access === "allow") return securityHeaders(NextResponse.next());
+      if (access === "trial-over")
+        return denied(request, 401, "Your free hour is up. Please create an account.", "/signup", { trial: "over" });
+      return denied(request, 401, "Please sign in.", "/start");
+    }
     if (adminOnly && session.role !== "admin") return denied(request, 403, "You don't have access to this.", "/");
   }
 

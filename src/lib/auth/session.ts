@@ -62,3 +62,32 @@ export async function sessionCookie(session: Session): Promise<string> {
 export function clearedSessionCookie(): string {
   return `${SESSION_COOKIE}=; Max-Age=0; ${cookieFlags()}`;
 }
+
+/** A free trial lets a visitor use the site for this long before they need an account. */
+export const TRIAL_COOKIE = "my247_trial";
+export const TRIAL_MINUTES = 60;
+/** The cookie outlives the trial so the site remembers it was used. */
+const TRIAL_COOKIE_DAYS = 30;
+
+/** When this browser's free trial ends, signed so it can't be extended by editing the cookie. */
+export async function signTrial(now = Date.now(), secret?: string): Promise<string> {
+  return new SignJWT({ typ: "trial", end: now + TRIAL_MINUTES * 60_000 })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt(Math.floor(now / 1000))
+    .sign(key(secret));
+}
+
+/** The trial's end time in milliseconds, or null when there is no genuine trial cookie. */
+export async function verifyTrial(token: string | undefined, secret?: string): Promise<number | null> {
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, key(secret), { algorithms: ["HS256"] });
+    return payload.typ === "trial" && typeof payload.end === "number" ? payload.end : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function trialCookie(now = Date.now()): Promise<string> {
+  return `${TRIAL_COOKIE}=${await signTrial(now)}; Max-Age=${TRIAL_COOKIE_DAYS * 86_400}; ${cookieFlags()}`;
+}

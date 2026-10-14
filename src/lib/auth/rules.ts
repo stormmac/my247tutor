@@ -72,3 +72,12 @@ export function temporaryPassword(random: (n: number) => number): string {
   const pick = () => words[random(words.length)];
   return `${pick()}-${pick()}-${pick()}-${String(1000 + random(9000))}`;
 }
+
+/**
+ * Where a visitor without an account goes: in, while their free trial lasts; to the choice
+ * between a trial and an account if they haven't had one; to sign up once it has run out.
+ */
+export function guestAccess(trialEnd: number | null, now = Date.now()): "allow" | "start" | "trial-over" {
+  if (trialEnd === null) return "start";
+  return now < trialEnd ? "allow" : "trial-over";
+}
