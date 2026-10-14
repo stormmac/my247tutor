@@ -30,14 +30,7 @@ export const LENGTH = levels(6050101, {
     (n) => trueFalse(n, "1 centimetre is the same length as 10 millimetres.", true, "Every centimetre is split into 10 millimetres."),
   ],
   easy: [
-    (n) =>
-      typed(
-        "fill_blank",
-        n,
-        "3.5 m = ___ cm",
-        ["350", "350 cm"],
-        "There are 100 cm in 1 metre, so 3.5 × 100 = 350 cm.",
-      ),
+    (n) => typed("fill_blank", n, "3.5 m = ___ cm", ["350", "350 cm"], "There are 100 cm in 1 metre, so 3.5 × 100 = 350 cm."),
     (n) =>
       pic(
         { kind: "rectangle", width: 7, height: 4, top: "7.5 m", side: "4 m" },
@@ -59,14 +52,7 @@ export const LENGTH = levels(6050101, {
       ),
   ],
   medium: [
-    (n) =>
-      typed(
-        "fill_blank",
-        n,
-        "2.75 km = ___ m",
-        ["2750", "2750 m"],
-        "There are 1000 m in 1 km, so 2.75 × 1000 = 2750 m.",
-      ),
+    (n) => typed("fill_blank", n, "2.75 km = ___ m", ["2750", "2750 m"], "There are 1000 m in 1 km, so 2.75 × 1000 = 2750 m."),
     (n) =>
       ordering(
         n,
@@ -210,23 +196,11 @@ export const AREA = levels(6050201, {
   ],
   easy: [
     (n) =>
-      typed(
-        "fill_blank",
-        n,
-        "1 hectare = ___ m²",
-        ["10 000", "10000"],
-        "A hectare is a square 100 m by 100 m, and 100 × 100 = 10 000 m².",
-      ),
+      typed("fill_blank", n, "1 hectare = ___ m²", ["10 000", "10000"], "A hectare is a square 100 m by 100 m, and 100 × 100 = 10 000 m²."),
     (n) =>
       pic(
         { kind: "rectangle", width: 8, height: 3, top: "8 m", side: "3.5 m" },
-        typed(
-          "short_answer",
-          n,
-          "Look at the rectangle. What is its area?",
-          ["28", "28 m²"],
-          "Area = length × width = 8 × 3.5 = 28 m².",
-        ),
+        typed("short_answer", n, "Look at the rectangle. What is its area?", ["28", "28 m²"], "Area = length × width = 8 × 3.5 = 28 m²."),
       ),
     (n) =>
       choice(
@@ -571,7 +545,13 @@ export const VOLUME = levels(6050401, {
           "Each layer is 3 × 2 = 6 cubes, and there are 2 layers. 6 × 2 = 12 cm³.",
         ),
       ),
-    (n) => trueFalse(n, "A 1 cm³ container holds exactly 1 mL of water.", true, "1 cubic centimetre and 1 millilitre are the same amount of space."),
+    (n) =>
+      trueFalse(
+        n,
+        "A 1 cm³ container holds exactly 1 mL of water.",
+        true,
+        "1 cubic centimetre and 1 millilitre are the same amount of space.",
+      ),
     (n) =>
       pic(
         { kind: "jug", max: 2, value: 1.5, step: 0.25, unit: "L" },
@@ -596,8 +576,7 @@ export const VOLUME = levels(6050401, {
           "Volume = length × width × height = 4 × 3 × 2 = 24 cm³.",
         ),
       ),
-    (n) =>
-      typed("fill_blank", n, "2.5 L = ___ mL", ["2500", "2500 mL"], "There are 1000 mL in 1 L, so 2.5 × 1000 = 2500 mL."),
+    (n) => typed("fill_blank", n, "2.5 L = ___ mL", ["2500", "2500 mL"], "There are 1000 mL in 1 L, so 2.5 × 1000 = 2500 mL."),
     (n) =>
       choice(
         n,
@@ -695,14 +674,7 @@ export const VOLUME = levels(6050401, {
 /** MA3-NSM-01: mass in grams, kilograms and tonnes. */
 export const MASS = levels(6050501, {
   very_easy: [
-    (n) =>
-      choice(
-        n,
-        "How many kilograms are in 1 tonne?",
-        ["1000", "100", "10", "10 000"],
-        0,
-        "1 tonne is 1000 kilograms.",
-      ),
+    (n) => choice(n, "How many kilograms are in 1 tonne?", ["1000", "100", "10", "10 000"], 0, "1 tonne is 1000 kilograms."),
     (n) =>
       pic(
         { kind: "scale", max: 5, value: 3.5, step: 0.5, unit: "kg" },
@@ -843,7 +815,13 @@ export const TIME = levels(6050601, {
           "The clock shows 9:40. In the evening that is 9:40 pm, and 9 + 12 = 21, so 21:40.",
         ),
       ),
-    (n) => trueFalse(n, "00:15 is a quarter past midnight.", true, "In 24-hour time the day starts at 00:00 (midnight), so 00:15 is 15 minutes after midnight."),
+    (n) =>
+      trueFalse(
+        n,
+        "00:15 is a quarter past midnight.",
+        true,
+        "In 24-hour time the day starts at 00:00 (midnight), so 00:15 is 15 minutes after midnight.",
+      ),
   ],
   easy: [
     (n) =>
@@ -854,14 +832,7 @@ export const TIME = levels(6050601, {
         ["85", "85 minutes"],
         "13:45 to 14:00 is 15 minutes, 14:00 to 15:00 is 60 minutes, and 15:00 to 15:10 is 10 minutes. 15 + 60 + 10 = 85 minutes.",
       ),
-    (n) =>
-      typed(
-        "fill_blank",
-        n,
-        "In 12-hour time, 18:25 is ___ pm.",
-        ["6:25", "6:25 pm", "6:25pm"],
-        "18 − 12 = 6, so 18:25 is 6:25 pm.",
-      ),
+    (n) => typed("fill_blank", n, "In 12-hour time, 18:25 is ___ pm.", ["6:25", "6:25 pm", "6:25pm"], "18 − 12 = 6, so 18:25 is 6:25 pm."),
     (n) =>
       pic(
         {
@@ -1388,7 +1359,8 @@ export const ANGLES = levels(6030101, {
           "It is bigger than a right angle (90°) but smaller than a straight angle (180°), so it is obtuse.",
         ),
       ),
-    (n) => trueFalse(n, "Angles on a straight line add up to 180°.", true, "A straight line is half a full turn, and half of 360° is 180°."),
+    (n) =>
+      trueFalse(n, "Angles on a straight line add up to 180°.", true, "A straight line is half a full turn, and half of 360° is 180°."),
     (n) =>
       pic(
         { kind: "angle", degrees: 60 },
@@ -1424,7 +1396,14 @@ export const ANGLES = levels(6030101, {
           "It is more than a straight angle (180°) but less than a full turn (360°), so it is a reflex angle.",
         ),
       ),
-    (n) => typed("fill_blank", n, "Angles at a point add up to ___°.", ["360", "360°"], "Angles all the way around a point make a full turn, which is 360°."),
+    (n) =>
+      typed(
+        "fill_blank",
+        n,
+        "Angles at a point add up to ___°.",
+        ["360", "360°"],
+        "Angles all the way around a point make a full turn, which is 360°.",
+      ),
   ],
   medium: [
     (n) =>
@@ -1534,13 +1513,7 @@ export const COORDINATES = levels(6030401, {
     (n) =>
       pic(
         { kind: "number_line", from: -5, to: 5, jumps: 10, dotAt: 2, labelEvery: true },
-        choice(
-          n,
-          "What number is the dot on?",
-          ["−3", "3", "−2", "−4"],
-          0,
-          "The dot is 3 steps to the left of 0, so it is on −3.",
-        ),
+        choice(n, "What number is the dot on?", ["−3", "3", "−2", "−4"], 0, "The dot is 3 steps to the left of 0, so it is on −3."),
       ),
   ],
   easy: [

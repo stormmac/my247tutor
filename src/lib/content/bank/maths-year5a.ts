@@ -24,7 +24,13 @@ export const PLACE_VALUE = levels(5010101, {
         "45 206",
         "45 thousands, 2 hundreds, 0 tens and 6 ones. The zero holds the tens place: 45 206.",
       ),
-    (n) => trueFalse(n, "Every even number is a multiple of 2.", true, "Even numbers are the numbers you say when you count by 2s, so they are all multiples of 2."),
+    (n) =>
+      trueFalse(
+        n,
+        "Every even number is a multiple of 2.",
+        true,
+        "Even numbers are the numbers you say when you count by 2s, so they are all multiples of 2.",
+      ),
   ],
   easy: [
     (n) =>
@@ -71,14 +77,7 @@ export const PLACE_VALUE = levels(5010101, {
         [0, 2, 3],
         "A factor divides 24 with nothing left over. 3 × 8 = 24 and 6 × 4 = 24, so 3, 6 and 8 are factors. 5 and 9 leave a remainder.",
       ),
-    (n) =>
-      typed(
-        "fill_blank",
-        n,
-        "The multiples of 6 are 6, 12, 18, 24, ___",
-        "30",
-        "Multiples of 6 go up by 6 each time: 24 + 6 = 30.",
-      ),
+    (n) => typed("fill_blank", n, "The multiples of 6 are 6, 12, 18, 24, ___", "30", "Multiples of 6 go up by 6 each time: 24 + 6 = 30."),
   ],
   hard: [
     (n) =>
@@ -291,14 +290,7 @@ export const PERCENT = levels(5030601, {
         ["1/4", "one quarter", "a quarter"],
         "25% is 25 out of 100. Four lots of 25 make 100, so 25% is one quarter, 1/4.",
       ),
-    (n) =>
-      choice(
-        n,
-        "Which decimal is equal to 75%?",
-        ["0.75", "7.5", "0.075", "75"],
-        0,
-        "75% is 75 hundredths, which is written 0.75.",
-      ),
+    (n) => choice(n, "Which decimal is equal to 75%?", ["0.75", "7.5", "0.075", "75"], 0, "75% is 75 hundredths, which is written 0.75."),
     (n) =>
       multi(
         n,
@@ -377,7 +369,14 @@ export const ADD_SUB = levels(5030201, {
     (n) => trueFalse(n, "1000 − 1 = 999", true, "One less than 1000 is 999."),
   ],
   easy: [
-    (n) => typed("short_answer", n, "12 345 + 2000 = ?", "14 345", "Only the thousands change: 12 thousands and 2 thousands make 14 thousands, so 14 345."),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "12 345 + 2000 = ?",
+        "14 345",
+        "Only the thousands change: 12 thousands and 2 thousands make 14 thousands, so 14 345.",
+      ),
     (n) => typed("short_answer", n, "3.6 + 2.5 = ?", "6.1", "3 + 2 = 5 and 0.6 + 0.5 = 1.1. Then 5 + 1.1 = 6.1."),
     (n) =>
       choice(
@@ -621,7 +620,8 @@ export const NUMBER_SENTENCES = levels(5040101, {
         [1, 2, 3],
         "(2 + 2) × 6 = 24, 30 − 6 = 24 and 24 × 1 = 24. But 2 + 2 × 6 = 2 + 12 = 14 and 4 × 3 + 2 = 14.",
       ),
-    (n) => typed("fill_blank", n, "5 × 8 = 10 × ___", "4", "5 × 8 = 40, and 10 × 4 = 40. (10 is double 5, so the other number is half of 8.)"),
+    (n) =>
+      typed("fill_blank", n, "5 × 8 = 10 × ___", "4", "5 × 8 = 40, and 10 × 4 = 40. (10 is double 5, so the other number is half of 8.)"),
   ],
   very_hard: [
     (n) =>
@@ -632,7 +632,8 @@ export const NUMBER_SENTENCES = levels(5040101, {
         0,
         "(6 + 4) × 5 − 2 = 10 × 5 − 2 = 50 − 2 = 48. The others give 18, 30 and 24.",
       ),
-    (n) => typed("fill_blank", n, "(___ + 3) × 4 = 36", "6", "Something × 4 = 36, so the brackets must equal 9. Then ___ + 3 = 9, so ___ = 6."),
+    (n) =>
+      typed("fill_blank", n, "(___ + 3) × 4 = 36", "6", "Something × 4 = 36, so the brackets must equal 9. Then ___ + 3 = 9, so ___ = 6."),
     (n) =>
       typed(
         "short_answer",
@@ -804,9 +805,9 @@ export const FRACTION_OF = levels(5030501, {
       ),
   ],
   easy: [
-    (n) => typed("short_answer", n, "What is 1/4 of 24?", "6", "Divide by 4: 24 ÷ 4 = 6. Or halve 24 to get 12, then halve again to get 6."),
     (n) =>
-      choice(n, "What is 1/5 of 35?", ["5", "7", "30", "175"], 1, "To find one fifth, divide by 5: 35 ÷ 5 = 7."),
+      typed("short_answer", n, "What is 1/4 of 24?", "6", "Divide by 4: 24 ÷ 4 = 6. Or halve 24 to get 12, then halve again to get 6."),
+    (n) => choice(n, "What is 1/5 of 35?", ["5", "7", "30", "175"], 1, "To find one fifth, divide by 5: 35 ÷ 5 = 7."),
     (n) =>
       pic(
         { kind: "ruler", cm: 12, length: 10, object: "ribbon" },
@@ -839,24 +840,11 @@ export const FRACTION_OF = levels(5030501, {
           "The jug has 500 mL of water. 1/5 of 500 is 500 ÷ 5 = 100 mL.",
         ),
       ),
-    (n) =>
-      choice(
-        n,
-        "What is 1/10 of $30?",
-        ["$3", "$10", "$0.30", "$300"],
-        0,
-        "Divide by 10: $30 ÷ 10 = $3.",
-      ),
+    (n) => choice(n, "What is 1/10 of $30?", ["$3", "$10", "$0.30", "$300"], 0, "Divide by 10: $30 ÷ 10 = $3."),
   ],
   hard: [
     (n) =>
-      typed(
-        "short_answer",
-        n,
-        "What is 1/4 of 2 hours, in minutes?",
-        ["30", "30 minutes"],
-        "2 hours = 120 minutes. 120 ÷ 4 = 30 minutes.",
-      ),
+      typed("short_answer", n, "What is 1/4 of 2 hours, in minutes?", ["30", "30 minutes"], "2 hours = 120 minutes. 120 ÷ 4 = 30 minutes."),
     (n) =>
       multi(
         n,
@@ -1120,7 +1108,12 @@ export const GRAPHS = levels(5070101, {
         multi(
           n,
           "Look at the column graph. Which of these are true? Choose all that are right.",
-          ["5M recycled twice as many cans as 5K", "6T recycled 50 more cans than 6R", "5K recycled the fewest cans", "The total is 1000 cans"],
+          [
+            "5M recycled twice as many cans as 5K",
+            "6T recycled 50 more cans than 6R",
+            "5K recycled the fewest cans",
+            "The total is 1000 cans",
+          ],
           [0, 2],
           "5M has 300, which is double 5K's 150, and 150 is the smallest. 6T (200) recycled 50 fewer than 6R (250), and the total is 150 + 300 + 250 + 200 = 900.",
         ),
@@ -1427,7 +1420,8 @@ export const CHANCE = levels(5070301, {
           "There are 4 equal parts and 1 is red, so the probability is 1 out of 4, or 1/4.",
         ),
       ),
-    (n) => trueFalse(n, "An event that is impossible has a probability of 0.", true, "Probability goes from 0 (impossible) to 1 (certain)."),
+    (n) =>
+      trueFalse(n, "An event that is impossible has a probability of 0.", true, "Probability goes from 0 (impossible) to 1 (certain)."),
     (n) =>
       choice(
         n,
@@ -1502,12 +1496,7 @@ export const CHANCE = levels(5070301, {
   ],
   hard: [
     (n) =>
-      trueFalse(
-        n,
-        "A probability of 1/2 is the same as a 50% chance.",
-        true,
-        "1/2 is 50 out of 100, which is 50%. It is an even chance.",
-      ),
+      trueFalse(n, "A probability of 1/2 is the same as a 50% chance.", true, "1/2 is 50 out of 100, which is 50%. It is an even chance."),
     (n) =>
       pic(
         {

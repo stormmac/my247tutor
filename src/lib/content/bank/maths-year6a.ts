@@ -150,7 +150,12 @@ export const DECIMALS = levels(6020401, {
         "After the decimal point the places are tenths, hundredths, then thousandths. The 5 is third, so it is 5 thousandths.",
       ),
     (n) =>
-      trueFalse(n, "0.6 is the same as 0.600.", true, "Zeros at the end after the decimal point don't change the value. 6 tenths is 600 thousandths."),
+      trueFalse(
+        n,
+        "0.6 is the same as 0.600.",
+        true,
+        "Zeros at the end after the decimal point don't change the value. 6 tenths is 600 thousandths.",
+      ),
     (n) =>
       choice(
         n,
@@ -197,7 +202,14 @@ export const DECIMALS = levels(6020401, {
         [0, 2, 4],
         "Compare the tenths first. 0.51, 0.6 and 0.505 all have 5 or more tenths and something extra. 0.499 and 0.095 are less than 0.5.",
       ),
-    (n) => typed("fill_blank", n, "0.8 = ___ thousandths", "800", "0.8 is 8 tenths. Each tenth is 100 thousandths, so 8 tenths is 800 thousandths."),
+    (n) =>
+      typed(
+        "fill_blank",
+        n,
+        "0.8 = ___ thousandths",
+        "800",
+        "0.8 is 8 tenths. Each tenth is 100 thousandths, so 8 tenths is 800 thousandths.",
+      ),
     (n) =>
       choice(
         n,
@@ -372,13 +384,7 @@ export const ADD_SUB = levels(6010301, {
         ["38 000", "38000"],
         "Think in thousands: 25 thousand + 13 thousand = 38 thousand, which is 38 000.",
       ),
-    (n) =>
-      trueFalse(
-        n,
-        "Taking 3.4 away from 9.6 leaves 6.2.",
-        true,
-        "Ones: 9 − 3 = 6. Tenths: 6 − 4 = 2. So 9.6 − 3.4 = 6.2.",
-      ),
+    (n) => trueFalse(n, "Taking 3.4 away from 9.6 leaves 6.2.", true, "Ones: 9 − 3 = 6. Tenths: 6 − 4 = 2. So 9.6 − 3.4 = 6.2."),
   ],
   easy: [
     (n) =>
@@ -497,7 +503,13 @@ export const MULT_DIV = levels(6010201, {
     (n) =>
       pic(
         { kind: "array", rows: 8, columns: 12 },
-        typed("short_answer", n, "How many dots are in this array?", "96", "There are 8 rows of 12. 8 × 10 = 80 and 8 × 2 = 16, so 80 + 16 = 96."),
+        typed(
+          "short_answer",
+          n,
+          "How many dots are in this array?",
+          "96",
+          "There are 8 rows of 12. 8 × 10 = 80 and 8 × 2 = 16, so 80 + 16 = 96.",
+        ),
       ),
     (n) =>
       choice(
@@ -613,7 +625,14 @@ export const NUMBER_SENTENCES = levels(6010101, {
         0,
         "(2 + 6) × 3 − 1 = 8 × 3 − 1 = 24 − 1 = 23. The others give 14, 19 and 19.",
       ),
-    (n) => typed("fill_blank", n, "36 ÷ ___ + 5 = 9", "9", "The division part must make 4, because 4 + 5 = 9. 36 ÷ 9 = 4, so the missing number is 9."),
+    (n) =>
+      typed(
+        "fill_blank",
+        n,
+        "36 ÷ ___ + 5 = 9",
+        "9",
+        "The division part must make 4, because 4 + 5 = 9. 36 ÷ 9 = 4, so the missing number is 9.",
+      ),
   ],
   very_hard: [
     (n) =>
@@ -639,7 +658,14 @@ export const NUMBER_SENTENCES = levels(6010101, {
 /** MA3-RQF-01: comparing and ordering fractions, and adding and subtracting with related denominators. */
 export const FRACTIONS = levels(6020101, {
   very_easy: [
-    (n) => typed("short_answer", n, "2/5 + 1/5 = ?", ["3/5"], "The pieces are the same size (fifths), so add the tops: 2 fifths + 1 fifth = 3 fifths."),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "2/5 + 1/5 = ?",
+        ["3/5"],
+        "The pieces are the same size (fifths), so add the tops: 2 fifths + 1 fifth = 3 fifths.",
+      ),
     (n) => trueFalse(n, "3/8 is less than 1/2.", true, "1/2 is the same as 4/8, and 3/8 is less than 4/8."),
     (n) =>
       pic(
@@ -714,13 +740,7 @@ export const FRACTIONS = levels(6020101, {
   ],
   very_hard: [
     (n) =>
-      typed(
-        "short_answer",
-        n,
-        "2 1/4 − 5/8 = ?",
-        ["1 5/8", "13/8"],
-        "Change to eighths: 2 1/4 = 18/8. 18/8 − 5/8 = 13/8, which is 1 5/8.",
-      ),
+      typed("short_answer", n, "2 1/4 − 5/8 = ?", ["1 5/8", "13/8"], "Change to eighths: 2 1/4 = 18/8. 18/8 − 5/8 = 13/8, which is 1 5/8."),
     (n) =>
       ordering(
         n,
@@ -758,14 +778,7 @@ export const FRACTION_OF = levels(6020201, {
   ],
   easy: [
     (n) => typed("short_answer", n, "What is 3/4 of 32?", "24", "One quarter of 32 is 32 ÷ 4 = 8. Three quarters is 3 × 8 = 24."),
-    (n) =>
-      choice(
-        n,
-        "What is 2/5 of $50?",
-        ["$20", "$10", "$25", "$40"],
-        0,
-        "One fifth of $50 is $10, so two fifths is 2 × $10 = $20.",
-      ),
+    (n) => choice(n, "What is 2/5 of $50?", ["$20", "$10", "$25", "$40"], 0, "One fifth of $50 is $10, so two fifths is 2 × $10 = $20."),
     (n) => typed("fill_blank", n, "1/10 of 1 kg = ___ g", "100", "1 kg is 1000 g, and 1000 ÷ 10 = 100 g."),
   ],
   medium: [
@@ -923,7 +936,17 @@ export const GRAPHS = levels(6060101, {
           "The side goes 0, 20, 40, 60 and so on, so each gap stands for 20 L.",
         ),
       ),
-    (n) => pic(WATER_USED, typed("short_answer", n, "Look at the graph. How many litres were used on Wednesday?", ["60", "60 L"], "The Wednesday column reaches the line marked 60, so 60 L.")),
+    (n) =>
+      pic(
+        WATER_USED,
+        typed(
+          "short_answer",
+          n,
+          "Look at the graph. How many litres were used on Wednesday?",
+          ["60", "60 L"],
+          "The Wednesday column reaches the line marked 60, so 60 L.",
+        ),
+      ),
     (n) =>
       typed(
         "short_answer",
@@ -1283,8 +1306,7 @@ export const CHANCE = levels(6060301, {
           "There are 4 equal sections and 1 is red, so the chance is 1/4.",
         ),
       ),
-    (n) =>
-      trueFalse(n, "A probability of 0 means the event is impossible.", true, "Probability goes from 0 (impossible) to 1 (certain)."),
+    (n) => trueFalse(n, "A probability of 0 means the event is impossible.", true, "Probability goes from 0 (impossible) to 1 (certain)."),
     (n) =>
       choice(
         n,
@@ -1397,12 +1419,7 @@ export const CHANCE = levels(6060301, {
         multi(
           n,
           "You pick one counter from this bag. Which of these are true? Choose all that are right.",
-          [
-            "The chance of green is 0.5",
-            "The chance of red is 20%",
-            "The chance of yellow is 3/5",
-            "The chance of red or yellow is 1/2",
-          ],
+          ["The chance of green is 0.5", "The chance of red is 20%", "The chance of yellow is 3/5", "The chance of red or yellow is 1/2"],
           [0, 1, 3],
           "There are 20 counters. Green 10/20 = 0.5. Red 4/20 = 20%. Yellow 6/20 = 3/10, not 3/5. Red or yellow 10/20 = 1/2.",
         ),
@@ -1421,7 +1438,12 @@ export const CHANCE = levels(6060301, {
       choice(
         n,
         "Mae spun a spinner 40 times: red 21 times, blue 9 times and green 10 times. Which spinner did she most likely use?",
-        ["Half red, a quarter blue, a quarter green", "A third each of red, blue and green", "Three quarters red, an eighth blue, an eighth green", "Half blue, a quarter red, a quarter green"],
+        [
+          "Half red, a quarter blue, a quarter green",
+          "A third each of red, blue and green",
+          "Three quarters red, an eighth blue, an eighth green",
+          "Half blue, a quarter red, a quarter green",
+        ],
         0,
         "Red came up about 20 times out of 40 (about half). Blue and green each came up about 10 times out of 40 (about a quarter).",
       ),

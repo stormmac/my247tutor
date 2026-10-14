@@ -72,7 +72,15 @@ export const LENGTH = levels(5050101, {
       ),
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [8, 0], [3, 5]], sideLabels: ["8 cm", "7 cm", "6 cm"] },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [8, 0],
+            [3, 5],
+          ],
+          sideLabels: ["8 cm", "7 cm", "6 cm"],
+        },
         typed(
           "short_answer",
           n,
@@ -113,7 +121,14 @@ export const LENGTH = levels(5050101, {
       pic(
         {
           kind: "shape",
-          points: [[0, 0], [6, 0], [6, 2], [3, 2], [3, 5], [0, 5]],
+          points: [
+            [0, 0],
+            [6, 0],
+            [6, 2],
+            [3, 2],
+            [3, 5],
+            [0, 5],
+          ],
           sideLabels: ["6 m", "2 m", "", "", "3 m", "5 m"],
         },
         typed(
@@ -300,7 +315,14 @@ export const AREA = levels(5050201, {
       pic(
         {
           kind: "shape",
-          points: [[0, 0], [8, 0], [8, 3], [3, 3], [3, 6], [0, 6]],
+          points: [
+            [0, 0],
+            [8, 0],
+            [8, 3],
+            [3, 3],
+            [3, 6],
+            [0, 6],
+          ],
           sideLabels: ["8 m", "3 m", "5 m", "3 m", "3 m", "6 m"],
         },
         typed(
@@ -350,7 +372,15 @@ export const AREA_TRI = levels(5050301, {
       ),
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [4, 0], [4, 4]], grid: true },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [4, 0],
+            [4, 4],
+          ],
+          grid: true,
+        },
         typed(
           "short_answer",
           n,
@@ -363,7 +393,15 @@ export const AREA_TRI = levels(5050301, {
   easy: [
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [6, 0], [0, 4]], grid: true },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [0, 4],
+          ],
+          grid: true,
+        },
         typed(
           "short_answer",
           n,
@@ -392,7 +430,16 @@ export const AREA_TRI = levels(5050301, {
   medium: [
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [5, 0], [7, 3], [2, 3]], grid: true },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [5, 0],
+            [7, 3],
+            [2, 3],
+          ],
+          grid: true,
+        },
         typed(
           "short_answer",
           n,
@@ -403,7 +450,15 @@ export const AREA_TRI = levels(5050301, {
       ),
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [8, 0], [3, 4]], grid: true },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [8, 0],
+            [3, 4],
+          ],
+          grid: true,
+        },
         choice(
           n,
           "Each small square is 1 cm². What is the area of the triangle?",
@@ -423,7 +478,15 @@ export const AREA_TRI = levels(5050301, {
   hard: [
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [8, 0], [0, 5]], sideLabels: ["8 cm", "", "5 cm"] },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [8, 0],
+            [0, 5],
+          ],
+          sideLabels: ["8 cm", "", "5 cm"],
+        },
         typed(
           "short_answer",
           n,
@@ -461,7 +524,15 @@ export const AREA_TRI = levels(5050301, {
   very_hard: [
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [4, 0], [7, 5]], grid: true },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [4, 0],
+            [7, 5],
+          ],
+          grid: true,
+        },
         typed(
           "short_answer",
           n,
@@ -480,7 +551,17 @@ export const AREA_TRI = levels(5050301, {
       ),
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [6, 0], [6, 4], [3, 7], [0, 4]], grid: true },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [6, 4],
+            [3, 7],
+            [0, 4],
+          ],
+          grid: true,
+        },
         typed(
           "short_answer",
           n,
@@ -520,13 +601,7 @@ export const VOLUME = levels(5050401, {
     (n) =>
       pic(
         { kind: "jug", max: 1000, value: 700, step: 100, unit: "mL" },
-        typed(
-          "short_answer",
-          n,
-          "How much water is in the jug, in millilitres?",
-          ["700", "700 mL"],
-          "The water reaches the 700 mL mark.",
-        ),
+        typed("short_answer", n, "How much water is in the jug, in millilitres?", ["700", "700 mL"], "The water reaches the 700 mL mark."),
       ),
     (n) =>
       pic(
@@ -647,7 +722,13 @@ export const MASS = levels(5050501, {
     (n) =>
       pic(
         { kind: "scale", max: 5, value: 3, step: 1, unit: "kg" },
-        typed("short_answer", n, "What mass does the scale show?", ["3", "3 kg"], "The needle points to 3, and the scale is in kg, so 3 kg."),
+        typed(
+          "short_answer",
+          n,
+          "What mass does the scale show?",
+          ["3", "3 kg"],
+          "The needle points to 3, and the scale is in kg, so 3 kg.",
+        ),
       ),
   ],
   easy: [
@@ -771,7 +852,13 @@ export const TIME = levels(5050601, {
         0,
         "pm times are from midday to midnight, so 3:00 pm is in the afternoon. am times are before midday.",
       ),
-    (n) => trueFalse(n, "In 24-hour time, 13:00 is 1:00 pm.", true, "After midday the hours keep counting past 12. 13 − 12 = 1, so 13:00 is 1:00 pm."),
+    (n) =>
+      trueFalse(
+        n,
+        "In 24-hour time, 13:00 is 1:00 pm.",
+        true,
+        "After midday the hours keep counting past 12. 13 − 12 = 1, so 13:00 is 1:00 pm.",
+      ),
     (n) =>
       pic(
         { kind: "clock", hour: 2, minute: 30 },
@@ -936,7 +1023,15 @@ export const SHAPES_2D = levels(5060101, {
   very_easy: [
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [6, 0], [3, 5]], sideLabels: ["6 cm", "6 cm", "6 cm"] },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [3, 5],
+          ],
+          sideLabels: ["6 cm", "6 cm", "6 cm"],
+        },
         choice(
           n,
           "What type of triangle is this?",
@@ -945,10 +1040,24 @@ export const SHAPES_2D = levels(5060101, {
           "All three sides are 6 cm. A triangle with three equal sides is equilateral.",
         ),
       ),
-    (n) => trueFalse(n, "A quadrilateral is any shape with four straight sides.", true, "Quad means four. Squares, rectangles and kites are all quadrilaterals."),
+    (n) =>
+      trueFalse(
+        n,
+        "A quadrilateral is any shape with four straight sides.",
+        true,
+        "Quad means four. Squares, rectangles and kites are all quadrilaterals.",
+      ),
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [7, 0], [7, 4], [0, 4]] },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [7, 0],
+            [7, 4],
+            [0, 4],
+          ],
+        },
         typed(
           "short_answer",
           n,
@@ -961,7 +1070,14 @@ export const SHAPES_2D = levels(5060101, {
   easy: [
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [6, 0], [0, 5]] },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [0, 5],
+          ],
+        },
         choice(
           n,
           "Which kind of triangle is this?",
@@ -980,7 +1096,15 @@ export const SHAPES_2D = levels(5060101, {
       ),
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [6, 0], [8, 4], [2, 4]] },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [8, 4],
+            [2, 4],
+          ],
+        },
         choice(
           n,
           "What is this shape called?",
@@ -1001,7 +1125,15 @@ export const SHAPES_2D = levels(5060101, {
       ),
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [6, 0], [3, 6]], sideLabels: ["6 cm", "7 cm", "7 cm"] },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [3, 6],
+          ],
+          sideLabels: ["6 cm", "7 cm", "7 cm"],
+        },
         trueFalse(
           n,
           "This triangle is isosceles.",
@@ -1011,7 +1143,15 @@ export const SHAPES_2D = levels(5060101, {
       ),
     (n) =>
       pic(
-        { kind: "shape", points: [[3, 0], [6, 5], [3, 7], [0, 5]] },
+        {
+          kind: "shape",
+          points: [
+            [3, 0],
+            [6, 5],
+            [3, 7],
+            [0, 5],
+          ],
+        },
         choice(
           n,
           "What is this shape called?",
@@ -1048,7 +1188,15 @@ export const SHAPES_2D = levels(5060101, {
   very_hard: [
     (n) =>
       pic(
-        { kind: "shape", points: [[0, 0], [5, 0], [0, 5]], sideLabels: ["5 cm", "", "5 cm"] },
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [5, 0],
+            [0, 5],
+          ],
+          sideLabels: ["5 cm", "", "5 cm"],
+        },
         multi(
           n,
           "Which words describe this triangle? Choose all that are right.",
@@ -1122,7 +1270,14 @@ export const OBJECTS_3D = levels(5060201, {
         ["base", "bases", "ends", "end"],
         "A triangular prism has triangle bases at each end, and a rectangular prism has rectangle bases.",
       ),
-    (n) => typed("short_answer", n, "How many edges does a cube have?", ["12", "twelve"], "A cube has 4 edges on top, 4 on the bottom and 4 going up the sides. 4 + 4 + 4 = 12."),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "How many edges does a cube have?",
+        ["12", "twelve"],
+        "A cube has 4 edges on top, 4 on the bottom and 4 going up the sides. 4 + 4 + 4 = 12.",
+      ),
   ],
   medium: [
     (n) =>
@@ -1230,7 +1385,13 @@ export const ANGLES = levels(5060301, {
           "The square mark in the corner shows a right angle, like the corner of a book. It is 90°.",
         ),
       ),
-    (n) => trueFalse(n, "An acute angle is smaller than a right angle.", true, "Acute angles are between 0° and 90°, so they are smaller than a right angle."),
+    (n) =>
+      trueFalse(
+        n,
+        "An acute angle is smaller than a right angle.",
+        true,
+        "Acute angles are between 0° and 90°, so they are smaller than a right angle.",
+      ),
     (n) =>
       pic(
         { kind: "angle", degrees: 40 },
@@ -1244,7 +1405,14 @@ export const ANGLES = levels(5060301, {
       ),
   ],
   easy: [
-    (n) => typed("fill_blank", n, "A right angle measures ___ degrees.", ["90", "90°"], "A right angle is a quarter of a full turn: 360 ÷ 4 = 90°."),
+    (n) =>
+      typed(
+        "fill_blank",
+        n,
+        "A right angle measures ___ degrees.",
+        ["90", "90°"],
+        "A right angle is a quarter of a full turn: 360 ÷ 4 = 90°.",
+      ),
     (n) =>
       pic(
         { kind: "angle", degrees: 130 },
@@ -1265,7 +1433,14 @@ export const ANGLES = levels(5060301, {
       ),
   ],
   medium: [
-    (n) => typed("short_answer", n, "How many degrees are in a straight angle?", ["180", "180°"], "A straight angle is half a full turn: 360 ÷ 2 = 180°."),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "How many degrees are in a straight angle?",
+        ["180", "180°"],
+        "A straight angle is half a full turn: 360 ÷ 2 = 180°.",
+      ),
     (n) =>
       pic(
         { kind: "angle", degrees: 250 },

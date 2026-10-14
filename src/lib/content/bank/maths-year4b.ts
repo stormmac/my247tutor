@@ -446,9 +446,15 @@ export const OBJECTS_3D = levels(4030301, {
     (n) =>
       pic(
         { kind: "solid", shape: "cylinder" },
-        trueFalse(n, "This object has a curved surface.", true, "A cylinder has two flat circle faces and a curved surface around the side."),
+        trueFalse(
+          n,
+          "This object has a curved surface.",
+          true,
+          "A cylinder has two flat circle faces and a curved surface around the side.",
+        ),
       ),
-    (n) => typed("short_answer", n, "How many faces does a cube have?", ["6", "six"], "A cube has a top, a bottom and 4 sides: 6 square faces."),
+    (n) =>
+      typed("short_answer", n, "How many faces does a cube have?", ["6", "six"], "A cube has a top, a bottom and 4 sides: 6 square faces."),
   ],
   easy: [
     (n) =>
@@ -915,12 +921,7 @@ export const MASS = levels(4060301, {
       ),
     (n) => typed("fill_blank", n, "1 kilogram = ___ grams", ["1000"], "There are 1000 grams in 1 kilogram."),
     (n) =>
-      trueFalse(
-        n,
-        "A paperclip has a mass of about 1 gram.",
-        true,
-        "A paperclip is very light. 1 gram is about the mass of a paperclip.",
-      ),
+      trueFalse(n, "A paperclip has a mass of about 1 gram.", true, "A paperclip is very light. 1 gram is about the mass of a paperclip."),
   ],
   easy: [
     (n) =>
@@ -1331,7 +1332,12 @@ export const AREA = levels(4060501, {
       choice(
         n,
         "Rectangle A is 5 cm by 4 cm. Rectangle B is 6 cm by 3 cm. Which is true?",
-        ["A's area is 2 square centimetres bigger", "B's area is 2 square centimetres bigger", "They have the same area", "A's area is 1 square centimetre bigger"],
+        [
+          "A's area is 2 square centimetres bigger",
+          "B's area is 2 square centimetres bigger",
+          "They have the same area",
+          "A's area is 1 square centimetre bigger",
+        ],
         0,
         "A is 5 × 4 = 20 and B is 6 × 3 = 18 square centimetres. 20 − 18 = 2. (They have the same perimeter, 18 cm, but not the same area.)",
       ),
@@ -1529,9 +1535,9 @@ export const DATA_COLLECT = levels(4070201, {
         typed(
           "short_answer",
           n,
-          "Look at the key. How many more dogs are there than cats and fish together?",
-          ["0", "zero", "none"],
-          "Dogs: 6 × 4 = 24. Cats and fish: (4 + 3) × 4 = 28. That is more than 24, so wait: the question asks how many MORE dogs. Cats and fish have more, so there are 0 more dogs.",
+          "Look at the key. How many more pets are cats and fish together than dogs?",
+          ["4", "four"],
+          "Dogs: 6 × 4 = 24. Cats and fish: 4 + 3 = 7 stars, and 7 × 4 = 28. 28 − 24 = 4 more pets.",
         ),
       ),
     (n) =>
