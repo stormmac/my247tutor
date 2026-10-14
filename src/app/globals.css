@@ -430,6 +430,43 @@ th {
   font-weight: 700;
 }
 
+/* Admin curriculum tree */
+.tree details {
+  margin-left: 18px;
+}
+.tree > details {
+  margin-left: 0;
+}
+.tree summary {
+  cursor: pointer;
+  padding: 4px 0;
+}
+.tree .node-note {
+  margin: 2px 0 6px 18px;
+}
+.tree .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+.question-list {
+  margin: 4px 0 12px 18px;
+  padding-left: 18px;
+}
+.question-list > li {
+  margin-bottom: 10px;
+}
+.question-list ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+.tree .correct {
+  color: var(--good);
+  font-weight: 600;
+}
+
 /* Topic tree */
 .tabs {
   display: flex;
@@ -445,6 +482,9 @@ th {
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
+}
+a.tab {
+  text-decoration: none;
 }
 .tab.active {
   border-color: var(--brand);

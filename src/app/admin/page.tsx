@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AdminTabs } from "@/components/AdminTabs";
 import { SetupStatus } from "@/components/SetupStatus";
 import { useAccount } from "@/components/useAccount";
 import type { Role } from "@/lib/auth/rules";
@@ -81,6 +82,7 @@ function Accounts() {
 
   return (
     <div className="stack">
+      <AdminTabs current="accounts" />
       <div className="row spread">
         <div>
           <h1>Admin</h1>
