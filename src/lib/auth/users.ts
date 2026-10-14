@@ -2,9 +2,9 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { NextRequest } from "next/server";
-import { db } from "./db";
+import { ready } from "./db";
 import { isAdminEmail, isLockedOut, LOCKOUT_MINUTES, temporaryPassword, type Role } from "./rules";
-import { SESSION_COOKIE, verifySession } from "./session";
+import { SESSION_COOKIE, TRIAL_MINUTES, verifySession } from "./session";
 
 const BCRYPT_COST = 12;
 /** Compared against when the email is unknown, so a wrong email takes as long as a wrong password. */
@@ -22,9 +22,20 @@ export interface User {
   sessionVersion: number;
   createdAt: string;
   lastLoginAt: string | null;
+  /** Card payments: an admin gave this account free use of the site. */
+  freeAccess: boolean;
+  /** When the account's free trial ends (milliseconds), or null when it never had one. */
+  trialEndsAt: number | null;
+  stripeCustomerId: string | null;
+  /** Stripe's subscription status, such as "active" or "canceled". */
+  subscriptionStatus: string | null;
+  /** The end of the period paid for (milliseconds). */
+  paidUntil: number | null;
 }
 
-const USER_COLUMNS = `id, email, display_name, role, is_active, session_version, created_at, last_login_at`;
+const USER_COLUMNS = `id, email, display_name, role, is_active, session_version, created_at, last_login_at, free_access, trial_ends_at, stripe_customer_id, subscription_status, paid_until`;
+
+const ms = (value: unknown) => (value ? new Date(value as string).getTime() : null);
 
 function toUser(row: Record<string, unknown>): User {
   return {
@@ -36,23 +47,31 @@ function toUser(row: Record<string, unknown>): User {
     sessionVersion: row.session_version as number,
     createdAt: new Date(row.created_at as string).toISOString(),
     lastLoginAt: row.last_login_at ? new Date(row.last_login_at as string).toISOString() : null,
+    freeAccess: Boolean(row.free_access),
+    trialEndsAt: ms(row.trial_ends_at),
+    stripeCustomerId: (row.stripe_customer_id as string | null) ?? null,
+    subscriptionStatus: (row.subscription_status as string | null) ?? null,
+    paidUntil: ms(row.paid_until),
   };
 }
 
 export async function getUser(id: string): Promise<User | null> {
-  const { rows } = await db().query(`SELECT ${USER_COLUMNS} FROM users WHERE id = $1`, [id]);
+  const { rows } = await (await ready()).query(`SELECT ${USER_COLUMNS} FROM users WHERE id = $1`, [id]);
   return rows[0] ? toUser(rows[0]) : null;
 }
 
 export type SignUpResult = { user: User } | { error: string };
 
-export async function createUser(name: string, email: string, password: string): Promise<SignUpResult> {
+/** A parent signing up. Their free trial ends at `trialEndsAt` (milliseconds). */
+export async function createUser(name: string, email: string, password: string, trialEndsAt: number): Promise<SignUpResult> {
   const hash = await bcrypt.hash(password, BCRYPT_COST);
   const role: Role = isAdminEmail(email) ? "admin" : "parent";
-  const { rows } = await db().query(
-    `INSERT INTO users (email, display_name, role, password_hash, last_login_at) VALUES ($1, $2, $3, $4, NOW())
+  const { rows } = await (
+    await ready()
+  ).query(
+    `INSERT INTO users (email, display_name, role, password_hash, last_login_at, trial_ends_at) VALUES ($1, $2, $3, $4, NOW(), $5)
      ON CONFLICT (email) DO NOTHING RETURNING ${USER_COLUMNS}`,
-    [email, name, role, hash],
+    [email, name, role, hash, new Date(trialEndsAt)],
   );
   return rows[0] ? { user: toUser(rows[0]) } : { error: "There's already an account with that email. Try signing in." };
 }
@@ -60,7 +79,9 @@ export async function createUser(name: string, email: string, password: string):
 export type SignInResult = { user: User } | { error: string; status: number };
 
 export async function signIn(email: string, password: string, ip: string): Promise<SignInResult> {
-  const { rows: counts } = await db().query(
+  const { rows: counts } = await (
+    await ready()
+  ).query(
     `SELECT
        COUNT(*) FILTER (WHERE email = $1) AS email_failures,
        COUNT(*) FILTER (WHERE ip = $2) AS ip_failures
@@ -72,19 +93,18 @@ export async function signIn(email: string, password: string, ip: string): Promi
     return { error: `Too many tries. Please wait ${LOCKOUT_MINUTES} minutes and try again.`, status: 429 };
   }
 
-  const { rows } = await db().query(`SELECT ${USER_COLUMNS}, password_hash FROM users WHERE email = $1`, [email]);
+  const { rows } = await (await ready()).query(`SELECT ${USER_COLUMNS}, password_hash FROM users WHERE email = $1`, [email]);
   const row = rows[0];
   const ok = await bcrypt.compare(password, (row?.password_hash as string | null) ?? dummy());
-  await db().query(`INSERT INTO login_attempts (email, ip, success) VALUES ($1, $2, $3)`, [email, ip, ok && !!row]);
+  await (await ready()).query(`INSERT INTO login_attempts (email, ip, success) VALUES ($1, $2, $3)`, [email, ip, ok && !!row]);
   if (!ok || !row) return { error: "That email and password don't match.", status: 401 };
   if (!row.is_active) return { error: "This account has been turned off. Please contact my247tutor.", status: 403 };
 
   // Emails in ADMIN_EMAILS are promoted on their next sign-in.
   const role: Role = isAdminEmail(email) ? "admin" : row.role;
-  const { rows: updated } = await db().query(
-    `UPDATE users SET last_login_at = NOW(), role = $2, updated_at = NOW() WHERE id = $1 RETURNING ${USER_COLUMNS}`,
-    [row.id, role],
-  );
+  const { rows: updated } = await (
+    await ready()
+  ).query(`UPDATE users SET last_login_at = NOW(), role = $2, updated_at = NOW() WHERE id = $1 RETURNING ${USER_COLUMNS}`, [row.id, role]);
   return { user: toUser(updated[0]) };
 }
 
@@ -107,7 +127,9 @@ export async function requireUser(request: NextRequest, role?: Role): Promise<{ 
 }
 
 export async function listUsers(): Promise<(User & { learners: number })[]> {
-  const { rows } = await db().query(
+  const { rows } = await (
+    await ready()
+  ).query(
     `SELECT ${USER_COLUMNS.split(", ")
       .map((c) => `u.${c}`)
       .join(", ")}, COUNT(l.id) AS learners
@@ -118,7 +140,9 @@ export async function listUsers(): Promise<(User & { learners: number })[]> {
 }
 
 async function audit(actorId: string, action: string, targetId: string, detail: object) {
-  await db().query(`INSERT INTO audit_log (actor_id, action, target_id, detail) VALUES ($1, $2, $3, $4)`, [
+  await (
+    await ready()
+  ).query(`INSERT INTO audit_log (actor_id, action, target_id, detail) VALUES ($1, $2, $3, $4)`, [
     actorId,
     action,
     targetId,
@@ -127,38 +151,75 @@ async function audit(actorId: string, action: string, targetId: string, detail: 
 }
 
 /** An admin changes another user's role or turns their account off or on. Turning it off signs them out. */
-export async function updateUser(actor: User, targetId: string, change: { role?: Role; isActive?: boolean }): Promise<User | null> {
-  const { rows } = await db().query(
+export async function updateUser(
+  actor: User,
+  targetId: string,
+  change: { role?: Role; isActive?: boolean; freeAccess?: boolean },
+): Promise<User | null> {
+  const { rows } = await (
+    await ready()
+  ).query(
     `UPDATE users SET
        role = COALESCE($2, role),
        is_active = COALESCE($3, is_active),
+       free_access = COALESCE($4, free_access),
        session_version = session_version + CASE WHEN $3 = FALSE THEN 1 ELSE 0 END,
        updated_at = NOW()
      WHERE id = $1 RETURNING ${USER_COLUMNS}`,
-    [targetId, change.role ?? null, change.isActive ?? null],
+    [targetId, change.role ?? null, change.isActive ?? null, change.freeAccess ?? null],
   );
   if (rows[0]) await audit(actor.id, "update_user", targetId, change);
   return rows[0] ? toUser(rows[0]) : null;
 }
 
+/**
+ * An admin adds an account. It gets a temporary password to pass on, and a parent without free
+ * access gets the usual free trial before they need to pay.
+ */
+export async function addUser(
+  actor: User,
+  details: { name: string; email: string; role: Role; freeAccess: boolean },
+): Promise<{ user: User; password: string } | { error: string }> {
+  const password = temporaryPassword(randomInt);
+  const { rows } = await (
+    await ready()
+  ).query(
+    `INSERT INTO users (email, display_name, role, password_hash, free_access, trial_ends_at) VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (email) DO NOTHING RETURNING ${USER_COLUMNS}`,
+    [
+      details.email,
+      details.name,
+      details.role,
+      await bcrypt.hash(password, BCRYPT_COST),
+      details.freeAccess,
+      new Date(Date.now() + TRIAL_MINUTES * 60_000),
+    ],
+  );
+  if (!rows[0]) return { error: "There's already an account with that email." };
+  const user = toUser(rows[0]);
+  await audit(actor.id, "add_user", user.id, { role: details.role, freeAccess: details.freeAccess });
+  return { user, password };
+}
+
 /** Sets a new temporary password and signs the user out everywhere. Returns the password to pass on. */
 export async function resetPassword(actor: User, targetId: string): Promise<string | null> {
   const password = temporaryPassword(randomInt);
-  const { rowCount } = await db().query(
-    `UPDATE users SET password_hash = $2, session_version = session_version + 1, updated_at = NOW() WHERE id = $1`,
-    [targetId, await bcrypt.hash(password, BCRYPT_COST)],
-  );
+  const { rowCount } = await (
+    await ready()
+  ).query(`UPDATE users SET password_hash = $2, session_version = session_version + 1, updated_at = NOW() WHERE id = $1`, [
+    targetId,
+    await bcrypt.hash(password, BCRYPT_COST),
+  ]);
   if (!rowCount) return null;
   await audit(actor.id, "reset_password", targetId, {});
   return password;
 }
 
 export async function changePassword(user: User, current: string, next: string): Promise<boolean> {
-  const { rows } = await db().query(`SELECT password_hash FROM users WHERE id = $1`, [user.id]);
+  const { rows } = await (await ready()).query(`SELECT password_hash FROM users WHERE id = $1`, [user.id]);
   if (!rows[0] || !(await bcrypt.compare(current, rows[0].password_hash ?? dummy()))) return false;
-  await db().query(`UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`, [
-    user.id,
-    await bcrypt.hash(next, BCRYPT_COST),
-  ]);
+  await (
+    await ready()
+  ).query(`UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`, [user.id, await bcrypt.hash(next, BCRYPT_COST)]);
   return true;
 }

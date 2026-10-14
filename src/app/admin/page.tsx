@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminTabs } from "@/components/AdminTabs";
 import { SetupStatus } from "@/components/SetupStatus";
 import { useAccount } from "@/components/useAccount";
-import type { Role } from "@/lib/auth/rules";
+import type { Plan, Role } from "@/lib/auth/rules";
 
 interface Row {
   id: string;
@@ -15,11 +15,23 @@ interface Row {
   createdAt: string;
   lastLoginAt: string | null;
   learners: number;
+  freeAccess: boolean;
+  plan: Plan;
+  paidUntil: number | null;
+  trialEndsAt: number | null;
 }
+
+const PLAN: Record<Plan, { label: string; pill: string }> = {
+  staff: { label: "Staff", pill: "" },
+  free: { label: "Free access", pill: "good" },
+  paying: { label: "Paying", pill: "good" },
+  trial: { label: "Free trial", pill: "warn" },
+  unpaid: { label: "Needs to pay", pill: "bad" },
+};
 
 const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-AU") : "Never");
 
-/** Admins manage accounts: roles, turning accounts off, and password resets. */
+/** Admins manage accounts: adding them, roles, free access, turning accounts off, and password resets. */
 export default function AdminPage() {
   const account = useAccount();
   if (!account.loaded) return <p className="muted">Loading…</p>;
@@ -37,23 +49,26 @@ export default function AdminPage() {
 function Accounts() {
   const [users, setUsers] = useState<Row[] | null>(null);
   const [me, setMe] = useState<string | null>(null);
+  const [billing, setBilling] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/users");
-    const body = (await res.json().catch(() => ({}))) as { users?: Row[]; me?: string; error?: string };
+    const body = (await res.json().catch(() => ({}))) as { users?: Row[]; me?: string; billing?: boolean; error?: string };
     if (!res.ok) return setError(body.error ?? "Couldn't load accounts.");
     setUsers(body.users ?? []);
     setMe(body.me ?? null);
+    setBilling(Boolean(body.billing));
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  async function change(user: Row, update: { role?: Role; isActive?: boolean }) {
+  async function change(user: Row, update: { role?: Role; isActive?: boolean; freeAccess?: boolean }) {
     setError(null);
     setNotice(null);
     const res = await fetch(`/api/admin/users/${user.id}`, {
@@ -90,16 +105,37 @@ function Accounts() {
             {users.length} accounts, {users.filter((u) => u.isActive).length} active, {users.reduce((n, u) => n + u.learners, 0)} learners.
           </p>
         </div>
-        <input
-          type="search"
-          placeholder="Search name or email"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          style={{ maxWidth: 260 }}
-          aria-label="Search accounts"
-        />
+        <div className="row" style={{ gap: 8 }}>
+          <input
+            type="search"
+            placeholder="Search name or email"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            style={{ maxWidth: 260 }}
+            aria-label="Search accounts"
+          />
+          {!adding && (
+            <button className="btn small" onClick={() => setAdding(true)}>
+              Add account
+            </button>
+          )}
+        </div>
       </div>
       <SetupStatus compact />
+      <PaymentsSetup />
+      {adding && (
+        <AddAccount
+          onCancel={() => setAdding(false)}
+          onAdded={(email, password) => {
+            setAdding(false);
+            setError(null);
+            setNotice(
+              `Account added for ${email}. Their temporary password is ${password}. Pass it on privately; it won't be shown again.`,
+            );
+            void load();
+          }}
+        />
+      )}
       {notice && (
         <div className="feedback good" role="status">
           {notice}
@@ -116,6 +152,7 @@ function Accounts() {
             <tr>
               <th>Account</th>
               <th>Role</th>
+              <th>Plan</th>
               <th>Learners</th>
               <th>Joined</th>
               <th>Last sign-in</th>
@@ -150,6 +187,24 @@ function Accounts() {
                       <option value="admin">Admin</option>
                     </select>
                   </td>
+                  <td>
+                    <span className={`pill ${PLAN[u.plan].pill}`}>{PLAN[u.plan].label}</span>
+                    {u.plan === "paying" && u.paidUntil && (
+                      <div className="small muted">Until {date(new Date(u.paidUntil).toISOString())}</div>
+                    )}
+                    {u.plan === "trial" && u.trialEndsAt && (
+                      <div className="small muted">
+                        Ends{" "}
+                        {new Date(u.trialEndsAt).toLocaleString("en-AU", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    )}
+                    {!billing && u.plan !== "staff" && u.plan !== "free" && <div className="small muted">Payments are off</div>}
+                  </td>
                   <td>{u.learners}</td>
                   <td>{date(u.createdAt)}</td>
                   <td>{date(u.lastLoginAt)}</td>
@@ -158,13 +213,18 @@ function Accounts() {
                   </td>
                   <td>
                     {!self && (
-                      <div className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
+                      <div className="row" style={{ gap: 6, flexWrap: "wrap", maxWidth: 280 }}>
                         <button className="btn secondary small" onClick={() => void change(u, { isActive: !u.isActive })}>
                           {u.isActive ? "Turn off" : "Turn on"}
                         </button>
                         <button className="btn secondary small" onClick={() => void reset(u)}>
                           Reset password
                         </button>
+                        {u.plan !== "staff" && (
+                          <button className="btn secondary small" onClick={() => void change(u, { freeAccess: !u.freeAccess })}>
+                            {u.freeAccess ? "End free access" : "Give free access"}
+                          </button>
+                        )}
                       </div>
                     )}
                   </td>
@@ -175,6 +235,133 @@ function Accounts() {
         </table>
       </div>
       <p className="small muted">Every change here is recorded with who made it.</p>
+    </div>
+  );
+}
+
+/** An admin adds a parent, teacher or admin account. The new account gets a temporary password. */
+function AddAccount({ onAdded, onCancel }: { onAdded: (email: string, password: string) => void; onCancel: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<Role>("parent");
+  const [freeAccess, setFreeAccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, role, freeAccess: role === "parent" ? freeAccess : false }),
+    });
+    const body = (await res.json().catch(() => ({}))) as { user?: { email: string }; password?: string; error?: string };
+    setBusy(false);
+    if (res.ok && body.user && body.password) onAdded(body.user.email, body.password);
+    else setError(body.error ?? "That didn't work.");
+  }
+
+  return (
+    <form className="card stack" onSubmit={submit} style={{ maxWidth: 560 }}>
+      <h2 style={{ margin: 0 }}>Add an account</h2>
+      <div className="grid grid-2">
+        <div>
+          <label htmlFor="new-name">Name</label>
+          <input id="new-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} required />
+        </div>
+        <div>
+          <label htmlFor="new-email">Email</label>
+          <input id="new-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </div>
+      </div>
+      <div className="row">
+        <label className="row" style={{ fontWeight: 400, margin: 0 }}>
+          Role
+          <select value={role} onChange={(e) => setRole(e.target.value as Role)} style={{ width: "auto" }}>
+            <option value="parent">Parent</option>
+            <option value="teacher">Teacher</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+        {role === "parent" && (
+          <label className="row" style={{ fontWeight: 400, margin: 0 }}>
+            <input type="checkbox" checked={freeAccess} onChange={(e) => setFreeAccess(e.target.checked)} style={{ width: "auto" }} />
+            Free access (never asked to pay)
+          </label>
+        )}
+      </div>
+      <p className="small muted" style={{ margin: 0 }}>
+        {role === "parent" && !freeAccess ? "They get the usual free trial, then are asked to add a payment method. " : ""}
+        You'll get a temporary password to pass on. They can change it after signing in.
+      </p>
+      {error && (
+        <div className="feedback bad" role="alert">
+          {error}
+        </div>
+      )}
+      <div className="row">
+        <button className="btn" disabled={busy}>
+          {busy ? "Adding…" : "Add account"}
+        </button>
+        <button type="button" className="btn secondary" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+interface PaymentsStatus {
+  enabled: boolean;
+  checks: { label: string; ok: boolean; fix: string }[];
+  price: { amount: number; currency: string; interval: string | null } | null;
+}
+
+/** What's set up for card payments through Stripe, and what's left to do. */
+function PaymentsSetup() {
+  const [status, setStatus] = useState<PaymentsStatus | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    fetch("/api/billing/setup")
+      .then((r) => (r.ok ? (r.json() as Promise<PaymentsStatus>) : null))
+      .then(setStatus)
+      .catch(() => setStatus(null));
+  }, []);
+  if (!status) return null;
+  const done = status.checks.every((c) => c.ok);
+  const price = status.price
+    ? `${new Intl.NumberFormat("en-AU", { style: "currency", currency: status.price.currency.toUpperCase() }).format(status.price.amount / 100)}${status.price.interval ? ` a ${status.price.interval}` : ""}`
+    : null;
+  return (
+    <div className="card stack">
+      <div className="row spread">
+        <div>
+          <h2 style={{ margin: 0 }}>{status.enabled ? "Card payments are on" : "Card payments are off"}</h2>
+          <p className="muted" style={{ margin: "4px 0 0" }}>
+            {status.enabled
+              ? `Parents pay ${price ?? "the Stripe price"} once their free trial ends.${done ? "" : " Some setup is still missing."}`
+              : "Until Stripe is connected, nobody is asked to pay."}
+          </p>
+        </div>
+        <button className="btn secondary small" onClick={() => setOpen((o) => !o)}>
+          {open ? "Hide setup" : done ? "Show setup" : "What's left to set up"}
+        </button>
+      </div>
+      {open && (
+        <ul className="setup-checks">
+          {status.checks.map((c) => (
+            <li key={c.label} className={c.ok ? "ok" : ""}>
+              <span aria-hidden="true">{c.ok ? "✓" : "✗"}</span>
+              <div>
+                {c.label}
+                {!c.ok && <div className="small muted">{c.fix}</div>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

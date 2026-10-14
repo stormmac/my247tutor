@@ -6,6 +6,8 @@ import { z } from "zod";
 
 export type Role = "admin" | "teacher" | "student" | "parent";
 export const ROLES: Role[] = ["parent", "teacher", "admin"];
+/** Roles an admin can give an account. */
+export const ASSIGNABLE_ROLES = ["parent", "teacher", "admin"] as const;
 
 export const MIN_PASSWORD_LENGTH = 10;
 
@@ -81,3 +83,37 @@ export function guestAccess(trialEnd: number | null, now = Date.now()): "allow" 
   if (trialEnd === null) return "start";
   return now < trialEnd ? "allow" : "trial-over";
 }
+
+/** Stripe subscription states that still let the family in. Past due gets Stripe's retry period. */
+const PAYING = ["active", "trialing", "past_due"];
+
+export interface AccessFacts {
+  role: Role;
+  freeAccess: boolean;
+  /** Milliseconds, or null when the account never had a trial. */
+  trialEndsAt: number | null;
+  subscriptionStatus: string | null;
+}
+
+export type Plan = "staff" | "free" | "paying" | "trial" | "unpaid";
+
+/** Why an account can use the site, or "unpaid" when it needs to add a card first. */
+export function accountPlan(a: AccessFacts, now = Date.now()): Plan {
+  if (a.role === "admin" || a.role === "teacher") return "staff";
+  if (a.freeAccess) return "free";
+  if (a.subscriptionStatus && PAYING.includes(a.subscriptionStatus)) return "paying";
+  if (a.trialEndsAt !== null && now < a.trialEndsAt) return "trial";
+  return "unpaid";
+}
+
+/** When a new account's free trial ends: when the browser's free hour ends, or an hour from now if it never had one. */
+export function newAccountTrialEnd(browserTrialEnd: number | null, trialMinutes: number, now = Date.now()): number {
+  return browserTrialEnd ?? now + trialMinutes * 60_000;
+}
+
+export const NewUserSchema = z.object({
+  name: z.string().trim().min(1, "Enter their name.").max(100),
+  email: EmailSchema,
+  role: z.enum(ASSIGNABLE_ROLES),
+  freeAccess: z.boolean(),
+});

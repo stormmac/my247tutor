@@ -51,7 +51,9 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         </div>
       )}
       {signup && params.get("trial") === "over" && (
-        <div className="feedback warn">Your free hour is up. Create a free account to keep going. Everything done so far is kept.</div>
+        <div className="feedback warn">
+          Your free hour is up. Create {account.billing ? "an account" : "a free account"} to keep going. Everything done so far is kept.
+        </div>
       )}
       <p className="muted" style={{ margin: 0 }}>
         {signup

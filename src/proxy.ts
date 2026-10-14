@@ -4,7 +4,7 @@ import { accountsEnabled, SESSION_COOKIE, TRIAL_COOKIE, verifySession, verifyTri
 import { AUTH_COOKIE, authToken, safeEqual, sitePassword } from "@/lib/auth/sitePassword";
 
 /** Open to everyone, even with the site password or accounts switched on. */
-const SITE_PASSWORD_PUBLIC = ["/login", "/api/login"];
+const SITE_PASSWORD_PUBLIC = ["/login", "/api/login", "/api/billing/webhook"];
 /** Need no account: the home page, the trial choice, signing in and up, and the site-password page. */
 const ACCOUNT_PUBLIC = [
   "/",
@@ -18,7 +18,11 @@ const ACCOUNT_PUBLIC = [
   "/api/auth/signup",
   "/api/auth/signout",
   "/api/auth/me",
+  // Stripe calls this; it proves itself with a signature instead.
+  "/api/billing/webhook",
 ];
+/** Called by other services, which check themselves with a signature, so they skip the same-site check. */
+const SIGNED_WEBHOOKS = ["/api/billing/webhook"];
 
 function securityHeaders(response: NextResponse): NextResponse {
   response.headers.set("X-Frame-Options", "DENY");
@@ -43,7 +47,11 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Other websites can't send requests to our API using a visitor's cookies.
-  if (pathname.startsWith("/api/") && !isSameOrigin(request.method, request.headers.get("origin"), request.headers.get("host"))) {
+  if (
+    pathname.startsWith("/api/") &&
+    !SIGNED_WEBHOOKS.includes(pathname) &&
+    !isSameOrigin(request.method, request.headers.get("origin"), request.headers.get("host"))
+  ) {
     return securityHeaders(NextResponse.json({ error: "Cross-site request blocked." }, { status: 403 }));
   }
 
