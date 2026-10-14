@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isAdminEmail, isLockedOut, isSameOrigin, safeNextPath, SignUpSchema, temporaryPassword } from "../auth/rules";
-import { signSession, verifySession } from "../auth/session";
+import { guestAccess, isAdminEmail, isLockedOut, isSameOrigin, safeNextPath, SignUpSchema, temporaryPassword } from "../auth/rules";
+import { signSession, signTrial, TRIAL_MINUTES, verifySession, verifyTrial } from "../auth/session";
 
 const SECRET = "a-test-secret-that-is-at-least-32-characters";
 const OTHER = "another-secret-that-is-at-least-32-characters";
@@ -69,5 +69,33 @@ describe("account rules", () => {
     const pw = temporaryPassword((n) => i++ % n);
     expect(pw).toMatch(/^[a-z]+-[a-z]+-[a-z]+-\d{4}$/);
     expect(pw.length).toBeGreaterThanOrEqual(10);
+  });
+});
+
+describe("free trial", () => {
+  const secret = "x".repeat(40);
+
+  it("lets a visitor in until the hour is up, then sends them to sign up", () => {
+    const end = 1_000_000;
+    expect(guestAccess(null, 0)).toBe("start");
+    expect(guestAccess(end, end - 1)).toBe("allow");
+    expect(guestAccess(end, end)).toBe("trial-over");
+  });
+
+  it("signs the trial's end so it can't be stretched", async () => {
+    const now = Date.UTC(2026, 9, 14);
+    const token = await signTrial(now, secret);
+    expect(await verifyTrial(token, secret)).toBe(now + TRIAL_MINUTES * 60_000);
+    expect(await verifyTrial(token, "y".repeat(40))).toBeNull();
+    const [head, , sig] = token.split(".");
+    const forged = Buffer.from(JSON.stringify({ typ: "trial", end: now * 2 })).toString("base64url");
+    expect(await verifyTrial(`${head}.${forged}.${sig}`, secret)).toBeNull();
+  });
+
+  it("keeps trial passes and sign-in sessions apart", async () => {
+    const trial = await signTrial(Date.now(), secret);
+    expect(await verifySession(trial, secret)).toBeNull();
+    const session = await signSession({ userId: "u1", role: "parent", version: 0 }, secret);
+    expect(await verifyTrial(session, secret)).toBeNull();
   });
 });

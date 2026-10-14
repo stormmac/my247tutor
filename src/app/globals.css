@@ -125,6 +125,27 @@ p {
 .nav .link-button:hover {
   color: var(--text);
 }
+.nav {
+  align-items: center;
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .nav {
+    gap: 12px;
+    font-size: 0.9rem;
+  }
+  /* The trial pill already leads to sign-up and sign-in. */
+  .nav .trial-pill ~ .nav-signin {
+    display: none;
+  }
+}
+.nav a.trial-pill {
+  background: var(--warn-tint);
+  color: var(--warn-text);
+  border-radius: 999px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
 
 main {
   padding: 32px 0 64px;

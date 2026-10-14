@@ -91,6 +91,9 @@ When both `DATABASE_URL` and `AUTH_SECRET` are set:
 
 - Parents sign up at `/signup` and sign in at `/signin`. The home page stays open; everything else,
   including the AI tutor API, needs a signed-in parent.
+- Visitors without an account can try the site free for one hour from `/start` (where Start learning
+  leads). The trial is a signed cookie, so it can't be extended by editing it, though clearing cookies
+  starts a new one. When the hour is up they're asked to sign up, and their progress comes with them.
 - The child's progress is saved to the parent's account and loads on any device. Progress already in
   the browser moves into the account on first sign-in. Signing out clears it from the device.
 - Admins see `/admin`: every account, change roles, turn accounts off (signs them out at once) and

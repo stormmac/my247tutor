@@ -50,6 +50,9 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
           Logins aren't switched on for this site yet. <Link href="/admin">See what's left to set up</Link>.
         </div>
       )}
+      {signup && params.get("trial") === "over" && (
+        <div className="feedback warn">Your free hour is up. Create a free account to keep going. Everything done so far is kept.</div>
+      )}
       <p className="muted" style={{ margin: 0 }}>
         {signup
           ? "Your child's progress is saved to your account, so you can see it on any device."
