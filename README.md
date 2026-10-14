@@ -84,8 +84,8 @@ To switch accounts on:
 2. In Vercel → Settings → Environment Variables, set `DATABASE_URL`, `AUTH_SECRET`
    (`openssl rand -base64 32`) and `ADMIN_EMAILS` (your email). If Vercel's Supabase integration
    already set `POSTGRES_URL`, that is used when `DATABASE_URL` is missing.
-3. Run `DATABASE_URL=… npm run db:migrate` once to create the tables (`database/006_my247tutor_accounts.sql`
-   and `008_my247tutor_billing.sql`).
+3. Run `DATABASE_URL=… npm run db:migrate` once to create the tables (`database/006_my247tutor_accounts.sql`,
+   `008_my247tutor_billing.sql` and `009_my247tutor_invites.sql`).
 4. Redeploy, then sign up with your admin email.
 
 When both `DATABASE_URL` and `AUTH_SECRET` are set:
@@ -97,9 +97,18 @@ When both `DATABASE_URL` and `AUTH_SECRET` are set:
   starts a new one. When the hour is up they're asked to sign up, and their progress comes with them.
 - The child's progress is saved to the parent's account and loads on any device. Progress already in
   the browser moves into the account on first sign-in. Signing out clears it from the device.
-- Admins see `/admin`: every account, add accounts (with a temporary password to pass on), change
+- Admins see `/admin`: every account, add accounts (each new account is emailed a one-time link,
+  valid for 7 days, to set its own password; "Send invite again" makes a fresh one), change
   roles, give free access, turn accounts off (signs them out at once) and reset passwords to a
   temporary one. Admin changes are recorded in `audit_log`.
+
+## Email (Resend)
+
+New accounts get a welcome email saying they have access, with a link to set their password. To
+send it, create a free account at resend.com, verify your domain, and set `RESEND_API_KEY` and
+`EMAIL_FROM` (such as `my247tutor <hello@my247tutor.com>`) in Vercel. Until then, or if an email
+fails, the admin page shows the link to pass on instead. `SITE_URL` (such as
+`https://my247tutor.com`) sets the address used in links; otherwise it's the address the admin is on.
 
 ## Card payments (Stripe)
 

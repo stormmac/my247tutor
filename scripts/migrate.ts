@@ -12,7 +12,7 @@ if (!url) {
 async function main() {
   const client = new Client({ connectionString: connectionString(url as string) });
   await client.connect();
-  for (const file of ["006_my247tutor_accounts.sql", "008_my247tutor_billing.sql"])
+  for (const file of ["006_my247tutor_accounts.sql", "008_my247tutor_billing.sql", "009_my247tutor_invites.sql"])
     await client.query(readFileSync(join(__dirname, "../database", file), "utf8"));
   await client.end();
   console.log("Account tables are ready.");
