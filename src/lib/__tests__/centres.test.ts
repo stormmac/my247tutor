@@ -1,8 +1,18 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CENTRE_SQL } from "../auth/centreSchema";
-import { accountPlan, ASSIGNABLE_ROLES, ClassSchema, NewStudentSchema, NewTeacherSchema, StudentChangeSchema } from "../auth/rules";
+import { CENTRE_SQL, CLASS_TIMES_SQL } from "../auth/centreSchema";
+import {
+  accountPlan,
+  ASSIGNABLE_ROLES,
+  ClassSchema,
+  describeTime,
+  formatDuration,
+  formatTime,
+  NewStudentSchema,
+  NewTeacherSchema,
+  StudentChangeSchema,
+} from "../auth/rules";
 import { newProfile } from "../learner/model";
 import { summarise } from "../learner/summary";
 
@@ -77,6 +87,7 @@ describe("a student's line in the class list", () => {
 describe("centre migration", () => {
   it("is the same SQL the app runs itself", () => {
     expect(readFileSync(join(__dirname, "../../../database/011_my247tutor_centres.sql"), "utf8")).toContain(CENTRE_SQL);
+    expect(readFileSync(join(__dirname, "../../../database/012_my247tutor_class_times.sql"), "utf8")).toContain(CLASS_TIMES_SQL);
   });
 
   it("keeps the centre role when the accounts migration is run again", () => {
@@ -95,5 +106,36 @@ describe("Learn to Read for centre students", () => {
   it("shows reading age in the class list", () => {
     const profile = newProfile("Mia", 3);
     expect(summarise(profile).reading).toEqual({ age: null, enrolled: false, unitsDone: 0, sightLevelsDone: 0 });
+  });
+});
+
+describe("class times", () => {
+  const base = { name: "Year 4 Maths", yearLevel: 4, subject: "maths", teacherId: null };
+
+  it("takes a day, a start time and a length", () => {
+    const parsed = ClassSchema.parse({ ...base, times: [{ weekday: 1, start: "16:30", minutes: 60 }] });
+    expect(parsed.times).toEqual([{ weekday: 1, start: "16:30", minutes: 60 }]);
+    expect(ClassSchema.parse(base).times).toEqual([]);
+  });
+
+  it("turns away times that make no sense", () => {
+    const bad = (t: object) => ClassSchema.safeParse({ ...base, times: [{ weekday: 1, start: "16:30", minutes: 60, ...t }] }).success;
+    expect(bad({ weekday: 8 })).toBe(false);
+    expect(bad({ start: "25:00" })).toBe(false);
+    expect(bad({ start: "4pm" })).toBe(false);
+    expect(bad({ minutes: 10 })).toBe(false);
+    expect(bad({ minutes: 300 })).toBe(false);
+    const twice = { weekday: 2, start: "09:00", minutes: 45 };
+    expect(ClassSchema.safeParse({ ...base, times: [twice, twice] }).success).toBe(false);
+  });
+
+  it("reads times the way people say them", () => {
+    expect(formatTime("16:30")).toBe("4:30 pm");
+    expect(formatTime("00:05")).toBe("12:05 am");
+    expect(formatTime("12:00")).toBe("12:00 pm");
+    expect(formatDuration(45)).toBe("45 min");
+    expect(formatDuration(60)).toBe("1 hour");
+    expect(formatDuration(90)).toBe("1 hr 30 min");
+    expect(describeTime({ weekday: 6, start: "09:00", minutes: 120 })).toBe("Saturday 9:00 am, 2 hours");
   });
 });

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ChangePassword } from "@/components/ChangePassword";
-import { CLASS_SUBJECTS as SUBJECTS } from "@/lib/auth/rules";
+import { WeekCalendar } from "@/components/WeekCalendar";
+import { CLASS_SUBJECTS as SUBJECTS, describeTime, formatDuration, WEEKDAYS, type ClassTime } from "@/lib/auth/rules";
 
 interface Teacher {
   id: string;
@@ -23,6 +24,7 @@ interface CentreClass {
   teacherId: string | null;
   teacherName: string | null;
   students: number;
+  times: ClassTime[];
 }
 
 interface Student {
@@ -146,6 +148,10 @@ export default function CentrePage() {
         </div>
       )}
 
+      <div className="card stack">
+        <h2 style={{ margin: 0 }}>Timetable</h2>
+        <WeekCalendar classes={centre.classes} />
+      </div>
       <Classes centre={centre} run={run} />
       <Students centre={centre} run={run} />
       <Teachers centre={centre} run={run} onInvited={invited} />
@@ -205,6 +211,7 @@ function Classes({ centre, run }: { centre: Centre; run: Run }) {
                 <th>Class</th>
                 <th>Year</th>
                 <th>Subject</th>
+                <th>When</th>
                 <th>Teacher</th>
                 <th>Students</th>
                 <th />
@@ -214,7 +221,7 @@ function Classes({ centre, run }: { centre: Centre; run: Run }) {
               {centre.classes.map((c) =>
                 editing === c.id ? (
                   <tr key={c.id}>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <ClassForm
                         initial={c}
                         teachers={centre.teachers}
@@ -234,6 +241,13 @@ function Classes({ centre, run }: { centre: Centre; run: Run }) {
                     </td>
                     <td>Year {c.yearLevel}</td>
                     <td>{SUBJECTS[c.subject]}</td>
+                    <td className="small">
+                      {c.times.length ? (
+                        c.times.map((t) => <div key={`${t.weekday} ${t.start}`}>{describeTime(t)}</div>)
+                      ) : (
+                        <span className="muted">Not set</span>
+                      )}
+                    </td>
                     <td>{c.teacherName ?? <span className="muted">No teacher yet</span>}</td>
                     <td>{c.students}</td>
                     <td>
@@ -266,7 +280,72 @@ function Classes({ centre, run }: { centre: Centre; run: Run }) {
   );
 }
 
-type ClassDetails = { name: string; yearLevel: number; subject: Subject; teacherId: string | null };
+type ClassDetails = { name: string; yearLevel: number; subject: Subject; teacherId: string | null; times: ClassTime[] };
+
+const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180];
+
+/** The weekly times a class meets: a day, a start time and how long, as many as it needs. */
+function TimesEditor({ times, onChange }: { times: ClassTime[]; onChange: (times: ClassTime[]) => void }) {
+  const set = (i: number, change: Partial<ClassTime>) => onChange(times.map((t, j) => (j === i ? { ...t, ...change } : t)));
+  const last = times.at(-1);
+  return (
+    <fieldset className="class-picker class-times">
+      <legend>When it meets each week</legend>
+      {times.length === 0 && (
+        <p className="small muted" style={{ margin: 0 }}>
+          No times yet. Add one to show the class on the timetable.
+        </p>
+      )}
+      {times.map((t, i) => (
+        <div key={i} className="class-time-row">
+          <select aria-label="Day" value={t.weekday} onChange={(e) => set(i, { weekday: Number(e.target.value) })}>
+            {WEEKDAYS.map((d, n) => (
+              <option key={d} value={n + 1}>
+                {d}
+              </option>
+            ))}
+          </select>
+          <input
+            aria-label="Start time"
+            type="time"
+            step={300}
+            value={t.start}
+            required
+            onChange={(e) => set(i, { start: e.target.value })}
+          />
+          <select aria-label="How long" value={t.minutes} onChange={(e) => set(i, { minutes: Number(e.target.value) })}>
+            {[...new Set([...DURATIONS, t.minutes])]
+              .sort((a, b) => a - b)
+              .map((m) => (
+                <option key={m} value={m}>
+                  {formatDuration(m)}
+                </option>
+              ))}
+          </select>
+          <button
+            type="button"
+            className="btn secondary small"
+            onClick={() => onChange(times.filter((_, j) => j !== i))}
+            aria-label="Remove this time"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+      <div>
+        <button
+          type="button"
+          className="btn secondary small"
+          onClick={() =>
+            onChange([...times, last ? { ...last, weekday: (last.weekday % 7) + 1 } : { weekday: 1, start: "16:00", minutes: 60 }])
+          }
+        >
+          Add a time
+        </button>
+      </div>
+    </fieldset>
+  );
+}
 
 function ClassForm({
   initial,
@@ -279,7 +358,15 @@ function ClassForm({
   onSave: (c: ClassDetails) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [c, setC] = useState<ClassDetails>(initial ?? { name: "", yearLevel: 4, subject: "both", teacherId: teachers[0]?.id ?? null });
+  const [c, setC] = useState<ClassDetails>(
+    initial ?? {
+      name: "",
+      yearLevel: 4,
+      subject: "both",
+      teacherId: teachers[0]?.id ?? null,
+      times: [{ weekday: 1, start: "16:00", minutes: 60 }],
+    },
+  );
   const [busy, setBusy] = useState(false);
   return (
     <form
@@ -287,7 +374,7 @@ function ClassForm({
       onSubmit={async (e) => {
         e.preventDefault();
         setBusy(true);
-        await onSave({ name: c.name, yearLevel: c.yearLevel, subject: c.subject, teacherId: c.teacherId });
+        await onSave({ name: c.name, yearLevel: c.yearLevel, subject: c.subject, teacherId: c.teacherId, times: c.times });
         setBusy(false);
       }}
     >
@@ -329,6 +416,7 @@ function ClassForm({
           </select>
         </div>
       </div>
+      <TimesEditor times={c.times} onChange={(times) => setC({ ...c, times })} />
       <div className="row">
         <button className="btn" disabled={busy}>
           {busy ? "Saving…" : initial ? "Save class" : "Add class"}

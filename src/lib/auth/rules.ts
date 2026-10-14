@@ -151,13 +151,49 @@ const YearSchema = z.union([z.literal(3), z.literal(4), z.literal(5), z.literal(
 
 export const CLASS_SUBJECTS = { maths: "Maths", english: "English", both: "Maths and English" } as const;
 
-/** One of a centre's classes, like a myteacher course: who runs it, for which year and subject. */
+/** When a class meets each week: a day (1 is Monday, 7 is Sunday), a start time like "16:30", and how long. */
+export const ClassTimeSchema = z.object({
+  weekday: z.number().int().min(1).max(7),
+  start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Choose a start time."),
+  minutes: z.number().int().min(15, "A class runs for at least 15 minutes.").max(240, "A class runs for at most 4 hours."),
+});
+export type ClassTime = z.infer<typeof ClassTimeSchema>;
+
+export const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+
+/** One of a centre's classes, like a myteacher course: who runs it, for which year and subject, and when. */
 export const ClassSchema = z.object({
   name: z.string().trim().min(1, "Give the class a name.").max(100),
   yearLevel: YearSchema,
   subject: z.enum(["maths", "english", "both"]),
   teacherId: z.uuid().nullable(),
+  times: z
+    .array(ClassTimeSchema)
+    .max(14, "A class can have at most 14 times a week.")
+    .refine((times) => new Set(times.map((t) => `${t.weekday} ${t.start}`)).size === times.length, "That class has the same time twice.")
+    .default([]),
 });
+
+/** "4:30 pm" from "16:30". */
+export function formatTime(start: string): string {
+  const [h, m] = start.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
+}
+
+/** Minutes after midnight from "16:30". */
+export const minutesOf = (start: string) => Number(start.slice(0, 2)) * 60 + Number(start.slice(3, 5));
+
+/** "1 hour", "45 min", "1 hr 30 min". */
+export function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (!h) return `${m} min`;
+  if (!m) return h === 1 ? "1 hour" : `${h} hours`;
+  return `${h} hr ${m} min`;
+}
+
+/** "Monday 4:30 pm, 1 hour". */
+export const describeTime = (t: ClassTime) => `${WEEKDAYS[t.weekday - 1]} ${formatTime(t.start)}, ${formatDuration(t.minutes)}`;
 
 export const MAX_CENTRE_STUDENTS = 500;
 
