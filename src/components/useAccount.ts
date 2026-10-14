@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { pickChildOnLoad } from "@/components/useProfile";
 import type { Plan, Role } from "@/lib/auth/rules";
 
 export interface Account {
@@ -62,19 +63,39 @@ export async function logInAs(userId: string): Promise<string | null> {
   // The admin's own browser copy of any children mustn't mix with this account's.
   try {
     localStorage.clear();
+    sessionStorage.removeItem(RETURN_KEY);
   } catch {}
   const home: Record<string, string> = { student: "/learn", teacher: "/classes", centre: "/centre" };
   window.location.assign(home[body?.role ?? ""] ?? "/parent");
   return null;
 }
 
-/** Ends logging in as someone else and goes back to Admin as yourself. */
-export async function backToAdmin() {
-  const res = await fetch("/api/auth/back-to-admin", { method: "POST" }).catch(() => null);
+const RETURN_KEY = "my247tutor.admin-return";
+
+/** An admin learns as one student from the Learn picker, then lands on their Learn page. */
+export async function learnAs(learnerId: string): Promise<string | null> {
+  const res = await fetch(`/api/admin/learners/${learnerId}/learn-as`, { method: "POST" }).catch(() => null);
+  const body = (await res?.json().catch(() => ({}))) as { pick?: string | null; error?: string } | undefined;
+  if (!res?.ok) return body?.error ?? "That didn't work.";
   try {
     localStorage.clear();
+    sessionStorage.setItem(RETURN_KEY, "/learn");
   } catch {}
-  window.location.assign(res?.ok ? "/admin" : "/signin");
+  pickChildOnLoad(body?.pick ?? null);
+  window.location.assign("/learn");
+  return null;
+}
+
+/** Ends logging in as someone else and goes back to where the admin started: Admin, or the Learn picker. */
+export async function backToAdmin() {
+  const res = await fetch("/api/auth/back-to-admin", { method: "POST" }).catch(() => null);
+  let back = "/admin";
+  try {
+    localStorage.clear();
+    back = sessionStorage.getItem(RETURN_KEY) ?? back;
+    sessionStorage.removeItem(RETURN_KEY);
+  } catch {}
+  window.location.assign(res?.ok ? back : "/signin");
 }
 
 export async function signOut() {
