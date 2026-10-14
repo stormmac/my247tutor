@@ -784,6 +784,18 @@ main {
   white-space: nowrap;
 }
 
+.ladder th,
+.ladder td {
+  text-align: center;
+}
+.ladder tbody th {
+  text-align: left;
+}
+ul.tight {
+  margin: 0;
+  padding-left: 20px;
+}
+
 /* Parents page results: on a phone each row becomes a small card. */
 @media (max-width: 600px) {
   .results-table thead {

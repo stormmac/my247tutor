@@ -1,6 +1,7 @@
 import { SKILLS, getSkill, skillsFor } from "../curriculum/skills";
 import type { Skill, Stage, Subject, YearLevel } from "../curriculum/types";
 import { yearToStage } from "../curriculum/types";
+import type { AssessmentRecord } from "./assessment";
 
 export interface SkillState {
   /** Estimated probability the student can do this skill unaided, 0–1. */
@@ -59,6 +60,8 @@ export interface LearnerProfile {
   history: AttemptRecord[];
   wellbeingFlags: WellbeingFlag[];
   writing: WritingRecord[];
+  /** The starting assessment in each subject, for the parents page. Missing on older profiles. */
+  assessments?: AssessmentRecord[];
 }
 
 export const MASTERY_THRESHOLD = 0.8;

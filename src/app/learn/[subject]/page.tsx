@@ -7,17 +7,17 @@ import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components
 import { questionFocus, useSuniFocus, useSuniSay } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { getOutcome } from "@/lib/curriculum/outcomes";
-import type { Subject } from "@/lib/curriculum/types";
+import type { Subject, YearLevel } from "@/lib/curriculum/types";
 import { pickNextSkill, recordAttempt, skillState, type LearnerProfile, type NextReason } from "@/lib/learner/model";
 import {
-  applyPlacement,
-  MAX_PROBES,
-  nextProbe,
-  placementDone,
-  recordProbe,
-  startPlacement,
-  type PlacementState,
-} from "@/lib/learner/placement";
+  applyAssessment,
+  finishAssessment,
+  nextQuestion,
+  recordAnswer,
+  startAssessment,
+  type AssessmentRecord,
+} from "@/lib/learner/assessment";
+import { toPracticeQuestion } from "@/lib/content/practice";
 import { answerText, generateQuestion } from "@/lib/practice";
 import { randomSeed } from "@/lib/practice/rng";
 
@@ -32,6 +32,7 @@ const REASON_LABEL: Record<NextReason, string> = {
 export default function SubjectPage() {
   const { subject } = useParams<{ subject: string }>();
   const { profile, setProfile, loaded } = useProfile();
+  const [thanks, setThanks] = useState<AssessmentRecord | null>(null);
 
   if (subject !== "maths" && subject !== "english") return <p>Unknown subject.</p>;
   if (!loaded) return null;
@@ -45,35 +46,127 @@ export default function SubjectPage() {
       </div>
     );
   }
+  if (thanks) return <AssessmentThanks name={profile.name} record={thanks} onContinue={() => setThanks(null)} />;
   if (!profile.placementDone[subject]) {
-    return <Placement subject={subject} onFinish={(state) => setProfile((p) => applyPlacement(p, state))} />;
+    return (
+      <Assessment
+        subject={subject}
+        name={profile.name}
+        yearLevel={profile.yearLevel}
+        onFinish={(record) => {
+          // Saved straight away, so the parent sees the report even if the tab is closed now.
+          setProfile((p) => applyAssessment(p, record));
+          setThanks(record);
+        }}
+      />
+    );
   }
   return <Practice subject={subject} profile={profile} setProfile={setProfile} />;
 }
 
-function Placement({ subject, onFinish }: { subject: Subject; onFinish: (s: PlacementState) => void }) {
-  const [state, setState] = useState(() => startPlacement(subject));
+/** The starting assessment: random written questions, from very easy two years below up. */
+/** Shown once the check is saved, before practice starts. */
+function AssessmentThanks({ name, record, onContinue }: { name: string; record: AssessmentRecord; onContinue: () => void }) {
+  return (
+    <div className="card narrow stack" style={{ margin: "0 auto" }}>
+      <h1>All done, {name}!</h1>
+      <p style={{ margin: 0 }}>
+        You answered {record.answers.length} questions. Now we know where to start, so your practice will be just right for you.
+      </p>
+      <p className="muted" style={{ margin: 0 }}>
+        Your grown-up can see how you went on the Parents page.
+      </p>
+      <button className="btn" onClick={onContinue}>
+        Start practising
+      </button>
+    </div>
+  );
+}
+
+/** The starting assessment: random written questions, from very easy two years below up. */
+/** The check, then a thank-you before practice starts. */
+function AssessmentDone({
+  subject,
+  profile,
+  setProfile,
+}: {
+  subject: Subject;
+  profile: LearnerProfile;
+  setProfile: ReturnType<typeof useProfile>["setProfile"];
+}) {
+  const [finished, setFinished] = useState<AssessmentRecord | null>(null);
+  if (finished)
+    return (
+      <div className="card narrow stack" style={{ margin: "0 auto" }}>
+        <h1>All done, {profile.name}!</h1>
+        <p style={{ margin: 0 }}>
+          You answered {finished.answers.length} questions. Now we know where to start, so your practice will be just right for you.
+        </p>
+        <p className="muted" style={{ margin: 0 }}>
+          Your grown-up can see how you went on the Parents page.
+        </p>
+        <button className="btn" onClick={() => setProfile((p) => applyAssessment(p, finished))}>
+          Start practising
+        </button>
+      </div>
+    );
+  return <Assessment subject={subject} name={profile.name} yearLevel={profile.yearLevel} onFinish={setFinished} />;
+}
+
+function Assessment({
+  subject,
+  name,
+  yearLevel,
+  onFinish,
+}: {
+  subject: Subject;
+  name: string;
+  yearLevel: YearLevel;
+  onFinish: (r: AssessmentRecord) => void;
+}) {
+  const [started, setStarted] = useState(false);
+  const [state, setState] = useState(() => startAssessment(subject, yearLevel));
+  const [question, setQuestion] = useState(() => nextQuestion(state));
   const [seed, setSeed] = useState(randomSeed);
-  // The probe on screen stays put until the student presses Next, even after the check has finished.
-  const [probe, setProbe] = useState(() => nextProbe(state));
-  const question = useMemo(() => (probe ? generateQuestion(probe, seed) : null), [probe, seed]);
+  const practice = useMemo(() => (question ? toPracticeQuestion(question, seed) : null), [question, seed]);
+  const title = subject === "maths" ? "Maths" : "English";
+
+  if (!started)
+    return (
+      <div className="card narrow stack" style={{ margin: "0 auto" }}>
+        <h1>Starting check: {title}</h1>
+        <p style={{ margin: 0 }}>
+          Hi {name}! Let&apos;s find the right place for you to start. The first questions are easy, and they get harder as you go. When
+          they get too tricky, the check stops by itself.
+        </p>
+        <p className="muted" style={{ margin: 0 }}>
+          There are no hints in the check. Just do your best. It&apos;s fine to get some wrong.
+        </p>
+        <button className="btn" onClick={() => setStarted(true)}>
+          Start
+        </button>
+      </div>
+    );
 
   return (
     <div className="narrow stack" style={{ margin: "0 auto" }}>
-      <h1>Quick check: {subject === "maths" ? "Maths" : "English"}</h1>
-      <p className="muted">
-        Question {Math.min(state.probes.length + 1, MAX_PROBES)} of up to {MAX_PROBES}. Just do your best. Some questions might be tricky,
-        and that's fine.
-      </p>
-      {question && (
+      <div className="row spread">
+        <h1 style={{ margin: 0 }}>Starting check: {title}</h1>
+        <span className="pill">Question {state.answers.length + (state.done ? 0 : 1)}</span>
+      </div>
+      <div className="progress" aria-label="How far through the check">
+        <div style={{ width: `${Math.round(((state.passed + 1) / Math.max(1, state.steps.length)) * 100)}%` }} />
+      </div>
+      {practice && question && (
         <QuestionView
-          key={question.id}
-          question={question}
+          key={practice.id}
+          question={practice}
           placement
-          onDone={(o) => setState((s) => recordProbe(s, o.correct))}
+          onDone={(o) => setState((s) => recordAnswer(s, question, o.correct, attemptDetails(practice, o)))}
           onNext={() => {
-            if (placementDone(state)) return onFinish(state);
-            setProbe(nextProbe(state));
+            const next = state.done ? null : nextQuestion(state);
+            if (!next) return onFinish(finishAssessment({ ...state, done: true }));
+            setQuestion(next);
             setSeed(randomSeed());
           }}
         />

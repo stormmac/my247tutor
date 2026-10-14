@@ -10,6 +10,14 @@ import { getSkill, skillsFor } from "@/lib/curriculum/skills";
 import type { Skill, Subject } from "@/lib/curriculum/types";
 import { SUBTOPICS } from "@/lib/content/tree";
 import { recentAccuracy, skillState, type AttemptRecord, type LearnerProfile } from "@/lib/learner/model";
+import {
+  LEVEL_NAMES,
+  standing as assessmentStanding,
+  summarySentence,
+  topicResults,
+  type AssessmentRecord,
+  type Level,
+} from "@/lib/learner/assessment";
 import { attemptResult, attemptTopic, resultsByTopic, type AttemptResult, type AttemptTopic } from "@/lib/learner/results";
 import { COMPETENCY_LABELS, competency, recommendedPlan, subjectLevel, type Competency, type Standing } from "@/lib/learner/report";
 
@@ -89,6 +97,19 @@ export default function ParentPage() {
           <div style={{ fontSize: 32, fontWeight: 800 }}>{profile.writing.length}</div>
         </div>
       </div>
+
+      <StartingReport
+        profile={profile}
+        subject="maths"
+        title="Maths"
+        onRedo={() => setProfile((p) => ({ ...p, placementDone: { ...p.placementDone, maths: false } }))}
+      />
+      <StartingReport
+        profile={profile}
+        subject="english"
+        title="English"
+        onRedo={() => setProfile((p) => ({ ...p, placementDone: { ...p.placementDone, english: false } }))}
+      />
 
       <RecentQuestions profile={profile} />
       <TopicResults profile={profile} />
@@ -300,6 +321,195 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+const ASSESSMENT_PILL = { ahead: "good", "on track": "good", below: "warn", "well below": "bad" } as const;
+const ASSESSMENT_LABEL = { ahead: "Ahead", "on track": "On track", below: "A little behind", "well below": "Well behind" } as const;
+
+/** The report from the starting assessment: where the child is working, by year and level, and by topic. */
+function StartingReport({
+  profile,
+  subject,
+  title,
+  onRedo,
+}: {
+  profile: LearnerProfile;
+  subject: Subject;
+  title: string;
+  onRedo: () => void;
+}) {
+  const record = profile.assessments?.find((a) => a.subject === subject);
+  const [showQuestions, setShowQuestions] = useState(false);
+  if (!record) {
+    return (
+      <div className="card">
+        <h2 style={{ margin: 0 }}>Starting assessment: {title}</h2>
+        <p className="muted" style={{ margin: "6px 0 0" }}>
+          {profile.placementDone[subject]
+            ? `${profile.name} did the older quick check, so there's no full report yet.`
+            : `Not done yet. It starts the first time ${profile.name} opens ${title}.`}
+        </p>
+        {profile.placementDone[subject] && (
+          <button className="btn secondary small no-print" style={{ marginTop: 12 }} onClick={onRedo}>
+            Do the starting assessment
+          </button>
+        )}
+      </div>
+    );
+  }
+  const s = assessmentStanding(record);
+  const topics = topicResults(record);
+  const strong = topics.filter((t) => t.right === t.total);
+  const work = topics.filter((t) => t.right < t.total);
+  const right = record.answers.filter((a) => a.correct).length;
+  return (
+    <div className="card stack report">
+      <div className="row spread">
+        <div>
+          <h2 style={{ margin: 0 }}>Starting assessment: {title}</h2>
+          <div className="muted small">
+            {new Date(record.at).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })} · {record.answers.length}{" "}
+            questions, {right} right · started at Year {record.startYear}, level 1
+          </div>
+        </div>
+        <span className={`pill ${ASSESSMENT_PILL[s]}`}>
+          {ASSESSMENT_LABEL[s]} for Year {record.yearLevel}
+        </span>
+      </div>
+      <p style={{ margin: 0, fontSize: 18 }}>{summarySentence(record, profile.name)}</p>
+      <LevelLadder record={record} />
+      <div className="grid grid-2">
+        <div>
+          <h3>Strengths</h3>
+          {strong.length ? (
+            <ul className="tight">
+              {strong.map((t) => (
+                <li key={t.topic}>{t.topic}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted small">None stood out yet.</p>
+          )}
+        </div>
+        <div>
+          <h3>To work on</h3>
+          {work.length ? (
+            <ul className="tight">
+              {work.map((t) => (
+                <li key={t.topic}>
+                  {t.topic}{" "}
+                  <span className="muted small">
+                    ({t.right} of {t.total} right)
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted small">Nothing was missed.</p>
+          )}
+        </div>
+      </div>
+      <p className="small muted" style={{ margin: 0 }}>
+        Levels go from 1 (very easy) to 5 (very hard) within each year. Questions were picked at random from the NSW syllabus topics for
+        each year, so this is a snapshot, not a school assessment.
+      </p>
+      <div className="row no-print">
+        <button className="btn secondary small" onClick={() => setShowQuestions((v) => !v)}>
+          {showQuestions ? "Hide the questions" : "See every question"}
+        </button>
+        <button
+          className="btn secondary small"
+          onClick={() => {
+            if (confirm(`Ask ${profile.name} to do the ${title} starting assessment again next time?`)) onRedo();
+          }}
+        >
+          Do it again
+        </button>
+      </div>
+      {showQuestions && (
+        <div className="table-scroll">
+          <table className="results-table">
+            <thead>
+              <tr>
+                <th>Level</th>
+                <th>Question</th>
+                <th>{profile.name}&apos;s answer</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {record.answers.map((a, i) => (
+                <tr key={i}>
+                  <td className="small">
+                    Year {a.year}, level {a.level}
+                    <div className="muted small">{a.topic}</div>
+                  </td>
+                  <td data-label="Question">{a.question ?? "–"}</td>
+                  <td data-label="Answer">
+                    {a.answer ?? "–"}
+                    {a.rightAnswer && <div className="muted small">Right answer: {a.rightAnswer}</div>}
+                  </td>
+                  <td>
+                    <span className={`pill ${a.correct ? "good" : "bad"}`}>{a.correct ? "Right" : "Not right"}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Each year and level the check reached: passed, where it stopped, or not reached. */
+function LevelLadder({ record }: { record: AssessmentRecord }) {
+  const years = [...new Set(record.answers.map((a) => a.year))];
+  const lastYear = Math.min(6, record.yearLevel + 1);
+  for (let y = record.startYear; y <= lastYear; y++) if (!years.includes(y as never)) years.push(y as never);
+  years.sort();
+  const levels: Level[] = [1, 3, 5];
+  const passed = (year: number, level: number) =>
+    record.reached !== null && (year < record.reached.year || (year === record.reached.year && level <= record.reached.level));
+  const stopped = (year: number, level: number) => record.stoppedAt?.year === year && record.stoppedAt.level === level;
+  return (
+    <div className="table-scroll">
+      <table className="ladder">
+        <thead>
+          <tr>
+            <th />
+            {levels.map((l) => (
+              <th key={l}>
+                Level {l}
+                <div className="muted small">{LEVEL_NAMES[l]}</div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {years.map((y) => (
+            <tr key={y}>
+              <th>
+                Year {y}
+                {y === record.yearLevel && <div className="muted small">their year</div>}
+              </th>
+              {levels.map((l) => (
+                <td key={l}>
+                  {passed(y, l) ? (
+                    <span className="pill good">Passed</span>
+                  ) : stopped(y, l) ? (
+                    <span className="pill warn">Stopped here</span>
+                  ) : (
+                    <span className="muted small">–</span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
