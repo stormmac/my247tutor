@@ -99,7 +99,8 @@ export function switchChild(id: string) {
   const next = all.find((p) => p.id === id);
   if (!next) return;
   writeOthers(all.filter((p) => p !== next));
-  write(next);
+  // Nothing about the child changed, so nothing is saved: the account's copy may be newer (they may have practised on their own sign-in).
+  write(next, PROFILE_LOADED);
   setAddingChild(false);
   window.location.assign(window.location.pathname.startsWith("/parent") ? "/parent" : "/learn");
 }

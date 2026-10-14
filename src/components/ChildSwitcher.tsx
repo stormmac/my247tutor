@@ -1,14 +1,16 @@
 "use client";
 
+import { useAccount } from "@/components/useAccount";
 import { addChild, switchChild, useChildren } from "@/components/useProfile";
 import { MAX_CHILDREN } from "@/lib/learner/model";
 
 const ADD = "__add";
 
-/** Which child is learning, in the top bar. Hidden until there is a child to show. */
+/** Which child is learning, in the top bar. Hidden until there is a child to show, and for a child signed in on their own. */
 export function ChildSwitcher() {
   const { children, current, canAdd } = useChildren();
-  if (!children.length) return null;
+  const { user } = useAccount();
+  if (!children.length || user?.child) return null;
   return (
     <select
       className="child-switcher"

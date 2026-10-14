@@ -29,8 +29,9 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         body: JSON.stringify(signup ? { name, email, password } : { email, password }),
       });
       if (res.ok) {
-        // A full page load so every part of the page sees the new session.
-        window.location.assign(next);
+        const { user } = (await res.json().catch(() => ({}))) as { user?: { role?: string } };
+        // A full page load so every part of the page sees the new session. Children go to their learning pages.
+        window.location.assign(user?.role === "student" && next.startsWith("/parent") ? "/learn" : next);
         return;
       }
       setError(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Something went wrong.");
@@ -58,7 +59,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       <p className="muted" style={{ margin: 0 }}>
         {signup
           ? "Your child's progress is saved to your account, so you can see it on any device."
-          : "Sign in to your parent account to carry on."}
+          : "Parents sign in with their email. Children sign in with the username their parent set up for them."}
       </p>
       {signup && (
         <div>
@@ -67,8 +68,17 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         </div>
       )}
       <div>
-        <label htmlFor="email">Email</label>
-        <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+        <label htmlFor="email">{signup ? "Email" : "Email or username"}</label>
+        <input
+          id="email"
+          type={signup ? "email" : "text"}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete={signup ? "email" : "username"}
+          autoCapitalize="none"
+          spellCheck={false}
+          required
+        />
       </div>
       <div>
         <label htmlFor="password">Password</label>

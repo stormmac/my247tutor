@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { signOut, useAccount } from "@/components/useAccount";
 
+/** The Parents link in the top bar. A child signed in on their own doesn't get it. */
+export function ParentsLink() {
+  const { user } = useAccount();
+  if (user?.child) return null;
+  return <Link href="/parent">Parents</Link>;
+}
+
 /** Sign in (with any free-trial time left), or the signed-in parent's Admin and Sign out, in the top bar. */
 export function AccountMenu() {
   const { loaded, enabled, billing, user, trialEndsAt } = useAccount();
@@ -19,10 +26,15 @@ export function AccountMenu() {
     );
   return (
     <>
-      {user.trialEndsAt && <TrialTimer endsAt={user.trialEndsAt} account />}
+      {user.trialEndsAt && !user.child && <TrialTimer endsAt={user.trialEndsAt} account />}
       {billing && user.role === "parent" && <Link href="/billing">Billing</Link>}
       {user.role === "admin" && <Link href="/admin">Admin</Link>}
-      <button type="button" className="link-button" onClick={() => void signOut()} title={`Signed in as ${user.email}`}>
+      <button
+        type="button"
+        className="link-button"
+        onClick={() => void signOut()}
+        title={user.child ? `Signed in as ${user.name} (${user.email})` : `Signed in as ${user.email}`}
+      >
         Sign out
       </button>
     </>
