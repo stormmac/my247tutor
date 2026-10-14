@@ -10,6 +10,7 @@ import type { Subject, YearLevel } from "@/lib/curriculum/types";
 import { currentSightLevel, currentUnit, readingOf, sightLevelsDone, unitsDone } from "@/lib/phonics/progress";
 import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
 import { UNITS } from "@/lib/phonics/sequence";
+import { describeTables, tablesOf } from "@/lib/tables/game";
 
 export default function LearnPage() {
   const { profile, setProfile, loaded } = useProfile();
@@ -32,6 +33,7 @@ export default function LearnPage() {
         <SubjectCard profile={profile} subject="maths" title="Maths" />
         <SubjectCard profile={profile} subject="english" title="English" />
       </div>
+      <TablesCard profile={profile} />
       <div className="card">
         <div className="row spread">
           <div>
@@ -108,6 +110,28 @@ function ReadingCard({ profile }: { profile: LearnerProfile }) {
         </div>
         <Link href="/read/check" className="btn secondary">
           Start
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function TablesCard({ profile }: { profile: LearnerProfile }) {
+  const games = tablesOf(profile).games;
+  const last = games.at(-1);
+  return (
+    <div className="card">
+      <div className="row spread">
+        <div>
+          <h2>✖️ Times tables game</h2>
+          <p className="muted" style={{ margin: 0 }}>
+            {last
+              ? `Last game: ${last.right} right on ${describeTables(last.tables)}. Can you beat it?`
+              : "Answer as many as you can in 2 minutes. Pick your tables and speed."}
+          </p>
+        </div>
+        <Link href="/tables" className="btn secondary">
+          Play
         </Link>
       </div>
     </div>
