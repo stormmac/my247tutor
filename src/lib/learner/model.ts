@@ -52,6 +52,8 @@ export interface WritingRecord {
 
 export interface LearnerProfile {
   version: 1;
+  /** Tells a parent's children apart. Missing on profiles saved before families had more than one child. */
+  id?: string;
   name: string;
   yearLevel: YearLevel;
   createdAt: number;
@@ -76,7 +78,25 @@ const clip = (text: string | undefined, max: number) =>
   text === undefined ? undefined : text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
 export function newProfile(name: string, yearLevel: YearLevel, now = Date.now()): LearnerProfile {
-  return { version: 1, name, yearLevel, createdAt: now, skills: {}, placementDone: {}, history: [], wellbeingFlags: [], writing: [] };
+  return {
+    version: 1,
+    id: newChildId(),
+    name,
+    yearLevel,
+    createdAt: now,
+    skills: {},
+    placementDone: {},
+    history: [],
+    wellbeingFlags: [],
+    writing: [],
+  };
+}
+
+/** A parent can have up to this many children. */
+export const MAX_CHILDREN = 3;
+
+export function newChildId(): string {
+  return globalThis.crypto.randomUUID();
 }
 
 export function skillState(profile: LearnerProfile, skillId: string): SkillState {

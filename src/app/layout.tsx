@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccountMenu } from "@/components/AccountMenu";
+import { ChildSwitcher } from "@/components/ChildSwitcher";
 import { PaymentGate } from "@/components/PaymentGate";
 import { ProfileSync } from "@/components/ProfileSync";
 import { SuniCompanion, SuniProvider } from "@/components/SuniCompanion";
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 my<span>247</span>tutor
               </Link>
               <nav className="nav">
+                <ChildSwitcher />
                 <Link href="/learn">Learn</Link>
                 <Link href="/parent">Parents</Link>
                 <AccountMenu />
