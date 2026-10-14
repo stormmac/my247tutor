@@ -109,7 +109,14 @@ function SubtopicRow({ subject, subtopic, profile }: { subject: string; subtopic
   const isWriting = subtopic.skill_id !== null && getSkill(subtopic.skill_id).practice === "writing";
   const st = skillState(profile, progressKey(subtopic));
   const started = st.attempts > 0 || st.mastered;
-  const kind = isWriting ? "Writing task" : subtopic.skill_id ? "Endless practice" : `${questionsOf(subtopic.id).length} questions`;
+  const written = questionsOf(subtopic.id).length;
+  const kind = isWriting
+    ? "Writing task"
+    : subtopic.skill_id
+      ? written
+        ? `${written} questions, then endless practice`
+        : "Endless practice"
+      : `${written} questions`;
 
   return (
     <li className="subtopic">
