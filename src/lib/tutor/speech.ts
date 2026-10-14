@@ -21,7 +21,10 @@ export function speakableText(text: string): string {
   );
 }
 
-/** An Australian voice if the device has one, then British, then any English voice. */
+/**
+ * An Australian voice if the device has one, then British, then any English voice. Within a country,
+ * natural-sounding voices (Edge's "Natural" ones, iPhone's "Enhanced" ones) come before robotic ones.
+ */
 export function pickVoice<V extends { lang: string; name: string; localService?: boolean }>(voices: V[]): V | null {
   const english = voices.filter((v) => v.lang.toLowerCase().replace("_", "-").startsWith("en"));
   const rank = (v: V) => {
@@ -29,7 +32,8 @@ export function pickVoice<V extends { lang: string; name: string; localService?:
     const region = lang === "en-au" ? 0 : lang === "en-gb" ? 1 : lang === "en-nz" ? 2 : 3;
     // Female-sounding voices tend to suit a friendly bee; named ones vary by device.
     const friendly = /karen|catherine|female|samantha|serena|kate|libby|natasha/i.test(v.name) ? 0 : 1;
-    return region * 2 + friendly;
+    const natural = /natural|neural|online|enhanced|premium/i.test(v.name) ? 0 : 1;
+    return region * 4 + natural * 2 + friendly;
   };
   return english.sort((a, b) => rank(a) - rank(b))[0] ?? null;
 }
@@ -38,12 +42,36 @@ export function speechSupported(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
 }
 
+let waitedForVoices = false;
+/** Counts what Suni is asked to say, so something newer replaces a line still waiting for voices. */
+let latest = 0;
+
 /** Reads the text aloud, cutting off anything Suni was already saying. */
 export function speak(text: string) {
   if (!speechSupported()) return;
   const words = speakableText(text);
+  const turn = ++latest;
   window.speechSynthesis.cancel();
   if (!words) return;
+  // Chrome loads its voices after the page, so the first thing Suni says could be in the default
+  // (often American) voice. Wait for them, briefly, the first time only.
+  if (!waitedForVoices && !window.speechSynthesis.getVoices().length) {
+    waitedForVoices = true;
+    let spoken = false;
+    const go = () => {
+      if (spoken) return;
+      spoken = true;
+      window.speechSynthesis.removeEventListener("voiceschanged", go);
+      if (turn === latest) say(words);
+    };
+    window.speechSynthesis.addEventListener("voiceschanged", go);
+    setTimeout(go, 500);
+    return;
+  }
+  say(words);
+}
+
+function say(words: string) {
   const utterance = new SpeechSynthesisUtterance(words);
   const voice = pickVoice(window.speechSynthesis.getVoices());
   if (voice) utterance.voice = voice;
@@ -54,5 +82,6 @@ export function speak(text: string) {
 }
 
 export function stopSpeaking() {
+  latest++;
   if (speechSupported()) window.speechSynthesis.cancel();
 }

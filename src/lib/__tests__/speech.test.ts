@@ -24,6 +24,13 @@ describe("Suni's voice", () => {
     expect(pickVoice([v("en-AU", "Lee"), v("en-AU", "Karen")])?.name).toBe("Karen");
   });
 
+  it("prefers a natural-sounding voice, but never over the accent", () => {
+    expect(pickVoice([v("en-AU", "Microsoft Catherine"), v("en-AU", "Microsoft Natasha Online (Natural)")])?.name).toBe(
+      "Microsoft Natasha Online (Natural)",
+    );
+    expect(pickVoice([v("en-GB", "Google UK English Female (Natural)"), v("en-AU", "Lee")])?.lang).toBe("en-AU");
+  });
+
   it("has no voice when the device has no English voices", () => {
     expect(pickVoice([v("fr-FR"), v("de-DE")])).toBeNull();
   });
