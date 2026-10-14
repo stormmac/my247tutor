@@ -29,7 +29,29 @@ export const SignUpSchema = z.object({
   password: PasswordSchema,
 });
 
-export const SignInSchema = z.object({ email: EmailSchema, password: z.string().min(1).max(200) });
+/** Parents sign in with their email; children with the username their parent gave them. */
+export const SignInSchema = z.object({ email: z.string().trim().toLowerCase().min(1).max(255), password: z.string().min(1).max(200) });
+
+/** A child's sign-in name: easy to type, and never an email, so the two can't be confused. */
+export const UsernameSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, "Use at least 3 characters.")
+  .max(30, "Use 30 characters or fewer.")
+  .regex(/^[a-z0-9][a-z0-9._-]*$/, "Use letters, numbers, dots, dashes or underscores, starting with a letter or number.");
+
+/** Shorter than a parent's, as children type it themselves. Repeated wrong guesses still lock the account. */
+export const MIN_CHILD_PASSWORD_LENGTH = 8;
+export const ChildPasswordSchema = z
+  .string()
+  .min(MIN_CHILD_PASSWORD_LENGTH, `Use at least ${MIN_CHILD_PASSWORD_LENGTH} characters.`)
+  .max(200, "That password is too long.");
+
+export const NewChildLoginSchema = z.object({ username: UsernameSchema, password: ChildPasswordSchema });
+export const ChildLoginChangeSchema = z
+  .object({ username: UsernameSchema.optional(), password: ChildPasswordSchema.optional() })
+  .refine((c) => c.username !== undefined || c.password !== undefined, "Nothing to change.");
 
 /** Emails listed in ADMIN_EMAILS (comma separated) become admins when they sign up or sign in. */
 export function isAdminEmail(email: string, list = process.env.ADMIN_EMAILS ?? ""): boolean {

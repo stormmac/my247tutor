@@ -1,6 +1,7 @@
 import "server-only";
 import { Pool } from "pg";
 import { BILLING_SQL } from "./billingSchema";
+import { CHILD_SQL } from "./childSchema";
 import { INVITE_SQL } from "./inviteSchema";
 import { connectionString, databaseUrl } from "./dburl";
 
@@ -18,9 +19,9 @@ export function db(): Pool {
 
 let schema: Promise<Pool> | null = null;
 
-const LATER_SQL = `${BILLING_SQL}\n${INVITE_SQL}`;
+const LATER_SQL = `${BILLING_SQL}\n${INVITE_SQL}\n${CHILD_SQL}`;
 
-/** The pool, once the card-payment columns and invite table exist. Tried again on the next call if it fails. */
+/** The pool, once the card-payment columns, invite table and child sign-in columns exist. Tried again on the next call if it fails. */
 export function ready(): Promise<Pool> {
   schema ??= db()
     .query(LATER_SQL)

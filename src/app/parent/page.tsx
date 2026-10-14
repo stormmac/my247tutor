@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ChangePassword } from "@/components/ChangePassword";
 import { useAccount } from "@/components/useAccount";
+import { ChildLogin } from "@/components/ChildLogin";
 import { ChildTabs } from "@/components/ChildSwitcher";
 import { removeCurrentChild, useProfile } from "@/components/useProfile";
 import { getOutcome } from "@/lib/curriculum/outcomes";
@@ -152,6 +153,8 @@ export default function ParentPage() {
         </div>
       )}
 
+      {account.user && profile.id && <ChildLogin key={profile.id} learnerId={profile.id} name={profile.name} />}
+
       <div className="card no-print">
         <h2>Settings</h2>
         <p className="muted small">
@@ -160,6 +163,21 @@ export default function ParentPage() {
             : "Progress is saved in this browser only."}
         </p>
         <div className="row">
+          <label className="row" style={{ fontWeight: 400, margin: 0 }}>
+            Name
+            <input
+              key={profile.id}
+              defaultValue={profile.name}
+              maxLength={20}
+              style={{ width: 160 }}
+              aria-label="Child's name"
+              onBlur={(e) => {
+                const name = e.target.value.trim().slice(0, 20);
+                if (name && name !== profile.name) setProfile((p) => ({ ...p, name }));
+                else e.target.value = profile.name;
+              }}
+            />
+          </label>
           <label className="row" style={{ fontWeight: 400, margin: 0 }}>
             School year
             <select

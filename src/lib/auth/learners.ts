@@ -18,29 +18,33 @@ export type StoredProfile = z.infer<typeof StoredProfileSchema>;
 export const MAX_PROFILE_BYTES = 512 * 1024;
 
 /** Every child on the parent's account, oldest first. Each profile carries its row id as its own id. */
-export async function getLearnerProfiles(parentId: string): Promise<Record<string, unknown>[]> {
-  const { rows } = await db().query(`SELECT id, profile FROM learners WHERE parent_id = $1 ORDER BY created_at LIMIT ${MAX_CHILDREN}`, [
-    parentId,
-  ]);
+export async function getLearnerProfiles(parentId: string, onlyId?: string): Promise<Record<string, unknown>[]> {
+  const { rows } = await db().query(
+    `SELECT id, profile FROM learners WHERE parent_id = $1 AND ($2::uuid IS NULL OR id = $2) ORDER BY created_at LIMIT ${MAX_CHILDREN}`,
+    [parentId, onlyId ?? null],
+  );
   return rows.map((r) => ({ ...(r.profile as Record<string, unknown>), id: r.id as string }));
 }
 
 /**
- * Makes the account hold exactly these children (at most three). Each child's id is their row id,
- * so a save updates the right child and a child left out of the list is deleted.
- * With `keepOthers`, children not in the list are left alone (a page from before there were several children).
+ * Saves these children to the parent's account. Each child's id is their row id, so a save updates
+ * the right child. `keep` says which other children stay: by default only the ones saved here (the
+ * rest are deleted), a list of ids to keep, or "all" to delete nobody.
  */
 export async function saveLearnerProfiles(
   parentId: string,
   profiles: StoredProfile[],
-  { keepOthers = false } = {},
+  { keep }: { keep?: string[] | "all" } = {},
 ): Promise<StoredProfile[]> {
   const withIds = profiles.slice(0, MAX_CHILDREN).map((p) => ({ ...p, id: p.id ?? crypto.randomUUID() }));
   const client = await db().connect();
   try {
     await client.query("BEGIN");
-    if (!keepOthers) {
-      await client.query(`DELETE FROM learners WHERE parent_id = $1 AND NOT (id = ANY($2::uuid[]))`, [parentId, withIds.map((p) => p.id)]);
+    if (keep !== "all") {
+      await client.query(`DELETE FROM learners WHERE parent_id = $1 AND NOT (id = ANY($2::uuid[]))`, [
+        parentId,
+        [...withIds.map((p) => p.id), ...(keep ?? [])],
+      ]);
     }
     for (const p of withIds) {
       // Another account's id can't be taken over: the update only applies to this parent's row.
@@ -52,6 +56,14 @@ export async function saveLearnerProfiles(
         [p.id, parentId, p.name, p.yearLevel, JSON.stringify(p)],
       );
     }
+    // A child's own sign-in greets them by the name their parent gave them.
+    for (const p of withIds) {
+      await client.query(`UPDATE users SET display_name = $3 WHERE learner_id = $1 AND parent_id = $2 AND display_name <> $3`, [
+        p.id,
+        parentId,
+        p.name,
+      ]);
+    }
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
@@ -60,4 +72,13 @@ export async function saveLearnerProfiles(
     client.release();
   }
   return withIds;
+}
+
+/** A child signed in on their own saves their progress. It can only ever change their own profile. */
+export async function saveOwnProfile(parentId: string, learnerId: string, profile: StoredProfile): Promise<boolean> {
+  const { rowCount } = await db().query(
+    `UPDATE learners SET profile = $3, name = $4, year_level = $5, updated_at = NOW() WHERE id = $2 AND parent_id = $1`,
+    [parentId, learnerId, JSON.stringify({ ...profile, id: learnerId }), profile.name, profile.yearLevel],
+  );
+  return Boolean(rowCount);
 }

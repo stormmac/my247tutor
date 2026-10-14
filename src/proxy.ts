@@ -24,6 +24,13 @@ const ACCOUNT_PUBLIC = [
   // Stripe calls this; it proves itself with a signature instead.
   "/api/billing/webhook",
 ];
+/** A child signed in on their own uses the learning pages; these belong to their parent. */
+const PARENT_ONLY = ["/parent", "/billing", "/api/billing", "/api/children"];
+
+function isUnder(pathname: string, prefixes: string[]): boolean {
+  return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 /** Called by other services, which check themselves with a signature, so they skip the same-site check. */
 const SIGNED_WEBHOOKS = ["/api/billing/webhook"];
 
@@ -79,6 +86,8 @@ export async function proxy(request: NextRequest) {
       return denied(request, 401, "Please sign in.", "/start");
     }
     if (adminOnly && session.role !== "admin") return denied(request, 403, "You don't have access to this.", "/");
+    if (session.role === "student" && isUnder(pathname, PARENT_ONLY))
+      return denied(request, 403, "Ask your grown-up to do this.", "/learn");
   }
 
   return securityHeaders(NextResponse.next());

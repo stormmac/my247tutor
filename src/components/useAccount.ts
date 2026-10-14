@@ -8,6 +8,8 @@ export interface Account {
   name: string;
   email: string;
   role: Role;
+  /** A child signed in with the username their parent set up. `email` then holds that username. */
+  child?: boolean;
   /** Card payments: why this account can use the site ("trial", "paying", "free", "staff"), or "unpaid". */
   plan?: Plan;
   /** Payments are on and the free trial is over without a card added. */
