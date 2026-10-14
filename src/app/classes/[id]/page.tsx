@@ -8,6 +8,8 @@ import { CLASS_SUBJECTS } from "@/lib/auth/rules";
 import type { LearnerProfile } from "@/lib/learner/model";
 import type { Standing } from "@/lib/learner/report";
 import type { StudentSummary } from "@/lib/learner/summary";
+import { formatReadingAge, READING_AGE_CUTOFF } from "@/lib/phonics/progress";
+import { UNITS } from "@/lib/phonics/sequence";
 
 interface ClassStudent {
   id: string;
@@ -105,6 +107,7 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
                 <th>Student</th>
                 {c.subject !== "english" && <th>Maths</th>}
                 {c.subject !== "maths" && <th>English</th>}
+                <th>Reading</th>
                 <th>This week</th>
                 <th>Last practised</th>
                 <th className="no-print" />
@@ -130,6 +133,20 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
                       <Level level={s.summary.english} />
                     </td>
                   )}
+                  <td>
+                    {s.summary.reading.age === null ? (
+                      <span className="muted small">No check yet</span>
+                    ) : (
+                      <span className={s.summary.reading.age < READING_AGE_CUTOFF ? "warn-text" : ""}>
+                        {formatReadingAge(s.summary.reading.age)}
+                      </span>
+                    )}
+                    {s.summary.reading.enrolled && (
+                      <div className="small muted">
+                        Learn to Read {s.summary.reading.unitsDone}/{UNITS.length}
+                      </div>
+                    )}
+                  </td>
                   <td>
                     {s.summary.questionsThisWeek} {s.summary.questionsThisWeek === 1 ? "question" : "questions"}
                     {s.summary.correctThisWeek !== null && <div className="small muted">{s.summary.correctThisWeek}% right first try</div>}

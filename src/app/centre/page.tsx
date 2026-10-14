@@ -32,6 +32,7 @@ interface Student {
   username: string | null;
   lastLoginAt: string | null;
   classIds: string[];
+  learnToRead: boolean;
 }
 
 interface Centre {
@@ -440,7 +441,10 @@ function Students({ centre, run }: { centre: Centre; run: Run }) {
                     </td>
                     <td>Year {s.yearLevel}</td>
                     <td>{s.username ?? <span className="muted">None</span>}</td>
-                    <td>{s.classIds.map(className).filter(Boolean).join(", ") || <span className="muted">None</span>}</td>
+                    <td>
+                      {s.classIds.map(className).filter(Boolean).join(", ") || <span className="muted">None</span>}
+                      {s.learnToRead && <div className="small">📖 Learn to Read</div>}
+                    </td>
                     <td>{date(s.lastLoginAt)}</td>
                     <td>
                       <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
@@ -475,6 +479,7 @@ interface StudentChange {
   username?: string;
   password?: string;
   classIds?: string[];
+  learnToRead?: boolean;
 }
 
 function StudentForm({
@@ -493,6 +498,7 @@ function StudentForm({
   const [username, setUsername] = useState(initial?.username ?? "");
   const [password, setPassword] = useState("");
   const [classIds, setClassIds] = useState<string[]>(initial?.classIds ?? []);
+  const [learnToRead, setLearnToRead] = useState(initial?.learnToRead ?? false);
   const [busy, setBusy] = useState(false);
   return (
     <form
@@ -507,6 +513,7 @@ function StudentForm({
           username: username.trim().toLowerCase(),
           ...(password ? { password } : {}),
           classIds,
+          learnToRead,
         });
         setBusy(false);
       }}
@@ -550,6 +557,10 @@ function StudentForm({
         </div>
       </div>
       <ClassPicker classes={classes} value={classIds} onChange={setClassIds} />
+      <label className="row" style={{ fontWeight: 400, margin: 0, gap: 8 }}>
+        <input type="checkbox" style={{ width: "auto" }} checked={learnToRead} onChange={(e) => setLearnToRead(e.target.checked)} />
+        Learn to Read (phonics, for a reading age below 7.5). Students are also put in it by the reading check on their Learn page.
+      </label>
       <div className="row">
         <button className="btn" disabled={busy}>
           {busy ? "Saving…" : initial ? "Save student" : "Add student"}

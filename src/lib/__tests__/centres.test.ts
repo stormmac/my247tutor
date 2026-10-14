@@ -34,7 +34,7 @@ describe("centre forms", () => {
 
   it("adds a student with a username, a password and their classes", () => {
     const student = NewStudentSchema.parse({ name: "Mia", yearLevel: 5, username: "Mia.K", password: "koala-1234" });
-    expect(student).toEqual({ name: "Mia", yearLevel: 5, username: "mia.k", password: "koala-1234", classIds: [] });
+    expect(student).toEqual({ name: "Mia", yearLevel: 5, username: "mia.k", password: "koala-1234", classIds: [], learnToRead: false });
     expect(NewStudentSchema.safeParse({ name: "Mia", yearLevel: 5, username: "mia@x.com", password: "koala-1234" }).success).toBe(false);
     expect(NewStudentSchema.safeParse({ name: "Mia", yearLevel: 5, username: "mia", password: "short" }).success).toBe(false);
     expect(
@@ -81,5 +81,19 @@ describe("centre migration", () => {
 
   it("keeps the centre role when the accounts migration is run again", () => {
     expect(readFileSync(join(__dirname, "../../../database/006_my247tutor_accounts.sql"), "utf8")).toContain("'parent', 'centre'");
+  });
+});
+
+describe("Learn to Read for centre students", () => {
+  it("can be turned on when adding or editing a student", () => {
+    expect(
+      NewStudentSchema.parse({ name: "Mia", yearLevel: 3, username: "mia", password: "koala-1234", learnToRead: true }).learnToRead,
+    ).toBe(true);
+    expect(StudentChangeSchema.safeParse({ learnToRead: false }).success).toBe(true);
+  });
+
+  it("shows reading age in the class list", () => {
+    const profile = newProfile("Mia", 3);
+    expect(summarise(profile).reading).toEqual({ age: null, enrolled: false, unitsDone: 0 });
   });
 });

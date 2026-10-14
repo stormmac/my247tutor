@@ -16,6 +16,8 @@ import {
   type Level,
 } from "@/lib/learner/assessment";
 import { attemptResult, attemptTopic, resultsByTopic, type AttemptResult, type AttemptTopic } from "@/lib/learner/results";
+import { currentUnit, formatReadingAge, READING_AGE_CUTOFF, readingOf, setEnrolled, unitsDone } from "@/lib/phonics/progress";
+import { UNITS } from "@/lib/phonics/sequence";
 import { COMPETENCY_LABELS, competency, recommendedPlan, subjectLevel, type Competency, type Standing } from "@/lib/learner/report";
 
 /**
@@ -91,6 +93,7 @@ export function ProgressReport({
         onRedo={onChange && (() => onChange((p) => ({ ...p, placementDone: { ...p.placementDone, english: false } })))}
       />
 
+      <ReadingReport profile={profile} onChange={onChange} />
       <RecentQuestions profile={profile} />
       <TopicResults profile={profile} />
 
@@ -572,6 +575,70 @@ function TopicResults({ profile }: { profile: LearnerProfile }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Reading age from the reading check, and Learn to Read progress. A grown-up who can change the
+ * profile can put the student in the program or take them out.
+ */
+function ReadingReport({
+  profile,
+  onChange,
+}: {
+  profile: LearnerProfile;
+  onChange?: (update: (p: LearnerProfile) => LearnerProfile) => void;
+}) {
+  const reading = readingOf(profile);
+  const done = unitsDone(reading);
+  const next = currentUnit(reading);
+  return (
+    <div className="card stack reading-report">
+      <div className="row spread">
+        <h2 style={{ margin: 0 }}>Reading</h2>
+        {reading.enrolled && <span className="pill warn">In Learn to Read</span>}
+      </div>
+      <p style={{ margin: 0 }}>
+        {reading.age === null ? (
+          `${profile.name} hasn't done the reading check yet. It's on their Learn page.`
+        ) : (
+          <>
+            Reading age: <strong>{formatReadingAge(reading.age)}</strong>
+            {reading.checkedAt && <span className="muted"> (checked {new Date(reading.checkedAt).toLocaleDateString("en-AU")})</span>}.
+            {reading.age < READING_AGE_CUTOFF
+              ? ` That's below ${READING_AGE_CUTOFF}, so ${profile.name} is in Learn to Read, our phonics program.`
+              : ""}
+          </>
+        )}
+      </p>
+      {reading.enrolled && (
+        <>
+          <p className="muted" style={{ margin: 0 }}>
+            {done} of {UNITS.length} sound groups done.{" "}
+            {next ? `Working on: ${next.title.replace(/_/g, "–")} (${next.group.toLowerCase()}).` : "Every sound group is done."}
+            {reading.readAloud > 0 && ` ${reading.readAloud} sentence${reading.readAloud === 1 ? "" : "s"} read aloud.`}
+          </p>
+          <div className="unit-dots" aria-hidden>
+            {UNITS.map((u) => (
+              <span key={u.id} className={reading.units[u.id]?.mastered ? "done" : next?.id === u.id ? "next" : ""} title={u.title}>
+                {u.title.replace(/_/g, "–")}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+      {onChange && (
+        <label className="row no-print" style={{ fontWeight: 400, margin: 0, gap: 8 }}>
+          <input
+            type="checkbox"
+            style={{ width: "auto" }}
+            checked={reading.enrolled}
+            onChange={(e) => onChange((p) => ({ ...p, reading: setEnrolled(readingOf(p), e.target.checked) }))}
+          />
+          Learn to Read is on for {profile.name}
+        </label>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import type { PoolClient } from "pg";
 import { newProfile, type LearnerProfile } from "@/lib/learner/model";
 import { summarise, type StudentSummary } from "@/lib/learner/summary";
+import { newReading, setEnrolled } from "@/lib/phonics/progress";
 import { ready } from "./db";
 import { MAX_CENTRE_STUDENTS } from "./rules";
 import { audit, toUser, USER_COLUMNS, type User } from "./users";
@@ -35,6 +36,8 @@ export interface Student {
   username: string | null;
   lastLoginAt: string | null;
   classIds: string[];
+  /** In Learn to Read, the phonics program. */
+  learnToRead: boolean;
 }
 
 const iso = (value: unknown) => (value ? new Date(value as string).toISOString() : null);
@@ -161,6 +164,7 @@ export async function listStudents(centreId: string): Promise<Student[]> {
     await ready()
   ).query(
     `SELECT l.id, l.name, l.year_level, u.username, u.last_login_at,
+       COALESCE((l.profile->'reading'->>'enrolled')::boolean, FALSE) AS learn_to_read,
        COALESCE(array_agg(e.class_id) FILTER (WHERE e.class_id IS NOT NULL), '{}') AS class_ids
      FROM learners l
      LEFT JOIN users u ON u.learner_id = l.id
@@ -176,6 +180,7 @@ export async function listStudents(centreId: string): Promise<Student[]> {
     username: (r.username as string | null) ?? null,
     lastLoginAt: iso(r.last_login_at),
     classIds: r.class_ids as string[],
+    learnToRead: r.learn_to_read as boolean,
   }));
 }
 
@@ -208,7 +213,7 @@ const taken = (error: unknown) => (error as { code?: string }).code === "23505";
 /** A centre adds a student: a learner profile, a sign-in with this username and password, and their classes. */
 export async function addStudent(
   centre: User,
-  details: { name: string; yearLevel: 3 | 4 | 5 | 6; username: string; password: string; classIds: string[] },
+  details: { name: string; yearLevel: 3 | 4 | 5 | 6; username: string; password: string; classIds: string[]; learnToRead?: boolean },
 ): Promise<{ id: string } | { error: string; status: number }> {
   const hash = await bcrypt.hash(details.password, 12);
   try {
@@ -217,7 +222,11 @@ export async function addStudent(
       await client.query(`SELECT id FROM users WHERE id = $1 FOR UPDATE`, [centre.id]);
       const { rows } = await client.query(`SELECT COUNT(*) AS n FROM learners WHERE parent_id = $1`, [centre.id]);
       if (Number(rows[0].n) >= MAX_CENTRE_STUDENTS) return null;
-      const profile = { ...newProfile(details.name, details.yearLevel), id: randomUUID() };
+      const profile = {
+        ...newProfile(details.name, details.yearLevel),
+        id: randomUUID(),
+        ...(details.learnToRead ? { reading: setEnrolled(newReading(), true) } : {}),
+      };
       await client.query(`INSERT INTO learners (id, parent_id, name, year_level, profile) VALUES ($1, $2, $3, $4, $5)`, [
         profile.id,
         centre.id,
@@ -247,7 +256,7 @@ export async function addStudent(
 export async function updateStudent(
   centre: User,
   learnerId: string,
-  change: { name?: string; yearLevel?: number; username?: string; password?: string; classIds?: string[] },
+  change: { name?: string; yearLevel?: number; username?: string; password?: string; classIds?: string[]; learnToRead?: boolean },
 ): Promise<{ ok: true } | { error: string; status: number }> {
   const hash = change.password ? await bcrypt.hash(change.password, 12) : null;
   try {
@@ -262,6 +271,15 @@ export async function updateStudent(
         [learnerId, centre.id, change.name ?? null, change.yearLevel ?? null],
       );
       if (!rowCount) return false;
+      if (change.learnToRead !== undefined) {
+        // The same change a parent makes from the progress report: on or off, set by a grown-up.
+        const { rows } = await client.query(`SELECT profile->'reading' AS reading FROM learners WHERE id = $1`, [learnerId]);
+        const reading = setEnrolled({ ...newReading(), ...(rows[0]?.reading ?? {}) }, change.learnToRead);
+        await client.query(`UPDATE learners SET profile = jsonb_set(profile, '{reading}', $2::jsonb) WHERE id = $1`, [
+          learnerId,
+          JSON.stringify(reading),
+        ]);
+      }
       await client.query(
         `UPDATE users SET
            display_name = COALESCE($3, display_name),
@@ -286,6 +304,7 @@ export async function updateStudent(
     username: change.username,
     password: Boolean(change.password),
     classes: change.classIds?.length,
+    learnToRead: change.learnToRead,
   });
   return { ok: true };
 }

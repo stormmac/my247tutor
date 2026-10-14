@@ -168,6 +168,8 @@ export const NewStudentSchema = z.object({
   username: UsernameSchema,
   password: ChildPasswordSchema,
   classIds: z.array(z.uuid()).max(20).default([]),
+  /** Puts the student in Learn to Read, the phonics program, without waiting for the reading check. */
+  learnToRead: z.boolean().default(false),
 });
 
 export const StudentChangeSchema = z
@@ -177,5 +179,6 @@ export const StudentChangeSchema = z
     username: UsernameSchema.optional(),
     password: ChildPasswordSchema.optional(),
     classIds: z.array(z.uuid()).max(20).optional(),
+    learnToRead: z.boolean().optional(),
   })
   .refine((c) => Object.values(c).some((v) => v !== undefined), "Nothing to change.");

@@ -7,6 +7,8 @@ import { switchChild, useChildren, useProfile } from "@/components/useProfile";
 import { MAX_CHILDREN, newProfile, pickNextSkill, skillState, type LearnerProfile } from "@/lib/learner/model";
 import { skillsFor } from "@/lib/curriculum/skills";
 import type { Subject, YearLevel } from "@/lib/curriculum/types";
+import { currentUnit, readingOf, unitsDone } from "@/lib/phonics/progress";
+import { UNITS } from "@/lib/phonics/sequence";
 
 export default function LearnPage() {
   const { profile, setProfile, loaded } = useProfile();
@@ -24,6 +26,7 @@ export default function LearnPage() {
           </p>
         </div>
       </div>
+      <ReadingCard profile={profile} />
       <div className="grid grid-2">
         <SubjectCard profile={profile} subject="maths" title="Maths" />
         <SubjectCard profile={profile} subject="english" title="English" />
@@ -40,6 +43,60 @@ export default function LearnPage() {
             Start writing
           </Link>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Learn to Read, the phonics program, comes first for a student in it. Everyone else is asked to do
+ * the reading check once, which puts them in the program if their reading age is below 7.5.
+ */
+function ReadingCard({ profile }: { profile: LearnerProfile }) {
+  const reading = readingOf(profile);
+  if (reading.enrolled) {
+    const next = currentUnit(reading);
+    const done = unitsDone(reading);
+    return (
+      <div className="card stack reading-card">
+        <div className="row spread">
+          <h2 style={{ margin: 0 }}>📖 Learn to Read</h2>
+          <span className="pill good">
+            {done} of {UNITS.length} sounds
+          </span>
+        </div>
+        <div className="progress" aria-label={`${done} of ${UNITS.length} sound groups done`}>
+          <div style={{ width: `${(done / UNITS.length) * 100}%` }} />
+        </div>
+        <p className="muted" style={{ margin: 0 }}>
+          {next
+            ? `Next sounds: ${next.title.replace(/_/g, "–")}`
+            : "You've learnt every sound! Do the reading check again to see how far you've come."}
+        </p>
+        <div className="row">
+          <Link href={next ? `/read/${next.id}` : "/read/check"} className="btn">
+            {next ? "Practise sounds" : "Reading check"}
+          </Link>
+          <Link href="/read" className="btn secondary">
+            All sounds
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  if (reading.age !== null) return null;
+  return (
+    <div className="card">
+      <div className="row spread">
+        <div>
+          <h2>Reading check</h2>
+          <p className="muted" style={{ margin: 0 }}>
+            A quick word game with Suni that works out your reading age. It takes about three minutes.
+          </p>
+        </div>
+        <Link href="/read/check" className="btn secondary">
+          Start
+        </Link>
       </div>
     </div>
   );
