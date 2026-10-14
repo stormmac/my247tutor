@@ -162,6 +162,12 @@ function QuestionItem({ q }: { q: ContentQuestion }) {
   const correct = new Set(Array.isArray(q.correct_answer) ? q.correct_answer : [q.correct_answer]);
   return (
     <li>
+      {q.passage && (
+        <details className="small">
+          <summary>Passage: {q.passage.title}</summary>
+          <p style={{ whiteSpace: "pre-line" }}>{q.passage.text}</p>
+        </details>
+      )}
       <div>{q.question_text}</div>
       <div className="small muted">
         {TYPE_NAMES[q.question_type]} · {LEVEL_NAMES[q.difficulty]} · {plural(q.points, "point")}

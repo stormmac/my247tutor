@@ -24,6 +24,7 @@ export function toPracticeQuestion(q: ContentQuestion, seed: number): Question {
     hints: HINTS[q.question_type],
     solution: q.explanation,
     ...(q.picture ? { picture: q.picture } : {}),
+    ...(q.passage ? { passage: q.passage } : {}),
   };
   const opts = q.answer_options ?? [];
   const indexOf = (optionId: string) => opts.findIndex((o) => o.id === optionId);

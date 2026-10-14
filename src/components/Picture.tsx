@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { type Colour, describePicture, type Picture as PictureData } from "@/lib/content/picture";
+import { type Colour, describePicture, type Picture as PictureData, type Solid } from "@/lib/content/picture";
 
 /** Fill colours that read well on both the light and dark themes. */
 const FILL: Record<Colour, string> = {
@@ -373,5 +373,403 @@ export function Picture({ picture: p }: { picture: PictureData }) {
         </Svg>
       );
     }
+    case "angle": {
+      const rad = (p.degrees * Math.PI) / 180;
+      const vx = p.degrees > 90 ? 140 : 40;
+      const vy = p.degrees > 180 ? 85 : 135;
+      const arm = 110;
+      const ex = vx + arm * Math.cos(rad);
+      const ey = vy - arm * Math.sin(rad);
+      const r = 30;
+      const mid = rad / 2;
+      return (
+        <Svg width={280} height={p.degrees > 180 ? 200 : 160} label={label}>
+          {p.degrees === 90 ? (
+            <path d={`M ${vx + 18} ${vy} L ${vx + 18} ${vy - 18} L ${vx} ${vy - 18}`} fill="none" className="pic-brand" strokeWidth={2} />
+          ) : (
+            <path
+              d={`M ${vx + r} ${vy} A ${r} ${r} 0 ${p.degrees > 180 ? 1 : 0} 0 ${vx + r * Math.cos(rad)} ${vy - r * Math.sin(rad)}`}
+              fill="none"
+              className="pic-brand"
+              strokeWidth={2.5}
+            />
+          )}
+          <line x1={vx} y1={vy} x2={vx + arm} y2={vy} className="pic-ink" strokeWidth={3} strokeLinecap="round" />
+          <line x1={vx} y1={vy} x2={ex} y2={ey} className="pic-ink" strokeWidth={3} strokeLinecap="round" />
+          {p.label && (
+            <text
+              x={vx + 52 * Math.cos(mid)}
+              y={vy - 52 * Math.sin(mid) + 6}
+              textAnchor="middle"
+              className="pic-text"
+              fontSize={16}
+              fontWeight={600}
+            >
+              {p.label}
+            </text>
+          )}
+        </Svg>
+      );
+    }
+    case "shape": {
+      const u = 26;
+      const xs = p.points.map(([x]) => x);
+      const ys = p.points.map(([, y]) => y);
+      const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+      const pad = 64;
+      const X = (x: number) => pad + (x - minX) * u;
+      const Y = (y: number) => pad + (maxY - y) * u;
+      const cx = xs.reduce((a, b) => a + b, 0) / xs.length;
+      const cy = ys.reduce((a, b) => a + b, 0) / ys.length;
+      // A label's position just outside the shape, and which way its text should run from there.
+      const away = (x: number, y: number, by: number): [number, number, "start" | "middle" | "end"] => {
+        const dx = X(x) - X(cx);
+        const dy = Y(y) - Y(cy);
+        const len = Math.hypot(dx, dy) || 1;
+        const anchor = dx / len > 0.5 ? "start" : dx / len < -0.5 ? "end" : "middle";
+        return [X(x) + (dx / len) * by, Y(y) + (dy / len) * by + 5, anchor];
+      };
+      const width = (maxX - minX) * u + pad * 2;
+      const height = (maxY - minY) * u + pad * 2;
+      return (
+        <Svg width={width} height={height} label={label}>
+          {p.grid &&
+            Array.from({ length: maxX - minX + 1 }, (_, i) => (
+              <line key={`v${i}`} x1={X(minX + i)} y1={Y(maxY)} x2={X(minX + i)} y2={Y(minY)} className="pic-grid" />
+            ))}
+          {p.grid &&
+            Array.from({ length: maxY - minY + 1 }, (_, i) => (
+              <line key={`h${i}`} x1={X(minX)} y1={Y(minY + i)} x2={X(maxX)} y2={Y(minY + i)} className="pic-grid" />
+            ))}
+          <polygon
+            points={p.points.map(([x, y]) => `${X(x)},${Y(y)}`).join(" ")}
+            className="pic-shaded"
+            strokeWidth={2.5}
+            fillOpacity={p.grid ? 0.6 : 1}
+          />
+          {p.sideLabels?.map((text, i) => {
+            if (!text) return null;
+            const [x1, y1] = p.points[i];
+            const [x2, y2] = p.points[(i + 1) % p.points.length];
+            const [lx, ly, anchor] = away((x1 + x2) / 2, (y1 + y2) / 2, 12);
+            return (
+              <text key={`s${i}`} x={lx} y={ly} textAnchor={anchor} className="pic-text" fontSize={15}>
+                {text}
+              </text>
+            );
+          })}
+          {p.cornerLabels?.map((text, i) => {
+            const [lx, ly, anchor] = away(p.points[i][0], p.points[i][1], 12);
+            return (
+              <text key={`c${i}`} x={lx} y={ly} textAnchor={anchor} className="pic-text" fontSize={15} fontWeight={600}>
+                {text}
+              </text>
+            );
+          })}
+        </Svg>
+      );
+    }
+    case "grid": {
+      const u = 34;
+      const left = p.axes || p.map ? 34 : 12;
+      const top = 12;
+      const X = (x: number) => left + x * u;
+      const Y = (y: number) => top + (p.rows - y) * u;
+      // Points sit on line crossings, or in the middle of a square on a map.
+      const at = (x: number, y: number): [number, number] => (p.map ? [X(x + 0.5), Y(y + 0.5)] : [X(x), Y(y)]);
+      return (
+        <Svg width={left + p.columns * u + 14} height={top + p.rows * u + (p.axes || p.map ? 30 : 12)} label={label}>
+          {(p.cells ?? []).map(([x, y]) => (
+            <rect key={`${x},${y}`} x={X(x)} y={Y(y + 1)} width={u} height={u} className="pic-shaded" strokeWidth={0} />
+          ))}
+          {Array.from({ length: p.columns + 1 }, (_, i) => (
+            <line
+              key={`v${i}`}
+              x1={X(i)}
+              y1={Y(0)}
+              x2={X(i)}
+              y2={Y(p.rows)}
+              className={p.axes && i === 0 ? "pic-ink" : "pic-grid"}
+              strokeWidth={p.axes && i === 0 ? 2 : 1}
+            />
+          ))}
+          {Array.from({ length: p.rows + 1 }, (_, i) => (
+            <line
+              key={`h${i}`}
+              x1={X(0)}
+              y1={Y(i)}
+              x2={X(p.columns)}
+              y2={Y(i)}
+              className={p.axes && i === 0 ? "pic-ink" : "pic-grid"}
+              strokeWidth={p.axes && i === 0 ? 2 : 1}
+            />
+          ))}
+          {p.axes &&
+            Array.from({ length: p.columns + 1 }, (_, i) => (
+              <text key={`xl${i}`} x={X(i)} y={Y(0) + 20} textAnchor="middle" className="pic-text" fontSize={13}>
+                {i}
+              </text>
+            ))}
+          {p.axes &&
+            Array.from({ length: p.rows + 1 }, (_, i) =>
+              i === 0 ? null : (
+                <text key={`yl${i}`} x={X(0) - 10} y={Y(i) + 5} textAnchor="end" className="pic-text" fontSize={13}>
+                  {i}
+                </text>
+              ),
+            )}
+          {p.map &&
+            Array.from({ length: p.columns }, (_, i) => (
+              <text key={`xl${i}`} x={X(i + 0.5)} y={Y(0) + 20} textAnchor="middle" className="pic-text" fontSize={13} fontWeight={600}>
+                {String.fromCharCode(65 + i)}
+              </text>
+            ))}
+          {p.map &&
+            Array.from({ length: p.rows }, (_, i) => (
+              <text key={`yl${i}`} x={X(0) - 10} y={Y(i + 0.5) + 5} textAnchor="end" className="pic-text" fontSize={13} fontWeight={600}>
+                {i + 1}
+              </text>
+            ))}
+          {p.path && (
+            <polyline
+              points={p.path.map(([x, y]) => at(x, y).join(",")).join(" ")}
+              fill="none"
+              className="pic-brand"
+              strokeWidth={3}
+              strokeLinejoin="round"
+            />
+          )}
+          {(p.points ?? []).map((q) => {
+            const [px, py] = at(q.x, q.y);
+            return (
+              <g key={q.label}>
+                <circle cx={px} cy={py} r={6} className="pic-brand-fill" />
+                <text x={px + 8} y={py - 8} className="pic-text" fontSize={14} fontWeight={700}>
+                  {q.label}
+                </text>
+              </g>
+            );
+          })}
+        </Svg>
+      );
+    }
+    case "line_graph": {
+      const max = Math.max(...p.points.map((q) => q.value));
+      const step = p.step ?? niceStep(max);
+      const topValue = Math.ceil(max / step) * step;
+      const y = (v: number) => 190 - (v * 150) / topValue;
+      const slot = 270 / p.points.length;
+      const x = (i: number) => 50 + i * slot + slot / 2;
+      return (
+        <Svg width={330} height={230} label={label}>
+          <text x={175} y={22} textAnchor="middle" className="pic-text" fontSize={15} fontWeight={600}>
+            {p.title}
+          </text>
+          {Array.from({ length: topValue / step + 1 }, (_, i) => (
+            <g key={i}>
+              <line x1={50} y1={y(i * step)} x2={320} y2={y(i * step)} className="pic-grid" />
+              <text x={42} y={y(i * step) + 5} textAnchor="end" className="pic-text" fontSize={13}>
+                {i * step}
+              </text>
+            </g>
+          ))}
+          <polyline points={p.points.map((q, i) => `${x(i)},${y(q.value)}`).join(" ")} fill="none" className="pic-brand" strokeWidth={3} />
+          {p.points.map((q, i) => (
+            <g key={q.label}>
+              <circle cx={x(i)} cy={y(q.value)} r={5} className="pic-brand-fill" />
+              <text x={x(i)} y={210} textAnchor="middle" className="pic-text" fontSize={13}>
+                {q.label}
+              </text>
+            </g>
+          ))}
+          <line x1={50} y1={40} x2={50} y2={190} className="pic-ink" strokeWidth={2} />
+          <line x1={50} y1={190} x2={320} y2={190} className="pic-ink" strokeWidth={2} />
+        </Svg>
+      );
+    }
+    case "scale": {
+      const steps = Math.round(p.max / p.step);
+      // The dial runs from 8 o'clock round to 4 o'clock.
+      const turn = (v: number) => -1 / 3 + (v / p.max) * (2 / 3);
+      const every = steps > 10 ? 2 : 1;
+      const [nx, ny] = polar(120, 115, 70, turn(p.value));
+      return (
+        <Svg width={240} height={230} label={label}>
+          <rect x={30} y={190} width={180} height={28} rx={6} className="pic-bag" strokeWidth={2} />
+          <circle cx={120} cy={115} r={95} className="pic-paper" strokeWidth={4} />
+          {Array.from({ length: steps * 2 + 1 }, (_, i) => {
+            const v = (i * p.step) / 2;
+            const [x1, y1] = polar(120, 115, 90, turn(v));
+            const [x2, y2] = polar(120, 115, i % 2 ? 84 : 78, turn(v));
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} className="pic-ink" strokeWidth={i % 2 ? 1 : 2} />;
+          })}
+          {Array.from({ length: steps + 1 }, (_, i) => {
+            if (i % every) return null;
+            const [x, y] = polar(120, 115, 63, turn(i * p.step));
+            return (
+              <text key={i} x={x} y={y + 5} textAnchor="middle" className="pic-text" fontSize={12}>
+                {Math.round(i * p.step * 1000) / 1000}
+              </text>
+            );
+          })}
+          <text x={120} y={165} textAnchor="middle" className="pic-text" fontSize={15} fontWeight={600}>
+            {p.unit}
+          </text>
+          <line x1={120} y1={115} x2={nx} y2={ny} stroke={FILL.red} strokeWidth={4} strokeLinecap="round" />
+          <circle cx={120} cy={115} r={7} className="pic-ink-fill" />
+        </Svg>
+      );
+    }
+    case "jug": {
+      const steps = Math.round(p.max / p.step);
+      const bottom = 210;
+      const height = 170;
+      const y = (v: number) => bottom - (v / p.max) * height;
+      return (
+        <Svg width={240} height={230} label={label}>
+          <rect x={60} y={y(p.value)} width={110} height={bottom - y(p.value)} fill={FILL.blue} fillOpacity={0.45} />
+          <path
+            d={`M 60 ${bottom - height - 15} L 60 ${bottom} L 170 ${bottom} L 170 ${bottom - height - 15}`}
+            fill="none"
+            className="pic-ink"
+            strokeWidth={3}
+          />
+          <path
+            d={`M 60 ${bottom - height + 10} C 20 ${bottom - height + 10} 20 ${bottom - 60} 60 ${bottom - 60}`}
+            fill="none"
+            className="pic-ink"
+            strokeWidth={3}
+          />
+          {Array.from({ length: steps + 1 }, (_, i) => (
+            <g key={i}>
+              <line x1={150} y1={y(i * p.step)} x2={170} y2={y(i * p.step)} className="pic-ink" strokeWidth={2} />
+              {i > 0 && (
+                <text x={178} y={y(i * p.step) + 5} className="pic-text" fontSize={12}>
+                  {Math.round(i * p.step * 1000) / 1000} {p.unit}
+                </text>
+              )}
+            </g>
+          ))}
+        </Svg>
+      );
+    }
+    case "solid":
+      return (
+        <Svg width={220} height={200} label={label}>
+          <SolidDrawing shape={p.shape} />
+        </Svg>
+      );
+    case "cubes": {
+      const size = 26;
+      const dx = 13;
+      const dy = -10;
+      const width = 40 + p.length * size + p.width * dx;
+      const height = 40 + p.height * size + p.width * -dy;
+      const cubes: ReactNode[] = [];
+      for (let d = p.width - 1; d >= 0; d--)
+        for (let z = 0; z < p.height; z++)
+          for (let x = 0; x < p.length; x++) {
+            const X = 20 + x * size + d * dx;
+            const Y = height - 20 - z * size + d * dy;
+            cubes.push(
+              <g key={`${x}-${d}-${z}`} className="pic-outline">
+                <rect x={X} y={Y - size} width={size} height={size} className="pic-block" />
+                <polygon
+                  points={`${X},${Y - size} ${X + dx},${Y - size + dy} ${X + size + dx},${Y - size + dy} ${X + size},${Y - size}`}
+                  className="pic-shaded"
+                  strokeWidth={1}
+                />
+                <polygon
+                  points={`${X + size},${Y} ${X + size},${Y - size} ${X + size + dx},${Y - size + dy} ${X + size + dx},${Y + dy}`}
+                  className="pic-block-dark"
+                />
+              </g>,
+            );
+          }
+      return (
+        <Svg width={width} height={height} label={label}>
+          {cubes}
+        </Svg>
+      );
+    }
+  }
+}
+
+/** Simple line drawings of 3D objects, with hidden edges dashed. */
+function SolidDrawing({ shape }: { shape: Solid }) {
+  const edge = { className: "pic-ink", strokeWidth: 2.5, fill: "none" } as const;
+  const hidden = { ...edge, strokeDasharray: "6 5", strokeWidth: 1.5 };
+  const face = { className: "pic-shaded", strokeWidth: 2.5, fillOpacity: 0.55 } as const;
+  switch (shape) {
+    case "cube":
+    case "rectangular_prism": {
+      const w = shape === "cube" ? 100 : 140;
+      const h = shape === "cube" ? 100 : 80;
+      const [x, y, dx, dy] = [30, 70, 40, -35];
+      return (
+        <g>
+          <polygon points={`${x},${y} ${x + dx},${y + dy} ${x + w + dx},${y + dy} ${x + w},${y}`} {...face} />
+          <polygon points={`${x + w},${y} ${x + w + dx},${y + dy} ${x + w + dx},${y + h + dy} ${x + w},${y + h}`} {...face} />
+          <rect x={x} y={y} width={w} height={h} {...face} />
+          <path
+            d={`M ${x + dx} ${y + dy} L ${x + dx} ${y + h + dy} L ${x + w + dx} ${y + h + dy} M ${x + dx} ${y + h + dy} L ${x} ${y + h}`}
+            {...hidden}
+          />
+        </g>
+      );
+    }
+    case "triangular_prism": {
+      const [ax, ay, bx, by, cx, cy] = [30, 170, 120, 170, 75, 90];
+      const [dx, dy] = [60, -45];
+      return (
+        <g>
+          <polygon points={`${cx},${cy} ${cx + dx},${cy + dy} ${bx + dx},${by + dy} ${bx},${by}`} {...face} />
+          <polygon points={`${ax},${ay} ${bx},${by} ${cx},${cy}`} {...face} />
+          <path
+            d={`M ${ax} ${ay} L ${ax + dx} ${ay + dy} L ${bx + dx} ${by + dy} M ${ax + dx} ${ay + dy} L ${cx + dx} ${cy + dy}`}
+            {...hidden}
+          />
+        </g>
+      );
+    }
+    case "square_pyramid":
+      return (
+        <g>
+          <polygon points="40,160 140,160 110,20" {...face} />
+          <polygon points="140,160 180,125 110,20" {...face} />
+          <path d="M 40 160 L 80 125 L 180 125 M 80 125 L 110 20" {...hidden} />
+        </g>
+      );
+    case "triangular_pyramid":
+      return (
+        <g>
+          <polygon points="30,165 150,175 105,25" {...face} />
+          <polygon points="150,175 185,120 105,25" {...face} />
+          <path d="M 30 165 L 185 120" {...hidden} />
+        </g>
+      );
+    case "cylinder":
+      return (
+        <g>
+          <path d="M 50 40 L 50 160 A 60 18 0 0 0 170 160 L 170 40" {...face} />
+          <ellipse cx={110} cy={40} rx={60} ry={18} {...face} />
+          <path d="M 50 160 A 60 18 0 0 1 170 160" {...hidden} />
+        </g>
+      );
+    case "cone":
+      return (
+        <g>
+          <path d="M 110 20 L 50 160 A 60 18 0 0 0 170 160 Z" {...face} />
+          <path d="M 50 160 A 60 18 0 0 1 170 160" {...hidden} />
+        </g>
+      );
+    case "sphere":
+      return (
+        <g>
+          <circle cx={110} cy={100} r={75} {...face} />
+          <path d="M 35 100 A 75 22 0 0 0 185 100" {...edge} strokeWidth={1.5} />
+          <path d="M 35 100 A 75 22 0 0 1 185 100" {...hidden} />
+        </g>
+      );
   }
 }

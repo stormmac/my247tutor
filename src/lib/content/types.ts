@@ -98,4 +98,11 @@ export interface ContentQuestion {
   points: number;
   /** my247tutor extension: a drawing to show with the question (see picture.ts and database/007). */
   picture?: Picture | null;
+  /** my247tutor extension: a reading passage shown above the question (see database/007). */
+  passage?: Passage | null;
+}
+
+export interface Passage {
+  title: string;
+  text: string;
 }
