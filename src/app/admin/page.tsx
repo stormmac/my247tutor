@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AdminTabs } from "@/components/AdminTabs";
 import { SetupStatus } from "@/components/SetupStatus";
-import { useAccount } from "@/components/useAccount";
+import { logInAs, useAccount } from "@/components/useAccount";
 import type { Plan, Role } from "@/lib/auth/rules";
 
 interface Row {
@@ -91,6 +91,15 @@ function Accounts() {
     const body = (await res.json().catch(() => ({}))) as { password?: string; error?: string };
     if (res.ok) setNotice(`New temporary password for ${user.email}: ${body.password}. Pass it on privately; it won't be shown again.`);
     else setError(body.error ?? "That didn't work.");
+  }
+
+  /** Opens the site as this account, to see what they see. Admin comes back from the banner at the top. */
+  async function actAs(user: Row) {
+    if (!confirm(`Log in as ${user.name}? You'll see the site as they do until you go back to Admin.`)) return;
+    setError(null);
+    setNotice(null);
+    const failed = await logInAs(user.id);
+    if (failed) setError(failed);
   }
 
   /** Shows what happened to an invite: emailed, or a link to pass on when email isn't working. */
@@ -252,6 +261,11 @@ function Accounts() {
                         <button className="btn secondary small" onClick={() => void change(u, { isActive: !u.isActive })}>
                           {u.isActive ? "Turn off" : "Turn on"}
                         </button>
+                        {u.role !== "admin" && u.isActive && (
+                          <button className="btn small" onClick={() => void actAs(u)}>
+                            Log in as
+                          </button>
+                        )}
                         <button className="btn secondary small" onClick={() => void reset(u)}>
                           Reset password
                         </button>

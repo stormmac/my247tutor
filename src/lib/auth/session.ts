@@ -14,6 +14,8 @@ export interface Session {
   role: Role;
   /** Must match users.session_version, so a reset or a disabled account signs the user out everywhere. */
   version: number;
+  /** Set when an admin is logged in as this user from Admin: the admin's own id. */
+  actorId?: string;
 }
 
 /** Accounts switch on once a database and a signing secret are configured. Until then the site works as before. */
@@ -31,12 +33,19 @@ function key(secret = authSecret()): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
+/** An admin logged in as someone else stays that way for at most this long. */
+export const ACTING_HOURS = 2;
+
+export function sessionSeconds(session: Session): number {
+  return session.actorId ? ACTING_HOURS * 3600 : SESSION_DAYS * 86_400;
+}
+
 export async function signSession(session: Session, secret?: string, now = Date.now()): Promise<string> {
-  return new SignJWT({ role: session.role, v: session.version })
+  return new SignJWT({ role: session.role, v: session.version, ...(session.actorId ? { act: session.actorId } : {}) })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(session.userId)
     .setIssuedAt(Math.floor(now / 1000))
-    .setExpirationTime(Math.floor(now / 1000) + SESSION_DAYS * 86_400)
+    .setExpirationTime(Math.floor(now / 1000) + sessionSeconds(session))
     .sign(key(secret));
 }
 
@@ -45,7 +54,8 @@ export async function verifySession(token: string | undefined, secret?: string, 
   try {
     const { payload } = await jwtVerify(token, key(secret), { algorithms: ["HS256"], currentDate: new Date(now) });
     if (typeof payload.sub !== "string" || typeof payload.role !== "string" || typeof payload.v !== "number") return null;
-    return { userId: payload.sub, role: payload.role as Role, version: payload.v };
+    const actorId = typeof payload.act === "string" ? payload.act : undefined;
+    return { userId: payload.sub, role: payload.role as Role, version: payload.v, ...(actorId ? { actorId } : {}) };
   } catch {
     return null;
   }
@@ -56,11 +66,27 @@ function cookieFlags(): string {
 }
 
 export async function sessionCookie(session: Session): Promise<string> {
-  return `${SESSION_COOKIE}=${await signSession(session)}; Max-Age=${SESSION_DAYS * 86_400}; ${cookieFlags()}`;
+  return `${SESSION_COOKIE}=${await signSession(session)}; Max-Age=${sessionSeconds(session)}; ${cookieFlags()}`;
+}
+
+/** Puts back a session token kept aside (an admin coming back from logging in as someone). */
+export function restoredSessionCookie(token: string): string {
+  return `${SESSION_COOKIE}=${token}; Max-Age=${SESSION_DAYS * 86_400}; ${cookieFlags()}`;
 }
 
 export function clearedSessionCookie(): string {
   return `${SESSION_COOKIE}=; Max-Age=0; ${cookieFlags()}`;
+}
+
+/** While an admin is logged in as someone, their own session waits here so "Back to Admin" can restore it. */
+export const ADMIN_RETURN_COOKIE = "my247_admin_return";
+
+export function adminReturnCookie(adminToken: string): string {
+  return `${ADMIN_RETURN_COOKIE}=${adminToken}; Max-Age=${ACTING_HOURS * 3600}; ${cookieFlags()}`;
+}
+
+export function clearedAdminReturnCookie(): string {
+  return `${ADMIN_RETURN_COOKIE}=; Max-Age=0; ${cookieFlags()}`;
 }
 
 /** A free trial lets a visitor use the site for this long before they need an account. */

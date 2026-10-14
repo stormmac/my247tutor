@@ -1077,3 +1077,17 @@ ul.tight {
 .suni-mic-status.problem {
   color: var(--warn-text);
 }
+
+.acting-banner {
+  background: #7a2e0e;
+  color: #fff;
+  font-size: 0.95rem;
+  padding: 8px 0;
+}
+.acting-banner .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}

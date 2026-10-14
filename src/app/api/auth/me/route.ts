@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
-import { accountsEnabled, TRIAL_COOKIE, verifyTrial } from "@/lib/auth/session";
-import { requireUser } from "@/lib/auth/users";
+import { accountsEnabled, SESSION_COOKIE, TRIAL_COOKIE, verifySession, verifyTrial } from "@/lib/auth/session";
+import { getUser, requireUser } from "@/lib/auth/users";
 import { needsPayment, planFor } from "@/lib/billing/access";
 import { billingEnabled } from "@/lib/billing/stripe";
 
@@ -16,6 +16,9 @@ export async function GET(request: NextRequest) {
   // A child has no email of their own; they see the username they sign in with.
   const email = username ?? result.user.email;
   const plan = planFor(result.user);
+  // An admin logged in as this account from Admin.
+  const actorId = (await verifySession(request.cookies.get(SESSION_COOKIE)?.value))?.actorId;
+  const actor = actorId ? await getUser(actorId) : null;
   return Response.json({
     enabled: true,
     billing: billingEnabled(),
@@ -28,6 +31,7 @@ export async function GET(request: NextRequest) {
       plan,
       needsPayment: needsPayment(result.user),
       trialEndsAt: plan === "trial" ? trialEndsAt : null,
+      actingAdmin: actor ? actor.name : null,
     },
   });
 }

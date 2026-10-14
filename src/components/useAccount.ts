@@ -16,6 +16,8 @@ export interface Account {
   needsPayment?: boolean;
   /** When the account's free trial ends, while it's on one. */
   trialEndsAt?: number | null;
+  /** The admin's name when an admin is logged in as this account from Admin. */
+  actingAdmin?: string | null;
 }
 
 export interface AccountState {
@@ -50,6 +52,28 @@ export function useAccount(): AccountState {
     };
   }, []);
   return state;
+}
+
+/** An admin logs in as another account from Admin, then lands where that account would. */
+export async function logInAs(userId: string): Promise<string | null> {
+  const res = await fetch(`/api/admin/users/${userId}/log-in-as`, { method: "POST" }).catch(() => null);
+  const body = (await res?.json().catch(() => ({}))) as { role?: string; error?: string } | undefined;
+  if (!res?.ok) return body?.error ?? "That didn't work.";
+  // The admin's own browser copy of any children mustn't mix with this account's.
+  try {
+    localStorage.clear();
+  } catch {}
+  window.location.assign(body?.role === "student" ? "/learn" : body?.role === "teacher" ? "/" : "/parent");
+  return null;
+}
+
+/** Ends logging in as someone else and goes back to Admin as yourself. */
+export async function backToAdmin() {
+  const res = await fetch("/api/auth/back-to-admin", { method: "POST" }).catch(() => null);
+  try {
+    localStorage.clear();
+  } catch {}
+  window.location.assign(res?.ok ? "/admin" : "/signin");
 }
 
 export async function signOut() {

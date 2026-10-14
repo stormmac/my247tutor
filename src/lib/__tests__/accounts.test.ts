@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { guestAccess, isAdminEmail, isLockedOut, isSameOrigin, safeNextPath, SignUpSchema, temporaryPassword } from "../auth/rules";
-import { signSession, signTrial, TRIAL_MINUTES, verifySession, verifyTrial } from "../auth/session";
+import { sessionSeconds, signSession, signTrial, TRIAL_MINUTES, verifySession, verifyTrial } from "../auth/session";
 
 const SECRET = "a-test-secret-that-is-at-least-32-characters";
 const OTHER = "another-secret-that-is-at-least-32-characters";
@@ -24,6 +24,15 @@ describe("sessions", () => {
     expect(await verifySession(token, SECRET, later)).toBeNull();
     expect(await verifySession(undefined, SECRET)).toBeNull();
     expect(await verifySession("not-a-token", SECRET)).toBeNull();
+  });
+
+  it("carries the admin who logged in as someone else, and ends after two hours", async () => {
+    const token = await signSession({ userId: "u1", role: "parent", version: 0, actorId: "a1" }, SECRET);
+    expect(await verifySession(token, SECRET)).toEqual({ userId: "u1", role: "parent", version: 0, actorId: "a1" });
+    expect(await verifySession(token, SECRET, Date.now() + 90 * 60_000)).not.toBeNull();
+    expect(await verifySession(token, SECRET, Date.now() + 3 * 3_600_000)).toBeNull();
+    expect(sessionSeconds({ userId: "u1", role: "parent", version: 0, actorId: "a1" })).toBe(2 * 3600);
+    expect(sessionSeconds({ userId: "u1", role: "parent", version: 0 })).toBe(7 * 86_400);
   });
 });
 
