@@ -64,7 +64,8 @@ export async function setupStatus(): Promise<SetupCheck[]> {
     },
     {
       label: "Admin email (ADMIN_EMAILS) is set",
-      ok: admins > 0,
+      // Only needed to create the first admin; once one exists, admins can be made from the database.
+      ok: admins > 0 || adminAccount,
       fix: "Add ADMIN_EMAILS with your email address, then redeploy. That email becomes an admin when it signs up.",
     },
     {
