@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "./db";
+import { databaseUrl } from "./dburl";
 
 export interface SetupCheck {
   label: string;
@@ -10,7 +11,7 @@ export interface SetupCheck {
 
 /** Which parts of the account setup are in place. Says whether settings exist, never what they are. */
 export async function setupStatus(): Promise<SetupCheck[]> {
-  const hasUrl = Boolean(process.env.DATABASE_URL);
+  const hasUrl = Boolean(databaseUrl());
   const secret = process.env.AUTH_SECRET ?? "";
   const admins = (process.env.ADMIN_EMAILS ?? "").split(",").filter((e) => e.trim()).length;
 
@@ -40,19 +41,19 @@ export async function setupStatus(): Promise<SetupCheck[]> {
     {
       label: "Database address (DATABASE_URL) is set",
       ok: hasUrl,
-      fix: "In Vercel, create a Neon database under Storage and connect it to this project, or add DATABASE_URL under Settings → Environment Variables. Tick Preview as well as Production, then redeploy.",
+      fix: "In Supabase, open Connect and copy the Transaction pooler connection string. In Vercel, add it as DATABASE_URL under Settings → Environment Variables (Production and Preview), then redeploy.",
     },
     {
       label: "The database answers",
       ok: reachable,
       fix: hasUrl
-        ? `The site couldn't connect${dbError ? ` (${dbError})` : ""}. Check the DATABASE_URL value is the full connection string from Neon.`
+        ? `The site couldn't connect${dbError ? ` (${dbError})` : ""}. Check DATABASE_URL is the full Transaction pooler string from Supabase, with your database password filled in.`
         : "Set DATABASE_URL first.",
     },
     {
       label: "Account tables are set up",
       ok: tables,
-      fix: "In Neon, open the SQL Editor, paste in database/006_my247tutor_accounts.sql from the repository and press Run.",
+      fix: "In Supabase, open the SQL Editor, paste in database/006_my247tutor_accounts.sql from the repository and press Run.",
     },
     {
       label: "Sign-in secret (AUTH_SECRET) is set",
