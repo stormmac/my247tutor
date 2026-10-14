@@ -1,3 +1,5 @@
+import type { Picture } from "../content/picture";
+
 export type Answer =
   | { kind: "number"; value: number }
   | { kind: "fraction"; num: number; den: number; requireSimplest?: boolean }
@@ -24,6 +26,8 @@ export interface Question {
   solution: string;
   /** Reading passage for comprehension questions. */
   passage?: { title: string; text: string };
+  /** A drawing that goes with the question, such as a clock or a graph. */
+  picture?: Picture;
 }
 
 export interface CheckResult {

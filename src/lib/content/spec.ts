@@ -2,6 +2,7 @@
  * Helpers for writing content-tree questions by hand. Each returns a question without its ids,
  * which tree.ts fills in from `n` (see the id scheme there).
  */
+import type { Picture } from "./picture";
 import type { ContentQuestion, Difficulty, QuestionType } from "./types";
 
 export type QuestionSpec = Omit<ContentQuestion, "id" | "subtopic_id" | "points" | "difficulty"> & {
@@ -42,6 +43,11 @@ export function multi(n: number, question_text: string, texts: string[], correct
 export function ordering(n: number, question_text: string, inOrder: string[], explanation: string): QuestionSpec {
   const opts = options(inOrder);
   return { n, question_text, question_type: "ordering", answer_options: opts, correct_answer: opts.map((o) => o.id), explanation };
+}
+
+/** Adds a picture to a question: `pic({ kind: "clock", hour: 3, minute: 30 }, choice(...))`. */
+export function pic(picture: Picture, q: QuestionSpec): QuestionSpec {
+  return { ...q, picture };
 }
 
 /**

@@ -7,6 +7,8 @@
  * The one addition is `skill_id` on subtopics (see database/004_add_skill_link.sql).
  */
 
+import type { Picture } from "./picture";
+
 export interface Country {
   id: string;
   name: string;
@@ -94,4 +96,6 @@ export interface ContentQuestion {
   correct_answer: string | string[];
   explanation: string;
   points: number;
+  /** my247tutor extension: a drawing to show with the question (see picture.ts and database/007). */
+  picture?: Picture | null;
 }

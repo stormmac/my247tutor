@@ -830,3 +830,88 @@ main {
 .setup-checks li.ok > span {
   color: var(--good);
 }
+
+/* Question pictures (src/components/Picture.tsx). Colours follow the theme. */
+.picture {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 12px auto 16px;
+}
+.pic-paper {
+  fill: var(--surface);
+  stroke: var(--text);
+}
+.pic-ink {
+  stroke: var(--text);
+}
+.pic-ink-fill,
+.pic-text {
+  fill: var(--text);
+}
+.pic-brand {
+  stroke: var(--brand);
+}
+.pic-brand-fill {
+  fill: var(--brand);
+}
+.pic-shaded {
+  fill: var(--accent);
+  stroke: var(--text);
+}
+.pic-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.pic-star {
+  fill: var(--accent);
+  stroke: var(--text);
+  stroke-width: 1;
+}
+.pic-outline {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+.pic-ruler {
+  fill: var(--warn-tint);
+  stroke: var(--text);
+}
+.pic-bag {
+  fill: var(--surface-2);
+  stroke: var(--text);
+}
+.pic-block {
+  fill: var(--brand-tint);
+  stroke: var(--brand);
+  stroke-width: 1;
+}
+.picture-table {
+  width: auto;
+  margin: 12px auto 16px;
+  border-collapse: collapse;
+  min-width: 220px;
+}
+.picture-table th,
+.picture-table td {
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  text-align: left;
+}
+.picture-table th {
+  background: var(--surface-2);
+}
+.question input.blank-input {
+  display: inline-block;
+  width: 4.5em;
+  vertical-align: middle;
+  margin: 0 4px;
+  padding: 4px 8px;
+  font: inherit;
+  text-align: center;
+}
+.admin-picture {
+  max-width: 240px;
+}
+.admin-picture .picture {
+  margin: 6px 0;
+}

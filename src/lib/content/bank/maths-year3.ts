@@ -2,7 +2,7 @@
  * Year 3 Mathematics: 15 questions for each Stage 2 standard (NESA outcome), three at each
  * level from very easy to very hard. Arithmetic answers are checked by the content tests.
  */
-import { choice, levels, multi, ordering, trueFalse, typed } from "../spec";
+import { choice, levels, multi, ordering, pic, trueFalse, typed } from "../spec";
 
 /** MA2-RN-01: place value to tens of thousands. */
 export const PLACE_VALUE = levels(3010101, {
@@ -15,12 +15,19 @@ export const PLACE_VALUE = levels(3010101, {
         1,
         "The 4 is in the tens place, so it is worth 4 tens, or 40.",
       ),
-    (n) => typed("short_answer", n, "What number is 3 tens and 5 ones?", "35", "3 tens is 30, and 30 + 5 = 35."),
+    (n) =>
+      pic(
+        { kind: "blocks", hundreds: 0, tens: 3, ones: 5 },
+        typed("short_answer", n, "What number do these blocks show?", "35", "There are 3 tens and 5 ones. 3 tens is 30, and 30 + 5 = 35."),
+      ),
     (n) => trueFalse(n, "In 62, the 6 is in the tens place.", true, "62 is 6 tens and 2 ones, so the 6 is in the tens place."),
   ],
   easy: [
     (n) =>
-      choice(n, "Which number is two hundred and fifty-three?", ["235", "253", "2053", "325"], 1, "2 hundreds, 5 tens and 3 ones is 253."),
+      pic(
+        { kind: "blocks", hundreds: 2, tens: 5, ones: 3 },
+        choice(n, "Which number do these blocks show?", ["235", "253", "2053", "325"], 1, "2 hundreds, 5 tens and 3 ones is 253."),
+      ),
     (n) =>
       typed(
         "short_answer",
@@ -306,7 +313,16 @@ export const TIMES = levels(3030101, {
   very_easy: [
     (n) => typed("short_answer", n, "2 × 5 = ?", "10", "2 groups of 5 is 5 + 5 = 10."),
     (n) =>
-      typed("short_answer", n, "There are 3 groups with 4 in each group. How many altogether?", "12", "3 groups of 4 is 4 + 4 + 4 = 12."),
+      pic(
+        { kind: "array", rows: 3, columns: 4 },
+        typed(
+          "short_answer",
+          n,
+          "There are 3 rows with 4 dots in each row. How many dots altogether?",
+          "12",
+          "3 rows of 4 is 4 + 4 + 4 = 12.",
+        ),
+      ),
     (n) => trueFalse(n, "5 × 2 is the same as 2 × 5.", true, "You can multiply in any order. Both make 10."),
   ],
   easy: [
@@ -414,18 +430,30 @@ export const FRACTIONS = levels(3050101, {
         0,
         "2 equal parts are halves.",
       ),
-    (n) => trueFalse(n, "A shape cut into 4 equal parts shows quarters.", true, "4 equal parts are called quarters."),
+    (n) =>
+      pic(
+        { kind: "fraction", shape: "circle", parts: 4, shaded: 1 },
+        trueFalse(
+          n,
+          "One quarter of this circle is shaded.",
+          true,
+          "The circle is cut into 4 equal parts and 1 is shaded, so one quarter is shaded.",
+        ),
+      ),
     (n) => choice(n, "How many quarters make a whole?", ["2", "3", "4", "8"], 2, "A whole cut into quarters has 4 equal parts."),
   ],
   easy: [
     (n) => typed("short_answer", n, "What is half of 10?", "5", "10 shared into 2 equal groups is 5 in each."),
     (n) =>
-      choice(
-        n,
-        "In the fraction 3/4, how many equal parts is the whole cut into?",
-        ["3", "4", "7", "1"],
-        1,
-        "The bottom number tells you how many equal parts: 4.",
+      pic(
+        { kind: "fraction", shape: "bar", parts: 4, shaded: 3 },
+        choice(
+          n,
+          "What fraction of the bar is shaded?",
+          ["1/4", "3/4", "3/1", "4/3"],
+          1,
+          "The bar is cut into 4 equal parts and 3 are shaded, so 3/4 is shaded.",
+        ),
       ),
     (n) => trueFalse(n, "1/2 is bigger than 1/4.", true, "Cutting a whole into 2 parts makes bigger parts than cutting it into 4."),
   ],
@@ -443,12 +471,15 @@ export const FRACTIONS = levels(3050101, {
   hard: [
     (n) => typed("short_answer", n, "What is three quarters of 20?", "15", "One quarter of 20 is 5, so three quarters is 3 × 5 = 15."),
     (n) =>
-      choice(
-        n,
-        "A number line from 0 to 1 is split into 4 equal jumps. Where is 3/4?",
-        ["After 1 jump", "After 2 jumps", "After 3 jumps", "After 4 jumps"],
-        2,
-        "Each jump is 1/4, so 3 jumps take you to 3/4.",
+      pic(
+        { kind: "number_line", from: 0, to: 1, jumps: 4, dotAt: 3 },
+        choice(
+          n,
+          "What fraction is the dot on?",
+          ["1/4", "2/4", "3/4", "4/3"],
+          2,
+          "The line from 0 to 1 is split into 4 equal jumps, so each jump is 1/4. The dot is 3 jumps along: 3/4.",
+        ),
       ),
     (n) =>
       multi(
@@ -506,12 +537,15 @@ export const LENGTH = levels(3040201, {
         "A classroom is a few metres long.",
       ),
     (n) =>
-      typed(
-        "short_answer",
-        n,
-        "One ribbon is 30 cm long. Another is 45 cm long. How many centimetres longer is the second ribbon?",
-        "15",
-        "45 − 30 = 15 cm.",
+      pic(
+        { kind: "ruler", cm: 10, length: 7, object: "pencil" },
+        typed(
+          "short_answer",
+          n,
+          "How many centimetres long is the pencil?",
+          ["7", "7 cm"],
+          "The pencil starts at 0 and ends at 7, so it is 7 cm long.",
+        ),
       ),
   ],
   medium: [
@@ -527,12 +561,15 @@ export const LENGTH = levels(3040201, {
   ],
   hard: [
     (n) =>
-      typed(
-        "short_answer",
-        n,
-        "A rectangle is 6 cm long and 4 cm wide. What is its perimeter in centimetres?",
-        "20",
-        "Add all four sides: 6 + 4 + 6 + 4 = 20 cm.",
+      pic(
+        { kind: "rectangle", width: 6, height: 4, top: "6 cm", side: "4 cm" },
+        typed(
+          "short_answer",
+          n,
+          "What is the perimeter of this rectangle in centimetres?",
+          ["20", "20 cm"],
+          "Add all four sides: 6 + 4 + 6 + 4 = 20 cm.",
+        ),
       ),
     (n) => typed("fill_blank", n, "250 cm = 2 m and ___ cm", "50", "200 cm is 2 m, and 50 cm is left over."),
     (n) =>
@@ -573,31 +610,40 @@ export const TIME = [
     difficulty: "very_easy" as const,
   },
   {
-    ...choice(
-      3040101,
-      "The minute hand points to the 6 and the hour hand is halfway between the 3 and the 4. What time is it?",
-      ["6:30", "3:30", "4:30", "3:06"],
-      1,
-      "When the minute hand points to the 6, it's half past. The hour hand has passed the 3, so it's half past 3, or 3:30.",
+    ...pic(
+      { kind: "clock", hour: 3, minute: 30 },
+      choice(
+        3040101,
+        "What time does the clock show?",
+        ["6:30", "3:30", "4:30", "3:06"],
+        1,
+        "When the minute hand points to the 6, it's half past. The hour hand has passed the 3, so it's half past 3, or 3:30.",
+      ),
     ),
     difficulty: "easy" as const,
   },
   {
-    ...trueFalse(
-      3040104,
-      "Quarter past 7 is the same time as 7:15.",
-      true,
-      "A quarter of an hour is 15 minutes, so quarter past 7 is 7:15.",
+    ...pic(
+      { kind: "clock", hour: 7, minute: 15 },
+      trueFalse(
+        3040104,
+        "This clock shows quarter past 7.",
+        true,
+        "The minute hand points to the 3, which is 15 minutes past. The hour hand is just past the 7, so it's quarter past 7, or 7:15.",
+      ),
     ),
     difficulty: "easy" as const,
   },
   {
-    ...choice(
-      3040108,
-      "Which time is quarter to 4?",
-      ["3:45", "4:15", "4:45", "3:15"],
-      0,
-      "Quarter to 4 is 15 minutes before 4 o'clock, which is 3:45.",
+    ...pic(
+      { kind: "clock", hour: 3, minute: 45 },
+      choice(
+        3040108,
+        "What time does the clock show?",
+        ["3:45", "4:15", "4:45", "9:20"],
+        0,
+        "The minute hand points to the 9, which is 45 minutes past, or quarter to the next hour. The hour hand is nearly at 4, so it's 3:45.",
+      ),
     ),
     difficulty: "easy" as const,
   },
@@ -696,90 +742,193 @@ export const TIME = [
 export const DATA = levels(3060101, {
   very_easy: [
     (n) =>
-      choice(
-        n,
-        "Favourite fruit votes: apple 5, banana 3, orange 7. Which fruit got the most votes?",
-        ["apple", "banana", "orange"],
-        2,
-        "Orange got 7 votes, more than 5 or 3.",
+      pic(
+        {
+          kind: "column_graph",
+          title: "Favourite fruit",
+          columns: [
+            { label: "apple", value: 5 },
+            { label: "banana", value: 3 },
+            { label: "orange", value: 7 },
+          ],
+        },
+        choice(
+          n,
+          "Look at the graph. Which fruit got the most votes?",
+          ["apple", "banana", "orange"],
+          2,
+          "Orange got 7 votes, more than 5 or 3.",
+        ),
       ),
     (n) =>
-      typed(
-        "short_answer",
-        n,
-        "Favourite fruit votes: apple 5, banana 3, orange 7. How many votes did banana get?",
-        "3",
-        "Read the banana row: 3 votes.",
+      pic(
+        {
+          kind: "column_graph",
+          title: "Favourite fruit",
+          columns: [
+            { label: "apple", value: 5 },
+            { label: "banana", value: 3 },
+            { label: "orange", value: 7 },
+          ],
+        },
+        typed("short_answer", n, "Look at the graph. How many votes did banana get?", "3", "Read the banana row: 3 votes."),
       ),
     (n) => trueFalse(n, "In a column graph, a taller column shows a bigger number.", true, "The height of each column shows how many."),
   ],
   easy: [
     (n) =>
-      typed(
-        "short_answer",
-        n,
-        "Favourite fruit votes: apple 5, banana 3, orange 7. How many votes were there altogether?",
-        "15",
-        "5 + 3 + 7 = 15.",
+      pic(
+        {
+          kind: "column_graph",
+          title: "Favourite fruit",
+          columns: [
+            { label: "apple", value: 5 },
+            { label: "banana", value: 3 },
+            { label: "orange", value: 7 },
+          ],
+        },
+        typed("short_answer", n, "Look at the graph. How many votes were there altogether?", "15", "5 + 3 + 7 = 15."),
       ),
     (n) =>
-      choice(
-        n,
-        "Favourite fruit votes: apple 5, banana 3, orange 7. Which fruit got the fewest votes?",
-        ["apple", "banana", "orange"],
-        1,
-        "Banana got 3 votes, the smallest number.",
+      pic(
+        {
+          kind: "column_graph",
+          title: "Favourite fruit",
+          columns: [
+            { label: "apple", value: 5 },
+            { label: "banana", value: 3 },
+            { label: "orange", value: 7 },
+          ],
+        },
+        choice(
+          n,
+          "Look at the graph. Which fruit got the fewest votes?",
+          ["apple", "banana", "orange"],
+          1,
+          "Banana got 3 votes, the smallest number.",
+        ),
       ),
     (n) =>
-      typed(
-        "short_answer",
-        n,
-        "Favourite fruit votes: apple 5, banana 3, orange 7. How many more votes did orange get than apple?",
-        "2",
-        "Orange got 7 and apple got 5, so 7 − 5 = 2 more votes.",
+      pic(
+        {
+          kind: "column_graph",
+          title: "Favourite fruit",
+          columns: [
+            { label: "apple", value: 5 },
+            { label: "banana", value: 3 },
+            { label: "orange", value: 7 },
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "Look at the graph. How many more votes did orange get than apple?",
+          "2",
+          "Orange got 7 and apple got 5, so 7 − 5 = 2 more votes.",
+        ),
       ),
   ],
   medium: [
     (n) =>
-      typed(
-        "short_answer",
-        n,
-        "Pets owned by a class: dogs 8, cats 6, fish 4, birds 2. How many more dogs than birds are there?",
-        "6",
-        "There are 8 dogs and 2 birds, so 8 − 2 = 6 more dogs.",
+      pic(
+        {
+          kind: "table",
+          headings: ["Pet", "Number"],
+          rows: [
+            ["dogs", 8],
+            ["cats", 6],
+            ["fish", 4],
+            ["birds", 2],
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "The table shows pets owned by a class. How many more dogs than birds are there?",
+          "6",
+          "There are 8 dogs and 2 birds, so 8 − 2 = 6 more dogs.",
+        ),
       ),
     (n) =>
-      choice(
-        n,
-        "Pets owned by a class: dogs 8, cats 6, fish 4, birds 2. Which pairs of pets add up to 10?",
-        ["dogs and birds", "cats and fish", "both of these", "neither of these"],
-        2,
-        "Dogs and birds: 8 + 2 = 10. Cats and fish: 6 + 4 = 10. Both pairs make 10.",
+      pic(
+        {
+          kind: "table",
+          headings: ["Pet", "Number"],
+          rows: [
+            ["dogs", 8],
+            ["cats", 6],
+            ["fish", 4],
+            ["birds", 2],
+          ],
+        },
+        choice(
+          n,
+          "The table shows pets owned by a class. Which pairs of pets add up to 10?",
+          ["dogs and birds", "cats and fish", "both of these", "neither of these"],
+          2,
+          "Dogs and birds: 8 + 2 = 10. Cats and fish: 6 + 4 = 10. Both pairs make 10.",
+        ),
       ),
     (n) =>
-      trueFalse(
-        n,
-        "Pets owned by a class: dogs 8, cats 6, fish 4, birds 2. Cats and fish together are more than dogs.",
-        true,
-        "6 + 4 = 10, and 10 is more than 8.",
+      pic(
+        {
+          kind: "table",
+          headings: ["Pet", "Number"],
+          rows: [
+            ["dogs", 8],
+            ["cats", 6],
+            ["fish", 4],
+            ["birds", 2],
+          ],
+        },
+        trueFalse(
+          n,
+          "The table shows pets owned by a class. Cats and fish together are more than dogs.",
+          true,
+          "6 + 4 = 10, and 10 is more than 8.",
+        ),
       ),
   ],
   hard: [
     (n) =>
-      choice(
-        n,
-        "A dot plot shows test scores. Each dot is one student. There are 3 dots above 5, 6 dots above 6 and 2 dots above 7. Which score was most common?",
-        ["5", "6", "7", "8"],
-        1,
-        "The score with the most dots is 6, with 6 dots.",
+      pic(
+        {
+          kind: "dot_plot",
+          title: "Test scores",
+          columns: [
+            { label: "5", count: 3 },
+            { label: "6", count: 6 },
+            { label: "7", count: 2 },
+            { label: "8", count: 0 },
+          ],
+        },
+        choice(
+          n,
+          "The dot plot shows test scores. Each dot is one student. Which score was most common?",
+          ["5", "6", "7", "8"],
+          1,
+          "The score with the most dots is 6, with 6 dots.",
+        ),
       ),
     (n) =>
-      typed(
-        "short_answer",
-        n,
-        "A dot plot shows test scores. Each dot is one student. There are 3 dots above 5, 6 dots above 6 and 2 dots above 7. How many students are shown?",
-        "11",
-        "Count all the dots: 3 + 6 + 2 = 11.",
+      pic(
+        {
+          kind: "dot_plot",
+          title: "Test scores",
+          columns: [
+            { label: "5", count: 3 },
+            { label: "6", count: 6 },
+            { label: "7", count: 2 },
+            { label: "8", count: 0 },
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "The dot plot shows test scores. Each dot is one student. How many students are shown?",
+          "11",
+          "Count all the dots: 3 + 6 + 2 = 11.",
+        ),
       ),
     (n) =>
       typed(
@@ -792,12 +941,25 @@ export const DATA = levels(3060101, {
   ],
   very_hard: [
     (n) =>
-      typed(
-        "short_answer",
-        n,
-        "In a picture graph, each book picture means 5 books. Mia's row has 4 pictures and Jay's row has 7. How many more books did Jay read than Mia?",
-        "15",
-        "Jay has 3 more pictures than Mia, and 3 × 5 = 15 books.",
+      pic(
+        {
+          kind: "picture_graph",
+          title: "Books read",
+          thing: "books",
+          each: 5,
+          rows: [
+            { label: "Mia", count: 4 },
+            { label: "Jay", count: 7 },
+            { label: "Ava", count: 5 },
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "The picture graph shows books read. How many more books did Jay read than Mia?",
+          "15",
+          "Jay has 3 more pictures than Mia, and 3 × 5 = 15 books.",
+        ),
       ),
     (n) =>
       choice(
@@ -808,12 +970,24 @@ export const DATA = levels(3060101, {
         "12 + 9 = 21 chose soccer or netball, so 30 − 21 = 9 chose cricket.",
       ),
     (n) =>
-      multi(
-        n,
-        "Rainy days: Monday 4, Tuesday 7, Wednesday 7, Thursday 2. Which of these are true? Choose all that are right.",
-        ["Tuesday and Wednesday are the same", "Monday is the lowest", "The total is 20", "Thursday is the lowest"],
-        [0, 2, 3],
-        "Tuesday and Wednesday are both 7, Thursday (2) is the lowest, and 4 + 7 + 7 + 2 = 20.",
+      pic(
+        {
+          kind: "column_graph",
+          title: "Rainy days",
+          columns: [
+            { label: "Mon", value: 4 },
+            { label: "Tue", value: 7 },
+            { label: "Wed", value: 7 },
+            { label: "Thu", value: 2 },
+          ],
+        },
+        multi(
+          n,
+          "The graph shows rainy days. Which of these are true? Choose all that are right.",
+          ["Tuesday and Wednesday are the same", "Monday is the lowest", "The total is 20", "Thursday is the lowest"],
+          [0, 2, 3],
+          "Tuesday and Wednesday are both 7, Thursday (2) is the lowest, and 4 + 7 + 7 + 2 = 20.",
+        ),
       ),
   ],
 });
@@ -842,12 +1016,21 @@ export const CHANCE = levels(3060201, {
   ],
   easy: [
     (n) =>
-      choice(
-        n,
-        "A bag has 9 red counters and 1 blue counter. You pick one without looking. Which colour are you more likely to get?",
-        ["red", "blue", "they are equally likely"],
-        0,
-        "There are many more red counters than blue.",
+      pic(
+        {
+          kind: "bag",
+          counters: [
+            { colour: "red", count: 9 },
+            { colour: "blue", count: 1 },
+          ],
+        },
+        choice(
+          n,
+          "You pick one counter from this bag without looking. Which colour are you more likely to get?",
+          ["red", "blue", "they are equally likely"],
+          0,
+          "There are many more red counters than blue.",
+        ),
       ),
     (n) =>
       choice(
@@ -868,19 +1051,32 @@ export const CHANCE = levels(3060201, {
   ],
   medium: [
     (n) =>
-      choice(
-        n,
-        "A spinner has 4 equal parts: 3 green and 1 yellow. Landing on yellow is…",
-        ["likely", "unlikely", "certain", "impossible"],
-        1,
-        "Only 1 part out of 4 is yellow, so it could happen but probably won't.",
+      pic(
+        { kind: "spinner", sections: ["green", "yellow", "green", "green"] },
+        choice(
+          n,
+          "On this spinner, landing on yellow is…",
+          ["likely", "unlikely", "certain", "impossible"],
+          1,
+          "Only 1 part out of 4 is yellow, so it could happen but probably won't.",
+        ),
       ),
     (n) =>
-      ordering(
-        n,
-        "A bag has 1 red, 3 blue and 6 green marbles. Put the colours in order from least likely to most likely to be picked.",
-        ["red", "blue", "green"],
-        "Fewer marbles means less likely: red (1), blue (3), green (6).",
+      pic(
+        {
+          kind: "bag",
+          counters: [
+            { colour: "red", count: 1 },
+            { colour: "blue", count: 3 },
+            { colour: "green", count: 6 },
+          ],
+        },
+        ordering(
+          n,
+          "You pick one counter from this bag without looking. Put the colours in order from least likely to most likely.",
+          ["red", "blue", "green"],
+          "Fewer marbles means less likely: red (1), blue (3), green (6).",
+        ),
       ),
     (n) =>
       trueFalse(
@@ -900,12 +1096,26 @@ export const CHANCE = levels(3060201, {
         "A 6 is only 1 of the 6 faces, so it is unlikely but possible. Less than 7 is certain, 0 is impossible, and 1 to 5 is likely.",
       ),
     (n) =>
-      multi(
-        n,
-        "A bag has 5 red and 5 yellow counters. Which of these are true? Choose all that are right.",
-        ["Red and yellow are equally likely", "Picking green is impossible", "Picking red is certain", "Picking red or yellow is certain"],
-        [0, 1, 3],
-        "There are equal numbers of red and yellow, no green, and every counter is red or yellow. Red alone is not certain.",
+      pic(
+        {
+          kind: "bag",
+          counters: [
+            { colour: "red", count: 5 },
+            { colour: "yellow", count: 5 },
+          ],
+        },
+        multi(
+          n,
+          "You pick one counter from this bag. Which of these are true? Choose all that are right.",
+          [
+            "Red and yellow are equally likely",
+            "Picking green is impossible",
+            "Picking red is certain",
+            "Picking red or yellow is certain",
+          ],
+          [0, 1, 3],
+          "There are equal numbers of red and yellow, no green, and every counter is red or yellow. Red alone is not certain.",
+        ),
       ),
     (n) =>
       typed(

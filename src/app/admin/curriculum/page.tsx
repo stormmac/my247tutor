@@ -1,4 +1,5 @@
 import { AdminTabs } from "@/components/AdminTabs";
+import { Picture } from "@/components/Picture";
 import { accountsEnabled } from "@/lib/auth/session";
 import { COUNTRIES, questionsOf, STATES, SUBJECT_IDS, SUBJECTS, subtopicsOf, topicsFor, yearsWithContent } from "@/lib/content/tree";
 import type { ContentQuestion, Subtopic, Topic } from "@/lib/content/types";
@@ -164,7 +165,13 @@ function QuestionItem({ q }: { q: ContentQuestion }) {
       <div>{q.question_text}</div>
       <div className="small muted">
         {TYPE_NAMES[q.question_type]} · {LEVEL_NAMES[q.difficulty]} · {plural(q.points, "point")}
+        {q.picture && " · with picture"}
       </div>
+      {q.picture && (
+        <div className="admin-picture">
+          <Picture picture={q.picture} />
+        </div>
+      )}
       {q.answer_options ? (
         <ul className="small">
           {(q.question_type === "ordering"

@@ -23,6 +23,7 @@ export function toPracticeQuestion(q: ContentQuestion, seed: number): Question {
     prompt: q.question_text,
     hints: HINTS[q.question_type],
     solution: q.explanation,
+    ...(q.picture ? { picture: q.picture } : {}),
   };
   const opts = q.answer_options ?? [];
   const indexOf = (optionId: string) => opts.findIndex((o) => o.id === optionId);

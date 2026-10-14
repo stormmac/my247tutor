@@ -49,6 +49,7 @@ export function contentSeedSql(): string {
         ...q,
         answer_options: new Jsonb(q.answer_options),
         correct_answer: new Jsonb(q.correct_answer),
+        picture: new Jsonb(q.picture ?? null),
         created_by: CONTENT_USER_ID,
       })),
     ),
