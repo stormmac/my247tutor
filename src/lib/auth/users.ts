@@ -346,3 +346,61 @@ export async function changePassword(user: User, current: string, next: string):
   ).query(`UPDATE users SET password_hash = $2, updated_at = NOW() WHERE id = $1`, [user.id, await bcrypt.hash(next, BCRYPT_COST)]);
   return true;
 }
+
+/** A student as Admin's Learn picker shows them, under the parent or centre that owns them. */
+export interface OwnedLearner {
+  id: string;
+  name: string;
+  yearLevel: number;
+  username: string | null;
+}
+
+export interface LearnerOwner {
+  id: string;
+  name: string;
+  email: string;
+  role: "parent" | "centre";
+  isActive: boolean;
+  learners: OwnedLearner[];
+}
+
+/** Every parent and centre with their students, for an admin to pick one to learn as. */
+export async function listLearnerOwners(): Promise<LearnerOwner[]> {
+  const { rows } = await (
+    await ready()
+  ).query(
+    `SELECT o.id, o.display_name, o.email, o.role, o.is_active,
+       COALESCE(json_agg(json_build_object('id', l.id, 'name', l.profile->>'name', 'yearLevel', (l.profile->>'yearLevel')::int, 'username', s.username)
+         ORDER BY l.profile->>'name') FILTER (WHERE l.id IS NOT NULL), '[]') AS learners
+     FROM users o
+     LEFT JOIN learners l ON l.parent_id = o.id
+     LEFT JOIN users s ON s.learner_id = l.id
+     WHERE o.role IN ('parent', 'centre') AND o.learner_id IS NULL
+     GROUP BY o.id ORDER BY o.role, o.display_name LIMIT 1000`,
+  );
+  return rows.map((r) => ({
+    id: r.id as string,
+    name: r.display_name as string,
+    email: r.email as string,
+    role: r.role as LearnerOwner["role"],
+    isActive: r.is_active as boolean,
+    learners: r.learners as OwnedLearner[],
+  }));
+}
+
+/**
+ * Who an admin logs in as to learn as this student: the student's own sign-in when they have one
+ * that's on, otherwise their parent, with this child picked. Null when there's no such student.
+ */
+export async function learnAsTarget(learnerId: string): Promise<{ user: User; pick: string | null } | { error: string } | null> {
+  const { rows } = await (await ready()).query(`SELECT parent_id FROM learners WHERE id = $1`, [learnerId]);
+  if (!rows[0]) return null;
+  const login = await (await ready()).query(`SELECT ${USER_COLUMNS} FROM users WHERE learner_id = $1`, [learnerId]);
+  const student = login.rows[0] ? toUser(login.rows[0]) : null;
+  if (student?.isActive) return { user: student, pick: null };
+  const owner = await getUser(rows[0].parent_id as string);
+  if (!owner || owner.role !== "parent")
+    return { error: "This student's sign-in is turned off. Turn it on from their centre's page first." };
+  if (!owner.isActive) return { error: "This family's account is turned off. Turn it on first." };
+  return { user: owner, pick: learnerId };
+}

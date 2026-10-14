@@ -1611,3 +1611,33 @@ ul.tight {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
+
+/* Admin's Learn picker. */
+.owner-card {
+  padding: 14px 18px;
+}
+.owner-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.owner-learners {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.owner-learner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { AdminLearnPicker } from "@/components/AdminLearnPicker";
 import { Suni } from "@/components/Suni";
+import { useAccount } from "@/components/useAccount";
 import { switchChild, useChildren, useProfile } from "@/components/useProfile";
 import { MAX_CHILDREN, newProfile, pickNextSkill, skillState, type LearnerProfile } from "@/lib/learner/model";
 import { skillsFor } from "@/lib/curriculum/skills";
@@ -14,7 +16,11 @@ import { describeTables, tablesOf } from "@/lib/tables/game";
 
 export default function LearnPage() {
   const { profile, setProfile, loaded } = useProfile();
-  if (!loaded) return null;
+  const account = useAccount();
+  const [self, setSelf] = useState(false);
+  if (!loaded || !account.loaded) return null;
+  // An admin picks a family or centre, then a student, to learn as.
+  if (account.user?.role === "admin" && !self) return <AdminLearnPicker onSelf={() => setSelf(true)} />;
   if (!profile) return <Setup onCreate={(name, year) => setProfile(newProfile(name, year))} />;
 
   return (

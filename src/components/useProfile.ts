@@ -93,6 +93,32 @@ export function replaceAllProfiles(profiles: LearnerProfile[]) {
   write(active, PROFILE_LOADED);
 }
 
+const PICK_KEY = "my247tutor.pick-child";
+
+/** Asks for this child to be the one on screen when the account's children next load (Admin's Learn picker). */
+export function pickChildOnLoad(id: string | null) {
+  try {
+    if (id) localStorage.setItem(PICK_KEY, id);
+    else localStorage.removeItem(PICK_KEY);
+  } catch {}
+}
+
+/** The children with the one asked for by pickChildOnLoad first, and forgets the ask. */
+export function withPickedFirst(profiles: LearnerProfile[]): LearnerProfile[] {
+  let pick: string | null = null;
+  try {
+    pick = localStorage.getItem(PICK_KEY);
+    localStorage.removeItem(PICK_KEY);
+  } catch {}
+  const picked = profiles.find((p) => p.id === pick);
+  if (!picked) return profiles;
+  // The picked child goes on screen, whoever was there before.
+  try {
+    localStorage.removeItem(KEY);
+  } catch {}
+  return [picked, ...profiles.filter((p) => p !== picked)];
+}
+
 /** Puts another child on screen. A full page load, so every page starts fresh for them. */
 export function switchChild(id: string) {
   const all = readAllProfiles();

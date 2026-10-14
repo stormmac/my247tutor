@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useAccount } from "@/components/useAccount";
-import { PROFILE_CHANGED, readAllProfiles, readStoredProfile, replaceAllProfiles, withId } from "@/components/useProfile";
+import { PROFILE_CHANGED, readAllProfiles, readStoredProfile, replaceAllProfiles, withId, withPickedFirst } from "@/components/useProfile";
 import type { LearnerProfile } from "@/lib/learner/model";
 
 const OWNER_KEY = "my247tutor.owner";
@@ -79,7 +79,7 @@ export function ProfileSync() {
         localStorage.setItem(OWNER_KEY, user.id);
       } catch {}
       const local = readAllProfiles();
-      if (profiles.length) replaceAllProfiles(profiles);
+      if (profiles.length) replaceAllProfiles(withPickedFirst(profiles));
       else if (local.length && (owner === null || owner === user.id) && !user.child) {
         // Progress made in this browser before signing up moves into the account.
         const moving = local.map(withId);
