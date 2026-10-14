@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { QuestionView, type QuestionOutcome } from "@/components/QuestionView";
+import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components/QuestionView";
 import { questionFocus, useSuniFocus, useSuniSay } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { getOutcome } from "@/lib/curriculum/outcomes";
@@ -128,13 +128,14 @@ function Practice({
   }
 
   const skill = current.skill;
+  const asked = question;
   const outcome = getOutcome(skill.outcome);
   const state = skillState(profile, skill.id);
 
   function onDone(o: QuestionOutcome) {
     const wasMastered = skillState(profile, skill.id).mastered;
     // Only the first try counts towards mastery; a second-try success still helps learning.
-    const updated = recordAttempt(profile, skill.id, o.correct && o.firstTry, o.hintsUsed);
+    const updated = recordAttempt(profile, skill.id, o.correct && o.firstTry, o.hintsUsed, Date.now(), attemptDetails(asked, o));
     setProfile(updated);
     setSession((s) => ({ done: s.done + 1, correct: s.correct + (o.correct ? 1 : 0) }));
     if (!wasMastered && skillState(updated, skill.id).mastered) {
