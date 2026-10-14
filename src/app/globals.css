@@ -1041,3 +1041,39 @@ ul.tight {
 .suni-voice-toggle:hover {
   opacity: 1;
 }
+
+/* Hold-to-talk microphone in Suni's chat. */
+.suni-mic {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.suni-mic.listening {
+  border-color: #d93a2b;
+  background: #d93a2b;
+  color: #fff;
+  box-shadow: 0 0 0 6px rgba(217, 58, 43, 0.2);
+}
+.suni-mic:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.suni-mic-status {
+  margin: 0;
+  padding: 8px 16px 0;
+  color: var(--muted);
+}
+.suni-mic-status.problem {
+  color: var(--warn-text);
+}

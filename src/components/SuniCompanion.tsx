@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Suni } from "@/components/Suni";
 import { useProfile } from "@/components/useProfile";
+import { useSpeechInput, type SpeechInputProblem } from "@/components/useSpeechInput";
 import { useSuniVoice } from "@/components/useSuniVoice";
 import { useTutorChat } from "@/components/useTutorChat";
 import { TUTOR_NAME } from "@/lib/tutor/persona";
@@ -142,6 +143,26 @@ export function SuniCompanion() {
     setOpen(false);
   }
 
+  // Hold the microphone to talk: the words fill the message box as they speak, and letting go sends them.
+  const speech = useSpeechInput({
+    onWords: setInput,
+    onDone: (text) => {
+      if (!text) return;
+      setInput("");
+      void send(text);
+    },
+  });
+
+  function startTalking(e: React.PointerEvent | React.KeyboardEvent) {
+    if ("repeat" in e && e.repeat) return;
+    e.preventDefault();
+    // Suni stops talking so it doesn't hear itself.
+    voice.stop();
+    if (busy) return;
+    if ("pointerId" in e) (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    speech.start();
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
@@ -186,6 +207,11 @@ export function SuniCompanion() {
               </div>
             ))}
           </div>
+          {context && (speech.listening || speech.problem) && (
+            <p className={`suni-mic-status small ${speech.problem ? "problem" : ""}`} role="status">
+              {speech.problem ? MIC_PROBLEMS[speech.problem] : "Listening… let go when you've finished."}
+            </p>
+          )}
           {context ? (
             <form onSubmit={submit}>
               <input
@@ -197,6 +223,24 @@ export function SuniCompanion() {
                 maxLength={1000}
                 aria-label={`Message ${TUTOR_NAME}`}
               />
+              {speech.supported && (
+                <button
+                  type="button"
+                  className={`suni-mic ${speech.listening ? "listening" : ""}`}
+                  aria-label={speech.listening ? "Listening. Let go to send" : `Hold to talk to ${TUTOR_NAME}`}
+                  aria-pressed={speech.listening}
+                  title="Hold to talk"
+                  disabled={busy && !speech.listening}
+                  onPointerDown={startTalking}
+                  onPointerUp={speech.stop}
+                  onPointerCancel={speech.stop}
+                  onKeyDown={(e) => (e.key === " " || e.key === "Enter") && startTalking(e)}
+                  onKeyUp={(e) => (e.key === " " || e.key === "Enter") && speech.stop()}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  <MicIcon />
+                </button>
+              )}
               <button className="btn small" disabled={busy || !input.trim()}>
                 Send
               </button>
@@ -223,6 +267,31 @@ export function SuniCompanion() {
         <Suni size={open ? 72 : 92} wave={!!bubble && !open} />
       </button>
     </div>
+  );
+}
+
+const MIC_PROBLEMS: Record<SpeechInputProblem, string> = {
+  blocked: "I can't hear you yet. Ask a grown-up to allow the microphone for this site, then try again.",
+  "no-microphone": "I couldn't find a microphone. You can type to me instead.",
+  failed: "I didn't catch that. Hold the microphone and try again, or type to me.",
+};
+
+function MicIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
+    </svg>
   );
 }
 
