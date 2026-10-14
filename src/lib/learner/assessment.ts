@@ -89,7 +89,8 @@ export function startAssessment(subject: Subject, yearLevel: YearLevel): Assessm
   const lastYear = Math.min(6, yearLevel + 1);
   const steps: Step[] = [];
   for (let year = startYear; year <= lastYear; year++)
-    for (const level of CLIMB) if (questionsAt(subject, { year: year as YearLevel, level }).length) steps.push({ year: year as YearLevel, level });
+    for (const level of CLIMB)
+      if (questionsAt(subject, { year: year as YearLevel, level }).length) steps.push({ year: year as YearLevel, level });
   return { subject, yearLevel, startYear, steps, step: 0, stepResults: [], passed: -1, answers: [], done: steps.length === 0 };
 }
 
