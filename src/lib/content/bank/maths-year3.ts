@@ -1152,3 +1152,1703 @@ export const CHANCE = levels(3060201, {
       ),
   ],
 });
+
+/** MA2-NSM-01: mass in kilograms and grams. */
+export const MASS = levels(3040301, {
+  very_easy: [
+    (n) =>
+      choice(
+        n,
+        "Which unit would you use to measure the mass of a watermelon?",
+        ["kilograms", "litres", "metres", "hours"],
+        0,
+        "Mass is how heavy something is. A watermelon is heavy, so kilograms are a good unit.",
+      ),
+    (n) =>
+      pic(
+        { kind: "scale", max: 10, value: 3, step: 1, unit: "kg" },
+        typed(
+          "short_answer",
+          n,
+          "A bag of potatoes is on the scale. How many kilograms does it weigh?",
+          ["3", "3 kg", "3 kilograms"],
+          "The pointer is on the 3, so the potatoes weigh 3 kg.",
+        ),
+      ),
+    (n) => trueFalse(n, "1 kilogram is heavier than 1 gram.", true, "1 kilogram is the same as 1000 grams, so it is much heavier."),
+  ],
+  easy: [
+    (n) => typed("fill_blank", n, "1 kilogram = ___ grams", "1000", "There are 1000 grams in 1 kilogram."),
+    (n) =>
+      pic(
+        { kind: "scale", max: 1000, value: 400, step: 100, unit: "g" },
+        typed(
+          "short_answer",
+          n,
+          "Some flour is on the scale. How many grams of flour are there?",
+          ["400", "400 g", "400 grams"],
+          "The pointer is on the 400 mark, so there are 400 g of flour.",
+        ),
+      ),
+    (n) =>
+      multi(
+        n,
+        "Which of these weigh less than 1 kilogram? Choose all that are right.",
+        ["a pencil", "an apple", "a car", "a school desk"],
+        [0, 1],
+        "A pencil and an apple are light, just a few grams. A car and a desk are much heavier than 1 kg.",
+      ),
+  ],
+  medium: [
+    (n) =>
+      pic(
+        { kind: "scale", max: 1000, value: 750, step: 100, unit: "g" },
+        typed(
+          "short_answer",
+          n,
+          "Look at the scale. How many grams does it show?",
+          ["750", "750 g", "750 grams"],
+          "The pointer is on the small mark halfway between 700 and 800. Halfway is 750 g.",
+        ),
+      ),
+    (n) =>
+      ordering(
+        n,
+        "Put these masses in order from lightest to heaviest.",
+        ["300 g", "900 g", "1 kg 200 g", "2 kg"],
+        "1 kg 200 g is 1200 g and 2 kg is 2000 g, so the order is 300 g, 900 g, 1 kg 200 g, 2 kg.",
+      ),
+    (n) =>
+      choice(
+        n,
+        "A bag of rice has a mass of 2 kg. How many grams is that?",
+        ["2 g", "20 g", "200 g", "2000 g"],
+        3,
+        "Each kilogram is 1000 g, so 2 kg is 2000 g.",
+      ),
+  ],
+  hard: [
+    (n) =>
+      pic(
+        { kind: "scale", max: 5, value: 2.5, step: 1, unit: "kg" },
+        choice(
+          n,
+          "A pumpkin is on the scale. What is its mass?",
+          ["2 kg", "2 kg 500 g", "3 kg", "25 kg"],
+          1,
+          "The pointer is halfway between 2 kg and 3 kg. Half a kilogram is 500 g, so the pumpkin is 2 kg 500 g.",
+        ),
+      ),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "A rockmelon has a mass of 1 kg 300 g. How many grams is that?",
+        ["1300", "1300 g", "1300 grams"],
+        "1 kg is 1000 g, and 1000 + 300 = 1300 g.",
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "A big box is always heavier than a small box.",
+        false,
+        "Size does not tell you mass. A big box of feathers can be lighter than a small box of rocks.",
+      ),
+  ],
+  very_hard: [
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "Mia's backpack has a mass of 3 kg. She takes out her 600 g lunchbox. What is the mass of the backpack now, in grams?",
+        ["2400", "2400 g", "2 kg 400 g"],
+        "3 kg is 3000 g. 3000 − 600 = 2400 g.",
+      ),
+    (n) =>
+      pic(
+        { kind: "scale", max: 1000, value: 650, step: 100, unit: "g" },
+        typed(
+          "short_answer",
+          n,
+          "Some apples are on the scale. How many more grams of apples are needed to make 1 kg?",
+          ["350", "350 g", "350 grams"],
+          "The pointer is halfway between 600 and 700, so it shows 650 g. 1 kg is 1000 g, and 1000 − 650 = 350 g.",
+        ),
+      ),
+    (n) =>
+      choice(
+        n,
+        "Each bag of sugar has a mass of 250 g. What is the mass of 4 bags?",
+        ["1 kg", "750 g", "2 kg", "10 kg"],
+        0,
+        "4 × 250 g = 1000 g, and 1000 g is 1 kg.",
+      ),
+  ],
+});
+
+/** MA2-3DS-02: capacity in litres and millilitres, and volume in cubic centimetres. */
+export const CAPACITY = levels(3040401, {
+  very_easy: [
+    (n) =>
+      choice(
+        n,
+        "Which unit would you use to measure how much water a bucket holds?",
+        ["litres", "kilograms", "centimetres", "minutes"],
+        0,
+        "How much a container holds is its capacity. A bucket holds a few litres.",
+      ),
+    (n) =>
+      pic(
+        { kind: "jug", max: 5, value: 2, step: 1, unit: "L" },
+        typed(
+          "short_answer",
+          n,
+          "Look at the jug. How many litres of water are in it?",
+          ["2", "2 L", "2 litres"],
+          "The water comes up to the 2 L mark, so there are 2 litres.",
+        ),
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "A teaspoon holds more water than a bathtub.",
+        false,
+        "A bathtub holds a lot of water. A teaspoon holds only a few millilitres.",
+      ),
+  ],
+  easy: [
+    (n) => typed("fill_blank", n, "1 litre = ___ millilitres", "1000", "There are 1000 millilitres in 1 litre."),
+    (n) =>
+      pic(
+        { kind: "jug", max: 1000, value: 300, step: 100, unit: "mL" },
+        typed(
+          "short_answer",
+          n,
+          "Look at the jug. How many millilitres of water are in it?",
+          ["300", "300 mL", "300 millilitres"],
+          "The water comes up to the 300 mL mark.",
+        ),
+      ),
+    (n) =>
+      multi(
+        n,
+        "Which of these hold less than 1 litre? Choose all that are right.",
+        ["a cup", "a teaspoon", "a bathtub", "a swimming pool"],
+        [0, 1],
+        "A cup and a teaspoon hold only millilitres. A bathtub and a pool hold many litres.",
+      ),
+  ],
+  medium: [
+    (n) =>
+      pic(
+        { kind: "jug", max: 1000, value: 600, step: 200, unit: "mL" },
+        typed(
+          "short_answer",
+          n,
+          "This jug is marked in steps of 200 mL. How much water is in it?",
+          ["600", "600 mL", "600 millilitres"],
+          "The marks go 200, 400, 600, 800, 1000. The water is at the third mark, 600 mL.",
+        ),
+      ),
+    (n) =>
+      ordering(
+        n,
+        "Put these in order from smallest capacity to largest.",
+        ["a teaspoon", "a cup", "a bucket", "a bathtub"],
+        "A teaspoon holds a few millilitres, a cup about 250 mL, a bucket about 10 litres and a bathtub much more.",
+      ),
+    (n) =>
+      pic(
+        { kind: "cubes", length: 3, width: 2, height: 1 },
+        typed(
+          "short_answer",
+          n,
+          "This block is made of 1 cm cubes. What is its volume in cubic centimetres?",
+          ["6", "6 cubic centimetres", "6 cm³"],
+          "There are 2 rows of 3 cubes, so 6 cubes. Each cube is 1 cubic centimetre, so the volume is 6 cubic centimetres.",
+        ),
+      ),
+  ],
+  hard: [
+    (n) =>
+      pic(
+        { kind: "jug", max: 1000, value: 750, step: 250, unit: "mL" },
+        typed(
+          "short_answer",
+          n,
+          "How many more millilitres of water are needed to fill this jug to 1000 mL?",
+          ["250", "250 mL", "250 millilitres"],
+          "The water is at 750 mL. 1000 − 750 = 250 mL more.",
+        ),
+      ),
+    (n) =>
+      pic(
+        { kind: "cubes", length: 3, width: 2, height: 2 },
+        typed(
+          "short_answer",
+          n,
+          "This model is built from 1 cm cubes. What is its volume in cubic centimetres?",
+          ["12", "12 cubic centimetres", "12 cm³"],
+          "Each layer has 2 rows of 3, which is 6 cubes. There are 2 layers, so 6 + 6 = 12 cubic centimetres.",
+        ),
+      ),
+    (n) =>
+      choice(
+        n,
+        "Which is the same as 2 litres?",
+        ["2 mL", "20 mL", "200 mL", "2000 mL"],
+        3,
+        "Each litre is 1000 mL, so 2 litres is 2000 mL.",
+      ),
+  ],
+  very_hard: [
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "A 1 litre bottle of juice is shared equally into 4 cups. How many millilitres go in each cup?",
+        ["250", "250 mL", "250 millilitres"],
+        "1 litre is 1000 mL, and 1000 ÷ 4 = 250 mL.",
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "Two models made from the same number of 1 cm cubes have the same volume, even if they are different shapes.",
+        true,
+        "Volume is how much space something takes up. The same number of cubes takes up the same space, whatever the shape.",
+      ),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "Sam has a 2 litre bottle of water. He pours 3 glasses of 200 mL each. How many millilitres are left in the bottle?",
+        ["1400", "1400 mL", "1 L 400 mL"],
+        "2 litres is 2000 mL. 3 glasses is 3 × 200 = 600 mL. 2000 − 600 = 1400 mL.",
+      ),
+  ],
+});
+
+/** MA2-2DS-03: area in square centimetres and square metres. */
+export const AREA = levels(3040501, {
+  very_easy: [
+    (n) =>
+      pic(
+        {
+          kind: "grid",
+          columns: 4,
+          rows: 3,
+          cells: [
+            [0, 0],
+            [1, 0],
+            [2, 0],
+            [0, 1],
+            [1, 1],
+            [2, 1],
+          ],
+        },
+        typed("short_answer", n, "How many squares are shaded?", "6", "There are 2 rows of 3 shaded squares. 3 + 3 = 6."),
+      ),
+    (n) =>
+      choice(
+        n,
+        "What does area measure?",
+        ["the space a flat surface covers", "how heavy something is", "how long a line is", "how much a jug holds"],
+        0,
+        "Area is the amount of flat space a shape covers, like the floor of a room.",
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "A square metre is bigger than a square centimetre.",
+        true,
+        "A square metre is a square 1 m on each side. A square centimetre is only 1 cm on each side.",
+      ),
+  ],
+  easy: [
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [4, 0],
+            [4, 2],
+            [0, 2],
+          ],
+          grid: true,
+        },
+        typed(
+          "short_answer",
+          n,
+          "Each small square is 1 square centimetre. What is the area of the rectangle?",
+          ["8", "8 square centimetres", "8 cm²"],
+          "There are 2 rows of 4 squares. 4 + 4 = 8 square centimetres.",
+        ),
+      ),
+    (n) =>
+      choice(
+        n,
+        "Which unit would you use to measure the area of a netball court?",
+        ["square metres", "square centimetres", "litres", "kilograms"],
+        0,
+        "A netball court is big, so square metres are the right unit for its area.",
+      ),
+    (n) =>
+      multi(
+        n,
+        "Which of these would you measure in square centimetres? Choose all that are right.",
+        ["a postage stamp", "a page of a book", "a school oval", "a car park"],
+        [0, 1],
+        "A stamp and a page are small, so square centimetres work. An oval and a car park are big, so use square metres.",
+      ),
+  ],
+  medium: [
+    (n) =>
+      pic(
+        {
+          kind: "grid",
+          columns: 5,
+          rows: 4,
+          cells: [
+            [0, 0],
+            [1, 0],
+            [2, 0],
+            [3, 0],
+            [0, 1],
+            [0, 2],
+            [0, 3],
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "Each small square is 1 square centimetre. What is the area of the shaded shape?",
+          ["7", "7 square centimetres", "7 cm²"],
+          "Count the shaded squares: 4 along the bottom and 3 more going up. 4 + 3 = 7 square centimetres.",
+        ),
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [5, 0],
+            [5, 2],
+            [2, 2],
+            [2, 4],
+            [0, 4],
+          ],
+          grid: true,
+        },
+        typed(
+          "short_answer",
+          n,
+          "Each small square is 1 square centimetre. What is the area of this shape?",
+          ["14", "14 square centimetres", "14 cm²"],
+          "Split it into two rectangles: the bottom is 2 rows of 5, which is 10, and the top part is 2 rows of 2, which is 4. 10 + 4 = 14.",
+        ),
+      ),
+    (n) =>
+      ordering(
+        n,
+        "Put these in order from smallest area to largest.",
+        ["a postage stamp", "the cover of an exercise book", "a classroom floor", "a cricket oval"],
+        "A stamp is tiny, a book cover is bigger, a classroom floor is bigger again, and a cricket oval is huge.",
+      ),
+  ],
+  hard: [
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [5, 0],
+            [5, 3],
+            [0, 3],
+          ],
+          sideLabels: ["5 m", "3 m"],
+          grid: true,
+        },
+        typed(
+          "short_answer",
+          n,
+          "This is a garden bed. Each small square is 1 square metre. What is its area?",
+          ["15", "15 square metres", "15 m²"],
+          "There are 3 rows of 5 squares. 3 × 5 = 15 square metres.",
+        ),
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "A rectangle 4 cm long and 3 cm wide has the same area as a rectangle 6 cm long and 2 cm wide.",
+        true,
+        "The first is 3 rows of 4, which is 12 square centimetres. The second is 2 rows of 6, which is also 12.",
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [4, 0],
+            [0, 4],
+          ],
+          grid: true,
+        },
+        choice(
+          n,
+          "Each small square is 1 square centimetre. What is the area of the triangle?",
+          ["8 square centimetres", "16 square centimetres", "4 square centimetres", "10 square centimetres"],
+          0,
+          "The triangle is half of a 4 by 4 square. The square has 16 small squares, and half of 16 is 8.",
+        ),
+      ),
+  ],
+  very_hard: [
+    (n) =>
+      multi(
+        n,
+        "Which rectangles have an area of 12 square centimetres? Choose all that are right.",
+        ["3 cm by 4 cm", "2 cm by 6 cm", "1 cm by 12 cm", "4 cm by 2 cm"],
+        [0, 1, 2],
+        "3 rows of 4, 2 rows of 6 and 1 row of 12 all make 12 squares. 4 cm by 2 cm is only 8 squares (its distance around is 12 cm, not its area).",
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "grid",
+          columns: 6,
+          rows: 4,
+          cells: [
+            [0, 0],
+            [1, 0],
+            [2, 0],
+            [3, 0],
+            [4, 0],
+            [5, 0],
+            [0, 1],
+            [1, 1],
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "Leo is tiling a floor with square tiles. The shaded squares are the tiles he has laid. How many more tiles does he need to cover the whole floor?",
+          "16",
+          "The floor is 4 rows of 6, which is 24 squares. He has laid 8. 24 − 8 = 16 more tiles.",
+        ),
+      ),
+    (n) =>
+      choice(
+        n,
+        "A square mat is 2 m long and 2 m wide. Ella says its area is 8 square metres. What is the correct area?",
+        ["4 square metres", "8 square metres", "2 square metres", "6 square metres"],
+        0,
+        "The mat is 2 rows of 2 square metres, which is 4 square metres. Ella added all four sides, which gives the distance around, not the area.",
+      ),
+  ],
+});
+
+/** MA2-DATA-01: collecting data and drawing graphs with a given scale. */
+export const DATA_COLLECT = levels(3060301, {
+  very_easy: [
+    (n) =>
+      choice(
+        n,
+        "Ms Lee wants to find out her class's favourite fruit. What is the best way to collect the data?",
+        ["Ask each student and make a tally mark for each answer", "Guess", "Ask only one friend", "Look out the window"],
+        0,
+        "Asking everyone and keeping a tally gives a true count for the whole class.",
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "In a tally, a bundle of four marks with a line across them stands for 5.",
+        true,
+        "Tally marks are bundled in fives: four marks and a fifth line across them.",
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "column_graph",
+          title: "Favourite sport",
+          columns: [
+            { label: "Cricket", value: 6 },
+            { label: "Netball", value: 8 },
+            { label: "Soccer", value: 4 },
+            { label: "Swimming", value: 2 },
+          ],
+          step: 2,
+        },
+        choice(
+          n,
+          "Look at the graph. Which sport got the most votes?",
+          ["Cricket", "Netball", "Soccer", "Swimming"],
+          1,
+          "The netball column is the tallest, so netball got the most votes.",
+        ),
+      ),
+  ],
+  easy: [
+    (n) =>
+      pic(
+        {
+          kind: "table",
+          headings: ["Pet", "Votes"],
+          rows: [
+            ["Dog", 7],
+            ["Cat", 4],
+            ["Fish", 2],
+          ],
+        },
+        typed("short_answer", n, "Look at the table. How many students voted altogether?", "13", "Add the votes: 7 + 4 + 2 = 13."),
+      ),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "A tally has 3 bundles of five and 2 more marks. What number does it show?",
+        "17",
+        "3 bundles of five is 15, and 15 + 2 = 17.",
+      ),
+    (n) =>
+      ordering(
+        n,
+        "Put the steps of a data investigation in order.",
+        ["Ask a question", "Collect the data", "Organise it in a table", "Draw a graph"],
+        "First decide what you want to know, then collect the answers, sort them into a table, and show them in a graph.",
+      ),
+  ],
+  medium: [
+    (n) =>
+      pic(
+        {
+          kind: "column_graph",
+          title: "Favourite fruit",
+          columns: [
+            { label: "Apple", value: 5 },
+            { label: "Banana", value: 9 },
+            { label: "Mango", value: 7 },
+            { label: "Orange", value: 3 },
+          ],
+          step: 2,
+        },
+        typed(
+          "short_answer",
+          n,
+          "The scale on this graph goes up in 2s. How many students chose banana?",
+          "9",
+          "The banana column stops halfway between 8 and 10. Halfway between 8 and 10 is 9.",
+        ),
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "table",
+          headings: ["Colour", "Votes"],
+          rows: [
+            ["Red", 4],
+            ["Blue", 8],
+            ["Green", 6],
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "Zoe is drawing a column graph of this table. Each line on her scale is worth 2 votes. How many lines up should the blue column reach?",
+          "4",
+          "Blue has 8 votes. Each line is 2 votes, and 8 ÷ 2 = 4 lines.",
+        ),
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "dot_plot",
+          title: "Number of pets",
+          columns: [
+            { label: "0", count: 3 },
+            { label: "1", count: 5 },
+            { label: "2", count: 4 },
+            { label: "3", count: 1 },
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "Each dot is one student. How many students have 1 pet?",
+          "5",
+          "There are 5 dots above the 1, so 5 students have 1 pet.",
+        ),
+      ),
+  ],
+  hard: [
+    (n) =>
+      pic(
+        {
+          kind: "dot_plot",
+          title: "Number of pets",
+          columns: [
+            { label: "0", count: 3 },
+            { label: "1", count: 5 },
+            { label: "2", count: 4 },
+            { label: "3", count: 1 },
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "Each dot is one student. How many students were asked altogether?",
+          "13",
+          "Count every dot: 3 + 5 + 4 + 1 = 13 students.",
+        ),
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "picture_graph",
+          title: "Books read this week",
+          thing: "books",
+          each: 2,
+          rows: [
+            { label: "Ava", count: 3 },
+            { label: "Ben", count: 5 },
+            { label: "Kai", count: 4 },
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "Look at the key. How many books did Ben read?",
+          "10",
+          "Ben has 5 stars and each star is 2 books. 5 × 2 = 10 books.",
+        ),
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "On a column graph with a scale going up in 10s, a column that stops halfway between 20 and 30 shows 25.",
+        true,
+        "Halfway between 20 and 30 is 25.",
+      ),
+  ],
+  very_hard: [
+    (n) =>
+      pic(
+        {
+          kind: "column_graph",
+          title: "Cars passing the school",
+          columns: [
+            { label: "Mon", value: 15 },
+            { label: "Tue", value: 25 },
+            { label: "Wed", value: 10 },
+            { label: "Thu", value: 20 },
+          ],
+          step: 5,
+        },
+        typed(
+          "short_answer",
+          n,
+          "Look at the graph. How many more cars passed on Tuesday than on Wednesday?",
+          "15",
+          "Tuesday shows 25 and Wednesday shows 10. 25 − 10 = 15 more cars.",
+        ),
+      ),
+    (n) =>
+      choice(
+        n,
+        "In a picture graph, each star stands for 2 books. Kai read 7 books. How should Kai's row look?",
+        ["3 and a half stars", "7 stars", "2 stars", "14 stars"],
+        0,
+        "3 stars is 6 books, and half a star is 1 more book. So 7 books is 3 and a half stars.",
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "table",
+          headings: ["Travel to school", "Students"],
+          rows: [
+            ["Walk", 9],
+            ["Car", 12],
+            ["Bus", 7],
+            ["Bike", 3],
+          ],
+        },
+        multi(
+          n,
+          "Mrs Patel will draw a column graph of this table with a scale going up in 3s. Which columns will end exactly on a line? Choose all that are right.",
+          ["Walk", "Car", "Bus", "Bike"],
+          [0, 1, 3],
+          "The lines are at 3, 6, 9, 12 and so on. 9, 12 and 3 are on lines, but 7 is between 6 and 9.",
+        ),
+      ),
+  ],
+});
+
+/** MA2-2DS-01: comparing two-dimensional shapes and describing their features. */
+export const SHAPES_2D = levels(3070101, {
+  very_easy: [
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [3, 5],
+          ],
+        },
+        typed("short_answer", n, "How many sides does this shape have?", "3", "Count the straight sides: 1, 2, 3. It is a triangle."),
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [2, 0],
+            [6, 0],
+            [8, 3],
+            [6, 6],
+            [2, 6],
+            [0, 3],
+          ],
+        },
+        choice(n, "What is this shape called?", ["hexagon", "pentagon", "octagon", "square"], 0, "It has 6 sides, so it is a hexagon."),
+      ),
+    (n) => trueFalse(n, "A square has 4 equal sides.", true, "All 4 sides of a square are the same length."),
+  ],
+  easy: [
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [2, 0],
+            [6, 0],
+            [7, 4],
+            [4, 7],
+            [1, 4],
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "How many corners (vertices) does this shape have?",
+          "5",
+          "Count the corners where two sides meet: there are 5. It is a pentagon.",
+        ),
+      ),
+    (n) =>
+      multi(
+        n,
+        "Which of these shapes have 4 sides? Choose all that are right.",
+        ["square", "rectangle", "rhombus", "triangle", "pentagon"],
+        [0, 1, 2],
+        "Squares, rectangles and rhombuses all have 4 sides. A triangle has 3 and a pentagon has 5.",
+      ),
+    (n) =>
+      choice(
+        n,
+        "Which shape has 8 sides?",
+        ["octagon", "hexagon", "pentagon", "rectangle"],
+        0,
+        "Octo means 8, like an octopus with 8 arms. An octagon has 8 sides.",
+      ),
+  ],
+  medium: [
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [5, 4],
+            [1, 5],
+          ],
+        },
+        choice(
+          n,
+          "This shape has 4 straight sides. What is the name for any shape with 4 straight sides?",
+          ["quadrilateral", "pentagon", "triangle", "hexagon"],
+          0,
+          "Any flat shape with 4 straight sides is a quadrilateral. Quad means 4.",
+        ),
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [7, 0],
+            [7, 4],
+            [0, 4],
+          ],
+        },
+        trueFalse(
+          n,
+          "This rectangle has 4 right angles.",
+          true,
+          "Every corner of a rectangle is a square corner, so it has 4 right angles.",
+        ),
+      ),
+    (n) =>
+      ordering(
+        n,
+        "Put these shapes in order from fewest sides to most sides.",
+        ["triangle", "rectangle", "pentagon", "hexagon", "octagon"],
+        "A triangle has 3 sides, a rectangle 4, a pentagon 5, a hexagon 6 and an octagon 8.",
+      ),
+  ],
+  hard: [
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [5, 0],
+            [8, 4],
+            [3, 4],
+          ],
+        },
+        choice(
+          n,
+          "This shape has 4 equal sides but no right angles. What is it?",
+          ["rhombus", "square", "rectangle", "triangle"],
+          0,
+          "A shape with 4 equal sides is a rhombus. It is not a square because its corners are not right angles.",
+        ),
+      ),
+    (n) =>
+      multi(
+        n,
+        "Which of these are true for both a square and a rectangle? Choose all that are right.",
+        ["They have 4 sides", "They have 4 right angles", "Their opposite sides are equal", "All their sides are equal"],
+        [0, 1, 2],
+        "Both have 4 sides, 4 right angles and equal opposite sides. Only a square must have all 4 sides equal.",
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [6, 3],
+            [3, 3],
+            [3, 6],
+            [0, 6],
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "How many sides does this shape have?",
+          "6",
+          "Count each straight side: 6. So it is a hexagon, even though it doesn't look like a honeycomb.",
+        ),
+      ),
+  ],
+  very_hard: [
+    (n) =>
+      choice(
+        n,
+        "I am a flat shape with more than 4 corners but fewer than 6 sides. What am I?",
+        ["pentagon", "hexagon", "square", "triangle"],
+        0,
+        "More than 4 corners and fewer than 6 sides means exactly 5, so it is a pentagon.",
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "A square is a special kind of rectangle.",
+        true,
+        "A rectangle has 4 sides and 4 right angles. A square has those too, and its sides are all equal as well.",
+      ),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "Lucy draws 2 triangles and 3 squares. How many sides do her shapes have altogether?",
+        "18",
+        "2 triangles have 2 × 3 = 6 sides. 3 squares have 3 × 4 = 12 sides. 6 + 12 = 18.",
+      ),
+  ],
+});
+
+/** MA2-2DS-02: combining and splitting shapes, flips, slides, turns and symmetry. */
+export const TRANSFORM = levels(3070201, {
+  very_easy: [
+    (n) =>
+      choice(
+        n,
+        "Moving a shape in a straight line without turning or flipping it is called a…",
+        ["slide", "flip", "turn", "split"],
+        0,
+        "A slide moves a shape along without turning it over or around.",
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [6, 3],
+            [0, 3],
+          ],
+        },
+        trueFalse(
+          n,
+          "You can fold this rectangle in half so that both halves match exactly.",
+          true,
+          "Fold it down the middle, from top to bottom, and the two halves sit exactly on top of each other.",
+        ),
+      ),
+    (n) =>
+      choice(
+        n,
+        "You cut a square in half from one corner to the opposite corner. What two shapes do you get?",
+        ["2 triangles", "2 squares", "2 circles", "2 pentagons"],
+        0,
+        "A cut from corner to corner makes two shapes with 3 sides each: 2 triangles.",
+      ),
+  ],
+  easy: [
+    (n) =>
+      choice(
+        n,
+        "A flip makes a shape look like it does in a…",
+        ["mirror", "clock", "ruler", "jug"],
+        0,
+        "A flip turns a shape over, like its reflection in a mirror.",
+      ),
+    (n) =>
+      multi(
+        n,
+        "Which of these capital letters have a line of symmetry? Choose all that are right.",
+        ["A", "M", "T", "F", "G"],
+        [0, 1, 2],
+        "A, M and T can be folded down the middle so both halves match. F and G cannot.",
+      ),
+    (n) =>
+      pic(
+        { kind: "grid", columns: 2, rows: 2 },
+        typed(
+          "short_answer",
+          n,
+          "How many small squares join together to make this big square?",
+          "4",
+          "There are 2 rows of 2 small squares, which is 4.",
+        ),
+      ),
+  ],
+  medium: [
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [3, 5],
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "How many lines of symmetry does this triangle have?",
+          "1",
+          "Only a fold straight down from the top corner makes the halves match, so it has 1 line of symmetry.",
+        ),
+      ),
+    (n) =>
+      ordering(
+        n,
+        "Put these turns in order from smallest to largest.",
+        ["quarter turn", "half turn", "three-quarter turn", "full turn"],
+        "A quarter turn is 1 quarter, a half turn is 2 quarters, a three-quarter turn is 3 quarters and a full turn is 4 quarters.",
+      ),
+    (n) => trueFalse(n, "When you slide a shape, it gets bigger.", false, "A slide only moves a shape. Its size and shape stay the same."),
+  ],
+  hard: [
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [4, 0],
+            [4, 4],
+            [0, 4],
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "How many lines of symmetry does this square have?",
+          "4",
+          "A square folds in half across the middle, down the middle, and along both diagonals: 4 lines.",
+        ),
+      ),
+    (n) =>
+      choice(
+        n,
+        "An arrow points up. You give it a half turn. Which way does it point now?",
+        ["down", "up", "left", "right"],
+        0,
+        "A half turn spins it around to face the opposite way, so up becomes down.",
+      ),
+    (n) =>
+      choice(
+        n,
+        "Which two shapes can be joined together to make a rectangle?",
+        ["two matching right-angled triangles", "two circles", "a triangle and a circle", "two pentagons"],
+        0,
+        "Put two matching right-angled triangles together along their longest sides and they make a rectangle.",
+      ),
+  ],
+  very_hard: [
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [8, 0],
+            [8, 3],
+            [0, 3],
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "How many lines of symmetry does this rectangle have?",
+          "2",
+          "It folds in half across the middle and down the middle. Folding along a diagonal doesn't match, so it has 2 lines.",
+        ),
+      ),
+    (n) =>
+      choice(
+        n,
+        "An arrow points right. Ava turns it a quarter turn clockwise, then another quarter turn clockwise. Which way does it point now?",
+        ["left", "down", "up", "right"],
+        0,
+        "Two quarter turns make a half turn. Right → down → left.",
+      ),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "Jack cuts a rectangle into 2 equal triangles, then cuts each triangle in half again. How many triangles does he have now?",
+        "4",
+        "He starts with 2 triangles. Cutting each into 2 gives 2 × 2 = 4 triangles.",
+      ),
+  ],
+});
+
+/** MA2-3DS-01: three-dimensional objects, including prisms, pyramids and their nets. */
+export const OBJECTS_3D = levels(3070301, {
+  very_easy: [
+    (n) =>
+      pic(
+        { kind: "solid", shape: "cube" },
+        choice(
+          n,
+          "What is this object called?",
+          ["cube", "square", "sphere", "cone"],
+          0,
+          "It has 6 square faces, so it is a cube. A square is flat.",
+        ),
+      ),
+    (n) =>
+      pic(
+        { kind: "solid", shape: "sphere" },
+        trueFalse(n, "This object has no flat faces.", true, "A sphere, like a ball, is curved all over and has no flat faces."),
+      ),
+    (n) =>
+      pic(
+        { kind: "solid", shape: "cylinder" },
+        choice(
+          n,
+          "What is this object called?",
+          ["cylinder", "cone", "circle", "cube"],
+          0,
+          "It has two flat circle ends and a curved side, like a tin of food. It is a cylinder.",
+        ),
+      ),
+  ],
+  easy: [
+    (n) =>
+      pic(
+        { kind: "solid", shape: "cube" },
+        typed(
+          "short_answer",
+          n,
+          "How many faces does a cube have?",
+          "6",
+          "A cube has 6 square faces: top, bottom, front, back and two sides.",
+        ),
+      ),
+    (n) =>
+      multi(
+        n,
+        "Which of these objects can roll? Choose all that are right.",
+        ["sphere", "cylinder", "cone", "cube", "square pyramid"],
+        [0, 1, 2],
+        "Objects with a curved surface can roll: the sphere, cylinder and cone. A cube and a pyramid have only flat faces.",
+      ),
+    (n) =>
+      pic(
+        { kind: "solid", shape: "square_pyramid" },
+        choice(
+          n,
+          "This is a square pyramid. What shape is its base?",
+          ["square", "triangle", "circle", "pentagon"],
+          0,
+          "A pyramid is named after its base, so a square pyramid has a square base.",
+        ),
+      ),
+  ],
+  medium: [
+    (n) =>
+      pic(
+        { kind: "solid", shape: "triangular_prism" },
+        typed(
+          "short_answer",
+          n,
+          "How many faces does a triangular prism have?",
+          "5",
+          "It has 2 triangle faces at the ends and 3 rectangle faces joining them. 2 + 3 = 5.",
+        ),
+      ),
+    (n) =>
+      choice(
+        n,
+        "What is a net?",
+        ["a flat shape that folds up to make a 3D object", "a 3D object with curved faces", "a kind of angle", "a shape with no corners"],
+        0,
+        "A net is a flat pattern. When you fold it up, it makes a 3D object.",
+      ),
+    (n) =>
+      pic(
+        { kind: "solid", shape: "square_pyramid" },
+        typed(
+          "short_answer",
+          n,
+          "How many vertices (corners) does a square pyramid have?",
+          "5",
+          "There are 4 corners around the square base and 1 at the top. 4 + 1 = 5.",
+        ),
+      ),
+  ],
+  hard: [
+    (n) =>
+      pic(
+        { kind: "solid", shape: "rectangular_prism" },
+        typed(
+          "short_answer",
+          n,
+          "How many edges does a rectangular prism have?",
+          "12",
+          "There are 4 edges around the top, 4 around the bottom and 4 going up the sides. 4 + 4 + 4 = 12.",
+        ),
+      ),
+    (n) =>
+      choice(
+        n,
+        "A net has 1 square and 4 triangles. What object does it fold into?",
+        ["square pyramid", "cube", "triangular prism", "cylinder"],
+        0,
+        "The square is the base and the 4 triangles fold up to meet at a point. That makes a square pyramid.",
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "A cube and a rectangular prism both have 8 vertices.",
+        true,
+        "Both have 4 corners on the top and 4 on the bottom, so 8 vertices each.",
+      ),
+  ],
+  very_hard: [
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [1, 0],
+            [2, 0],
+            [2, 2],
+            [3, 2],
+            [3, 3],
+            [2, 3],
+            [2, 4],
+            [1, 4],
+            [1, 3],
+            [0, 3],
+            [0, 2],
+            [1, 2],
+          ],
+          grid: true,
+        },
+        choice(
+          n,
+          "This net is made of squares. What 3D object will it fold into?",
+          ["cube", "square pyramid", "triangular prism", "cylinder"],
+          0,
+          "The net has 6 squares. Folded up, the squares make the 6 faces of a cube.",
+        ),
+      ),
+    (n) =>
+      multi(
+        n,
+        "Which of these are prisms? Choose all that are right.",
+        ["cube", "rectangular prism", "triangular prism", "square pyramid", "cone"],
+        [0, 1, 2],
+        "A prism has the same shape at both ends joined by rectangles. A cube is a prism with square ends. Pyramids and cones come to a point.",
+      ),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "Noah builds a skeleton model of a triangular prism using straws for the edges. How many straws does he need?",
+        "9",
+        "Each triangle end has 3 edges, so 3 + 3 = 6, and 3 more edges join the two ends. 6 + 3 = 9 straws.",
+      ),
+  ],
+});
+
+/** MA2-GM-03: angles compared with a right angle. */
+export const ANGLES = levels(3070401, {
+  very_easy: [
+    (n) =>
+      pic(
+        { kind: "angle", degrees: 90 },
+        choice(
+          n,
+          "What kind of angle is this?",
+          ["a right angle", "less than a right angle", "more than a right angle"],
+          0,
+          "The square mark in the corner shows a right angle, like the corner of a page.",
+        ),
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "The corner of a page in a book is a right angle.",
+        true,
+        "A page has square corners, and a square corner is a right angle.",
+      ),
+    (n) =>
+      pic(
+        { kind: "angle", degrees: 40 },
+        choice(
+          n,
+          "Is this angle smaller or bigger than a right angle?",
+          ["smaller than a right angle", "bigger than a right angle", "exactly a right angle"],
+          0,
+          "The arms are closer together than a square corner, so the angle is smaller than a right angle.",
+        ),
+      ),
+  ],
+  easy: [
+    (n) =>
+      pic(
+        { kind: "angle", degrees: 130 },
+        choice(
+          n,
+          "How does this angle compare with a right angle?",
+          ["greater than a right angle", "less than a right angle", "equal to a right angle"],
+          0,
+          "The arms are opened wider than a square corner, so it is greater than a right angle.",
+        ),
+      ),
+    (n) =>
+      multi(
+        n,
+        "Which of these have a right angle? Choose all that are right.",
+        ["the corner of a door", "the corner of a square", "the tip of a slice of pizza", "the corner of a book"],
+        [0, 1, 3],
+        "Doors, squares and books have square corners. The tip of a pizza slice is a sharp angle, less than a right angle.",
+      ),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "How many right angles does a rectangle have?",
+        "4",
+        "Each of the 4 corners of a rectangle is a right angle.",
+      ),
+  ],
+  medium: [
+    (n) =>
+      pic(
+        { kind: "angle", degrees: 180 },
+        typed(
+          "short_answer",
+          n,
+          "This angle is a straight line. How many right angles fit into it?",
+          "2",
+          "A straight angle is a half turn, and two right angles (two quarter turns) make it.",
+        ),
+      ),
+    (n) =>
+      ordering(
+        n,
+        "Put these angles in order from smallest to largest.",
+        ["less than a right angle", "a right angle", "more than a right angle but less than a straight line", "a straight angle"],
+        "Start with angles smaller than a square corner, then a right angle, then wider angles, then a straight line.",
+      ),
+    (n) =>
+      pic(
+        { kind: "clock", hour: 3, minute: 0 },
+        choice(
+          n,
+          "Look at the clock. What angle do the two hands make?",
+          ["a right angle", "less than a right angle", "more than a right angle", "a straight angle"],
+          0,
+          "At 3:00 one hand points to 12 and the other to 3. That is a quarter turn, a right angle.",
+        ),
+      ),
+  ],
+  hard: [
+    (n) =>
+      pic(
+        { kind: "clock", hour: 2, minute: 0 },
+        choice(
+          n,
+          "Look at the clock. What angle do the two hands make?",
+          ["less than a right angle", "a right angle", "more than a right angle", "a straight angle"],
+          0,
+          "From 12 to 3 would be a right angle. The hour hand is on 2, before 3, so the angle is less than a right angle.",
+        ),
+      ),
+    (n) =>
+      pic(
+        { kind: "angle", degrees: 70 },
+        trueFalse(
+          n,
+          "This angle is a right angle.",
+          false,
+          "It has no square mark, and the arms are a bit closer than a square corner. It is less than a right angle.",
+        ),
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [0, 4],
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "How many right angles does this triangle have?",
+          "1",
+          "Only the bottom left corner is a square corner. The other two are smaller than a right angle.",
+        ),
+      ),
+  ],
+  very_hard: [
+    (n) =>
+      choice(
+        n,
+        "Sam is facing north. He makes a quarter turn clockwise. Which way is he facing, and what angle did he turn through?",
+        ["east, a right angle", "south, a right angle", "east, a straight angle", "west, a right angle"],
+        0,
+        "Clockwise from north, a quarter turn takes you to east. A quarter turn is a right angle.",
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "shape",
+          points: [
+            [0, 0],
+            [6, 0],
+            [6, 3],
+            [3, 3],
+            [3, 6],
+            [0, 6],
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "How many of the angles inside this shape are right angles?",
+          "5",
+          "The shape has 6 corners. 5 of them are square corners. The inside corner where it bends in is bigger than a straight line, so it is not a right angle.",
+        ),
+      ),
+    (n) =>
+      multi(
+        n,
+        "At which of these times do the clock hands make a right angle? Choose all that are right.",
+        ["3:00", "9:00", "6:00", "12:00"],
+        [0, 1],
+        "At 3:00 and 9:00 the hands are a quarter turn apart. At 6:00 they make a straight line, and at 12:00 they point the same way.",
+      ),
+  ],
+});
+
+/** MA2-GM-01: grid maps, directions and routes. */
+export const POSITION = levels(3070501, {
+  very_easy: [
+    (n) =>
+      choice(
+        n,
+        "Which direction is opposite north?",
+        ["south", "east", "west", "up"],
+        0,
+        "North and south are opposites, like east and west.",
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "grid",
+          columns: 6,
+          rows: 5,
+          map: true,
+          points: [
+            { x: 1, y: 3, label: "Park" },
+            { x: 4, y: 1, label: "School" },
+            { x: 2, y: 0, label: "Shop" },
+            { x: 4, y: 4, label: "Pool" },
+            { x: 0, y: 2, label: "Library" },
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "Look at the map. Which square is the school in?",
+          ["E2"],
+          "Go across to column E, then up to row 2. The school is in E2.",
+        ),
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "On most maps, north is at the top.",
+        true,
+        "Maps are usually drawn with north at the top, south at the bottom, east on the right and west on the left.",
+      ),
+  ],
+  easy: [
+    (n) =>
+      pic(
+        {
+          kind: "grid",
+          columns: 6,
+          rows: 5,
+          map: true,
+          points: [
+            { x: 1, y: 3, label: "Park" },
+            { x: 4, y: 1, label: "School" },
+            { x: 2, y: 0, label: "Shop" },
+            { x: 4, y: 4, label: "Pool" },
+            { x: 0, y: 2, label: "Library" },
+          ],
+        },
+        choice(
+          n,
+          "Look at the map. What is in square B4?",
+          ["the park", "the school", "the shop", "the pool"],
+          0,
+          "Column B, row 4 has the park in it.",
+        ),
+      ),
+    (n) =>
+      ordering(
+        n,
+        "Put the compass directions in order, going clockwise from north.",
+        ["north", "east", "south", "west"],
+        "Going clockwise like the hands of a clock: north, east, south, west. Some people remember it as Never Eat Soggy Weet-Bix.",
+      ),
+    (n) =>
+      pic(
+        { kind: "grid", columns: 5, rows: 5, map: true, points: [{ x: 1, y: 1, label: "★" }] },
+        typed(
+          "short_answer",
+          n,
+          "Start at the star. Move 3 squares to the right. Which square are you in?",
+          ["E2"],
+          "The star is in B2. Moving right 3 squares goes C, D, E. You stay in row 2, so you are in E2.",
+        ),
+      ),
+  ],
+  medium: [
+    (n) =>
+      pic(
+        {
+          kind: "grid",
+          columns: 6,
+          rows: 5,
+          map: true,
+          points: [
+            { x: 1, y: 3, label: "Park" },
+            { x: 4, y: 1, label: "School" },
+            { x: 2, y: 0, label: "Shop" },
+            { x: 4, y: 4, label: "Pool" },
+            { x: 0, y: 2, label: "Library" },
+          ],
+        },
+        choice(
+          n,
+          "North is at the top of the map. Which place is furthest north?",
+          ["the pool", "the park", "the school", "the shop"],
+          0,
+          "The furthest north is the place nearest the top. The pool is in row 5, the top row.",
+        ),
+      ),
+    (n) =>
+      pic(
+        { kind: "grid", columns: 5, rows: 5, map: true, points: [{ x: 1, y: 1, label: "★" }] },
+        typed(
+          "short_answer",
+          n,
+          "Start at the star. Move 2 squares up and 1 square left. Which square are you in?",
+          ["A4"],
+          "The star is in B2. Up 2 squares takes you to B4. Left 1 square takes you to A4.",
+        ),
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "grid",
+          columns: 6,
+          rows: 5,
+          map: true,
+          points: [
+            { x: 1, y: 3, label: "Park" },
+            { x: 4, y: 1, label: "School" },
+            { x: 2, y: 0, label: "Shop" },
+            { x: 4, y: 4, label: "Pool" },
+            { x: 0, y: 2, label: "Library" },
+          ],
+        },
+        multi(
+          n,
+          "North is at the top of the map. Which places are west of the school? Choose all that are right.",
+          ["the park", "the shop", "the library", "the pool"],
+          [0, 1, 2],
+          "West is to the left. The school is in column E. The park (B), shop (C) and library (A) are to its left. The pool is in column E too, straight north of the school, so it is not west.",
+        ),
+      ),
+  ],
+  hard: [
+    (n) =>
+      pic(
+        {
+          kind: "grid",
+          columns: 6,
+          rows: 5,
+          map: true,
+          points: [
+            { x: 0, y: 0, label: "H" },
+            { x: 3, y: 3, label: "S" },
+          ],
+          path: [
+            [0, 0],
+            [3, 0],
+            [3, 3],
+          ],
+        },
+        choice(
+          n,
+          "North is at the top. The line shows Mia's route from home (H) to school (S). Which directions did she go?",
+          [
+            "3 squares east, then 3 squares north",
+            "3 squares north, then 3 squares east",
+            "3 squares west, then 3 squares north",
+            "3 squares east, then 3 squares south",
+          ],
+          0,
+          "From H she goes right (east) 3 squares to D1, then up (north) 3 squares to S in D4.",
+        ),
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "grid",
+          columns: 6,
+          rows: 5,
+          map: true,
+          points: [
+            { x: 1, y: 3, label: "Park" },
+            { x: 4, y: 1, label: "School" },
+            { x: 2, y: 0, label: "Shop" },
+            { x: 4, y: 4, label: "Pool" },
+            { x: 0, y: 2, label: "Library" },
+          ],
+        },
+        typed(
+          "short_answer",
+          n,
+          "North is at the top. Ben walks from the shop 3 squares north. Which square is he in now?",
+          ["C4"],
+          "The shop is in C1. North is up, so 3 squares up takes him to C4.",
+        ),
+      ),
+    (n) =>
+      trueFalse(
+        n,
+        "If you face east and make a half turn, you will face west.",
+        true,
+        "A half turn makes you face the opposite way, and the opposite of east is west.",
+      ),
+  ],
+  very_hard: [
+    (n) =>
+      pic(
+        { kind: "grid", columns: 5, rows: 5, map: true, points: [{ x: 1, y: 1, label: "★" }] },
+        typed(
+          "short_answer",
+          n,
+          "North is at the top. Start at the star. Move 3 squares east, then 2 squares north, then 1 square west. Which square are you in?",
+          ["D4"],
+          "Start in B2. 3 east takes you to E2. 2 north takes you to E4. 1 west takes you to D4.",
+        ),
+      ),
+    (n) =>
+      choice(
+        n,
+        "Kai is facing south. He makes a quarter turn clockwise. Which way is he facing now?",
+        ["west", "east", "north", "south"],
+        0,
+        "Going clockwise, the order is north, east, south, west. One quarter turn on from south is west.",
+      ),
+    (n) =>
+      pic(
+        {
+          kind: "grid",
+          columns: 6,
+          rows: 5,
+          map: true,
+          points: [
+            { x: 1, y: 3, label: "Park" },
+            { x: 4, y: 1, label: "School" },
+            { x: 2, y: 0, label: "Shop" },
+            { x: 4, y: 4, label: "Pool" },
+            { x: 0, y: 2, label: "Library" },
+          ],
+        },
+        choice(
+          n,
+          "North is at the top. Which directions take you from the library to the pool?",
+          [
+            "4 squares east and 2 squares north",
+            "2 squares east and 4 squares north",
+            "4 squares west and 2 squares north",
+            "4 squares east and 2 squares south",
+          ],
+          0,
+          "The library is in A3 and the pool is in E5. From A to E is 4 squares east, and from row 3 to row 5 is 2 squares north.",
+        ),
+      ),
+  ],
+});
