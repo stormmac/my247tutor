@@ -10,6 +10,7 @@ import type { Standing } from "@/lib/learner/report";
 import type { StudentSummary } from "@/lib/learner/summary";
 import { formatReadingAge, READING_AGE_CUTOFF } from "@/lib/phonics/progress";
 import { UNITS } from "@/lib/phonics/sequence";
+import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
 
 interface ClassStudent {
   id: string;
@@ -143,7 +144,8 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
                     )}
                     {s.summary.reading.enrolled && (
                       <div className="small muted">
-                        Learn to Read {s.summary.reading.unitsDone}/{UNITS.length}
+                        Sounds {s.summary.reading.unitsDone}/{UNITS.length}, sight words {s.summary.reading.sightLevelsDone}/
+                        {SIGHT_LEVELS.length}
                       </div>
                     )}
                   </td>

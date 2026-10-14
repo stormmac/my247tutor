@@ -4,6 +4,7 @@
  * apart from React so they can be tested.
  */
 import { getUnit, graphemesOf, soundsUpTo, UNITS, type PhonicsWord, type Sound, type Unit } from "./sequence";
+import { getSightLevel, SIGHT_LEVELS, sightWordsUpTo, type SightLevel } from "./sightWords";
 
 /** Students below this reading age (in years) join Learn to Read. */
 export const READING_AGE_CUTOFF = 7.5;
@@ -102,10 +103,12 @@ export interface ReadingProgress {
   enrolled: boolean;
   /** Whether the check put them in, or a grown-up did. A grown-up's choice isn't undone by a later check. */
   enrolledBy: "check" | "grown-up" | null;
-  /** Lesson progress in each Learn to Read unit. */
+  /** Lesson progress in each Learn to Read unit of sounds, and each sight word level (ids starting "sight-"). */
   units: Record<string, UnitProgress>;
   /** Sentences read aloud. */
   readAloud: number;
+  /** Sound It Out practice: sessions done, and words read right out of those asked. */
+  blending: { sessions: number; right: number; asked: number };
 }
 
 export const newReading = (): ReadingProgress => ({
@@ -115,11 +118,13 @@ export const newReading = (): ReadingProgress => ({
   enrolledBy: null,
   units: {},
   readAloud: 0,
+  blending: { sessions: 0, right: 0, asked: 0 },
 });
 
 /** Older profiles have no reading record, and ones saved by older pages may miss fields. */
 export function readingOf(profile: { reading?: Partial<ReadingProgress> }): ReadingProgress {
-  return { ...newReading(), ...(profile.reading ?? {}), units: { ...(profile.reading?.units ?? {}) } };
+  const r = profile.reading;
+  return { ...newReading(), ...(r ?? {}), units: { ...(r?.units ?? {}) }, blending: { ...newReading().blending, ...(r?.blending ?? {}) } };
 }
 
 /**
@@ -133,7 +138,8 @@ export function recordCheck(reading: ReadingProgress, right: number, now = Date.
   const enrolled = below || (reading.enrolled && reading.enrolledBy === "grown-up");
   const enrolledBy = below ? (reading.enrolledBy === "grown-up" ? "grown-up" : "check") : enrolled ? reading.enrolledBy : null;
   const units = { ...reading.units };
-  for (const unit of UNITS.slice(0, startingUnitIndex(age))) {
+  const levels = SIGHT_LEVELS.slice(0, startingIndex(age, SIGHT_LEVELS.length));
+  for (const unit of [...UNITS.slice(0, startingUnitIndex(age)), ...levels]) {
     if (!units[unit.id]?.mastered) units[unit.id] = { lessons: units[unit.id]?.lessons ?? 0, best: 1, mastered: true, at: now };
   }
   return { ...reading, age, checkedAt: now, enrolled, enrolledBy, units };
@@ -146,8 +152,13 @@ export function setEnrolled(reading: ReadingProgress, enrolled: boolean): Readin
 
 /** Which unit a reading age starts at: the units spread evenly from 5 years to the 7.5 cut-off. */
 export function startingUnitIndex(age: number): number {
+  return startingIndex(age, UNITS.length);
+}
+
+/** Where a reading age starts in a list of steps spread evenly from 5 years to the cut-off. */
+function startingIndex(age: number, count: number): number {
   const fraction = (age - YOUNGEST) / (READING_AGE_CUTOFF - YOUNGEST);
-  return Math.max(0, Math.min(UNITS.length - 1, Math.floor(fraction * UNITS.length)));
+  return Math.max(0, Math.min(count - 1, Math.floor(fraction * count)));
 }
 
 /** A lesson of 8 questions is passed with 7 right. */
@@ -185,6 +196,31 @@ export function unitsDone(reading: ReadingProgress): number {
   return UNITS.filter((u) => reading.units[u.id]?.mastered).length;
 }
 
+/** The first sight word level not yet done, or null when they're all done. */
+export function currentSightLevel(reading: ReadingProgress): SightLevel | null {
+  return SIGHT_LEVELS.find((l) => !reading.units[l.id]?.mastered) ?? null;
+}
+
+/** A sight word level opens once the ones before it are done. */
+export function isSightOpen(reading: ReadingProgress, levelId: string): boolean {
+  const index = SIGHT_LEVELS.findIndex((l) => l.id === levelId);
+  return index >= 0 && SIGHT_LEVELS.slice(0, index).every((l) => reading.units[l.id]?.mastered);
+}
+
+export function sightLevelsDone(reading: ReadingProgress): number {
+  return SIGHT_LEVELS.filter((l) => reading.units[l.id]?.mastered).length;
+}
+
+/** The units of sounds open so far: Sound It Out practises words from these. */
+export function openUnits(reading: ReadingProgress): Unit[] {
+  return UNITS.filter((u) => isOpen(reading, u.id));
+}
+
+export function recordBlending(reading: ReadingProgress, right: number, asked: number): ReadingProgress {
+  const b = reading.blending;
+  return { ...reading, blending: { sessions: b.sessions + 1, right: b.right + right, asked: b.asked + asked } };
+}
+
 // ---------- Lessons ----------
 
 export type LessonStep =
@@ -197,7 +233,11 @@ export type LessonStep =
   /** Suni says a word; the student picks it from words built from the same sounds. */
   | { kind: "listen"; word: PhonicsWord; options: string[] }
   /** The student reads a sentence aloud. */
-  | { kind: "read"; sentence: string };
+  | { kind: "read"; sentence: string }
+  /** Suni says each new sight word; the student taps to hear them again. */
+  | { kind: "meetWords"; words: string[] }
+  /** Suni reads a sentence aloud; the student picks the word that fills its gap. */
+  | { kind: "gap"; sentence: string; word: string; options: string[] };
 
 export const FIND_QUESTIONS = 4;
 export const WORD_QUESTIONS = 4;
@@ -231,23 +271,61 @@ export function buildLesson(unitId: string, random: () => number = Math.random):
   });
 
   const earlier = UNITS.slice(0, UNITS.findIndex((u) => u.id === unitId) + 1).flatMap((u) => u.words);
-  const words = shuffle(unit.words, random).slice(0, WORD_QUESTIONS);
-  const asked = words.map((word): LessonStep => {
-    const pictured = earlier.filter((x) => x.emoji && x.emoji !== word.emoji);
-    if (word.emoji && pictured.length >= 3) {
-      const options = [word, ...distractors(pictured, word, (a, b) => a.emoji === b.emoji || a.word === b.word, random)];
-      return { kind: "picture", word, parts: graphemesOf(word.word), options: shuffle(options, random) };
-    }
-    const others = distractors(
-      earlier.map((x) => x.word),
-      word.word,
-      (a, b) => a === b,
-      random,
-    );
-    return { kind: "listen", word, options: shuffle([word.word, ...others], random) };
-  });
+  const asked = shuffle(unit.words, random)
+    .slice(0, WORD_QUESTIONS)
+    .map((word) => wordQuestion(word, earlier, random));
 
   return [{ kind: "meet", sounds: unit.sounds }, ...finds, ...asked, { kind: "read", sentence: unit.sentence }];
+}
+
+/** A word to sound out: pick its picture when it has one, otherwise pick it when Suni says it. */
+function wordQuestion(word: PhonicsWord, pool: PhonicsWord[], random: () => number): LessonStep {
+  const pictured = pool.filter((x) => x.emoji && x.emoji !== word.emoji);
+  if (word.emoji && pictured.length >= 3) {
+    const options = [word, ...distractors(pictured, word, (a, b) => a.emoji === b.emoji || a.word === b.word, random)];
+    return { kind: "picture", word, parts: graphemesOf(word.word), options: shuffle(options, random) };
+  }
+  const others = distractors(
+    pool.map((x) => x.word),
+    word.word,
+    (a, b) => a === b,
+    random,
+  );
+  return { kind: "listen", word, options: shuffle([word.word, ...others], random) };
+}
+
+/** A sight word lesson: meet the words, find each when Suni says it, fill gaps in sentences, then read a sentence aloud. */
+export function buildSightLesson(levelId: string, random: () => number = Math.random): LessonStep[] {
+  const level = getSightLevel(levelId);
+  if (!level) return [];
+  const known = sightWordsUpTo(levelId).map((w) => w.word);
+  const picks = shuffle(level.words, random);
+  const finds = picks.slice(0, FIND_QUESTIONS).map((w): LessonStep => ({
+    kind: "listen",
+    word: { word: w.word },
+    options: shuffle([w.word, ...distractors(known, w.word, (a, b) => a.toLowerCase() === b.toLowerCase(), random)], random),
+  }));
+  // Gap words come from the same level, so they're the words being learnt.
+  const levelWords = level.words.map((w) => w.word);
+  const gaps = picks.slice(FIND_QUESTIONS, FIND_QUESTIONS + WORD_QUESTIONS).map((w): LessonStep => ({
+    kind: "gap",
+    sentence: w.gap,
+    word: w.word,
+    options: shuffle([w.word, ...distractors(levelWords, w.word, (a, b) => a === b, random)], random),
+  }));
+  return [{ kind: "meetWords", words: levelWords }, ...finds, ...gaps, { kind: "read", sentence: level.sentence }];
+}
+
+/** Sound It Out: 8 words to sound out from every unit of sounds open so far, then a sentence to read. */
+export function buildBlendPractice(reading: ReadingProgress, random: () => number = Math.random): LessonStep[] {
+  const units = openUnits(reading);
+  const pool = units.flatMap((u) => u.words);
+  if (!pool.length) return [];
+  const asked = shuffle(pool, random)
+    .slice(0, FIND_QUESTIONS + WORD_QUESTIONS)
+    .map((word) => wordQuestion(word, pool, random));
+  const sentence = shuffle(units, random)[0].sentence;
+  return [...asked, { kind: "read", sentence }];
 }
 
 /** How many of a sentence's words were heard, ignoring case and punctuation. */

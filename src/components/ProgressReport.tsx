@@ -16,7 +16,17 @@ import {
   type Level,
 } from "@/lib/learner/assessment";
 import { attemptResult, attemptTopic, resultsByTopic, type AttemptResult, type AttemptTopic } from "@/lib/learner/results";
-import { currentUnit, formatReadingAge, READING_AGE_CUTOFF, readingOf, setEnrolled, unitsDone } from "@/lib/phonics/progress";
+import {
+  currentSightLevel,
+  currentUnit,
+  formatReadingAge,
+  READING_AGE_CUTOFF,
+  readingOf,
+  setEnrolled,
+  sightLevelsDone,
+  unitsDone,
+} from "@/lib/phonics/progress";
+import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
 import { UNITS } from "@/lib/phonics/sequence";
 import { COMPETENCY_LABELS, competency, recommendedPlan, subjectLevel, type Competency, type Standing } from "@/lib/learner/report";
 
@@ -593,6 +603,8 @@ function ReadingReport({
   const reading = readingOf(profile);
   const done = unitsDone(reading);
   const next = currentUnit(reading);
+  const nextSight = currentSightLevel(reading);
+  const blending = reading.blending;
   return (
     <div className="card stack reading-report">
       <div className="row spread">
@@ -626,6 +638,24 @@ function ReadingReport({
               </span>
             ))}
           </div>
+          <p className="muted" style={{ margin: 0 }}>
+            Sight words: {sightLevelsDone(reading)} of {SIGHT_LEVELS.length} levels done.{" "}
+            {nextSight
+              ? `Working on ${nextSight.title.toLowerCase()} (${nextSight.words.map((w) => w.word).join(", ")}).`
+              : "Every level is done."}
+          </p>
+          <div className="unit-dots" aria-hidden>
+            {SIGHT_LEVELS.map((l) => (
+              <span key={l.id} className={reading.units[l.id]?.mastered ? "done" : nextSight?.id === l.id ? "next" : ""} title={l.title}>
+                {l.title.replace("Level ", "L")}
+              </span>
+            ))}
+          </div>
+          <p className="muted" style={{ margin: 0 }}>
+            {blending.sessions
+              ? `Sound It Out: ${blending.right} of ${blending.asked} words sounded out right (${Math.round((blending.right / blending.asked) * 100)}%) in ${blending.sessions} practice${blending.sessions === 1 ? "" : "s"}.`
+              : "Sound It Out: no practice yet."}
+          </p>
         </>
       )}
       {onChange && (
