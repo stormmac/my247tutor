@@ -4,10 +4,11 @@
  */
 import { z } from "zod";
 
-export type Role = "admin" | "teacher" | "student" | "parent";
-export const ROLES: Role[] = ["parent", "teacher", "admin"];
+/** A centre is a tutoring centre's own account, run by its manager. */
+export type Role = "admin" | "teacher" | "student" | "parent" | "centre";
+export const ROLES: Role[] = ["parent", "centre", "teacher", "admin"];
 /** Roles an admin can give an account. */
-export const ASSIGNABLE_ROLES = ["parent", "teacher", "admin"] as const;
+export const ASSIGNABLE_ROLES = ["parent", "centre", "teacher", "admin"] as const;
 
 export const MIN_PASSWORD_LENGTH = 10;
 
@@ -139,3 +140,42 @@ export const NewUserSchema = z.object({
   role: z.enum(ASSIGNABLE_ROLES),
   freeAccess: z.boolean(),
 });
+
+/** A centre adds a teacher, who is emailed a link to set their password. */
+export const NewTeacherSchema = z.object({
+  name: z.string().trim().min(1, "Enter their name.").max(100),
+  email: EmailSchema,
+});
+
+const YearSchema = z.union([z.literal(3), z.literal(4), z.literal(5), z.literal(6)], { message: "Choose Year 3, 4, 5 or 6." });
+
+export const CLASS_SUBJECTS = { maths: "Maths", english: "English", both: "Maths and English" } as const;
+
+/** One of a centre's classes, like a myteacher course: who runs it, for which year and subject. */
+export const ClassSchema = z.object({
+  name: z.string().trim().min(1, "Give the class a name.").max(100),
+  yearLevel: YearSchema,
+  subject: z.enum(["maths", "english", "both"]),
+  teacherId: z.uuid().nullable(),
+});
+
+export const MAX_CENTRE_STUDENTS = 500;
+
+/** A centre adds a student with the username and password they'll sign in with. */
+export const NewStudentSchema = z.object({
+  name: z.string().trim().min(1, "Enter the student's name.").max(20, "Use 20 characters or fewer."),
+  yearLevel: YearSchema,
+  username: UsernameSchema,
+  password: ChildPasswordSchema,
+  classIds: z.array(z.uuid()).max(20).default([]),
+});
+
+export const StudentChangeSchema = z
+  .object({
+    name: z.string().trim().min(1, "Enter the student's name.").max(20, "Use 20 characters or fewer.").optional(),
+    yearLevel: YearSchema.optional(),
+    username: UsernameSchema.optional(),
+    password: ChildPasswordSchema.optional(),
+    classIds: z.array(z.uuid()).max(20).optional(),
+  })
+  .refine((c) => Object.values(c).some((v) => v !== undefined), "Nothing to change.");

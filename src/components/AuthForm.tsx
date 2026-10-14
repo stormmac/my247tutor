@@ -30,8 +30,10 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       });
       if (res.ok) {
         const { user } = (await res.json().catch(() => ({}))) as { user?: { role?: string } };
-        // A full page load so every part of the page sees the new session. Children go to their learning pages.
-        window.location.assign(user?.role === "student" && next.startsWith("/parent") ? "/learn" : next);
+        // A full page load so every part of the page sees the new session. Children go to their learning
+        // pages, and tutoring centres and their teachers to theirs, instead of the parents page.
+        const home: Record<string, string> = { student: "/learn", centre: "/centre", teacher: "/classes" };
+        window.location.assign(next.startsWith("/parent") ? (home[user?.role ?? ""] ?? next) : next);
         return;
       }
       setError(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Something went wrong.");

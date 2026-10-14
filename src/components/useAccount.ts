@@ -63,7 +63,8 @@ export async function logInAs(userId: string): Promise<string | null> {
   try {
     localStorage.clear();
   } catch {}
-  window.location.assign(body?.role === "student" ? "/learn" : body?.role === "teacher" ? "/" : "/parent");
+  const home: Record<string, string> = { student: "/learn", teacher: "/classes", centre: "/centre" };
+  window.location.assign(home[body?.role ?? ""] ?? "/parent");
   return null;
 }
 

@@ -17,6 +17,7 @@ async function main() {
     "008_my247tutor_billing.sql",
     "009_my247tutor_invites.sql",
     "010_my247tutor_child_logins.sql",
+    "011_my247tutor_centres.sql",
   ])
     await client.query(readFileSync(join(__dirname, "../database", file), "utf8"));
   await client.end();
