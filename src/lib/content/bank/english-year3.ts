@@ -15,7 +15,8 @@ export const SPELLING = levels(3110101, {
         1,
         "'Because' is a tricky word to remember: b-e-c-a-u-s-e. It has 'cause' at the end.",
       ),
-    (n) => trueFalse(n, "The plural of 'cat' is 'cats'.", true, "For most words, you just add -s to show more than one: one cat, two cats."),
+    (n) =>
+      trueFalse(n, "The plural of 'cat' is 'cats'.", true, "For most words, you just add -s to show more than one: one cat, two cats."),
     (n) => typed("fill_blank", n, "jump + ing = ___", "jumping", "'Jump' ends in two consonants, so you just add -ing: jumping."),
   ],
   easy: [
@@ -131,13 +132,33 @@ export const SPELLING = levels(3110101, {
 export const VOCAB = levels(3120101, {
   very_easy: [
     (n) =>
-      choice(n, "Which word means the same as 'big'?", ["tiny", "large", "short", "slow"], 1, "'Large' and 'big' are synonyms: they mean the same thing."),
+      choice(
+        n,
+        "Which word means the same as 'big'?",
+        ["tiny", "large", "short", "slow"],
+        1,
+        "'Large' and 'big' are synonyms: they mean the same thing.",
+      ),
     (n) =>
-      choice(n, "What is the opposite of 'hot'?", ["warm", "cold", "sunny", "wet"], 1, "An antonym is a word with the opposite meaning. The opposite of hot is cold."),
-    (n) => trueFalse(n, "'Happy' and 'glad' mean almost the same thing.", true, "'Happy' and 'glad' are synonyms. Both describe feeling good."),
+      choice(
+        n,
+        "What is the opposite of 'hot'?",
+        ["warm", "cold", "sunny", "wet"],
+        1,
+        "An antonym is a word with the opposite meaning. The opposite of hot is cold.",
+      ),
+    (n) =>
+      trueFalse(n, "'Happy' and 'glad' mean almost the same thing.", true, "'Happy' and 'glad' are synonyms. Both describe feeling good."),
   ],
   easy: [
-    (n) => typed("fill_blank", n, "The opposite of 'early' is ___.", "late", "If you are not early, you are late. 'Early' and 'late' are antonyms."),
+    (n) =>
+      typed(
+        "fill_blank",
+        n,
+        "The opposite of 'early' is ___.",
+        "late",
+        "If you are not early, you are late. 'Early' and 'late' are antonyms.",
+      ),
     (n) =>
       choice(
         n,
@@ -286,12 +307,23 @@ export const READING = levels(3130101, {
     (n) =>
       read(
         LOST_HAT,
-        trueFalse(n, "Sam's hat blew away on a windy morning.", true, "The text says, 'One windy morning, a big gust blew the hat off his head.'"),
+        trueFalse(
+          n,
+          "Sam's hat blew away on a windy morning.",
+          true,
+          "The text says, 'One windy morning, a big gust blew the hat off his head.'",
+        ),
       ),
     (n) =>
       read(
         LOST_HAT,
-        typed("short_answer", n, "What was the name of Sam's dog?", "Biscuit", "The text says, 'Sam's dog, Biscuit, trotted up the beach.'"),
+        typed(
+          "short_answer",
+          n,
+          "What was the name of Sam's dog?",
+          "Biscuit",
+          "The text says, 'Sam's dog, Biscuit, trotted up the beach.'",
+        ),
       ),
   ],
   easy: [
@@ -309,7 +341,13 @@ export const READING = levels(3130101, {
     (n) =>
       read(
         ECHIDNAS,
-        typed("fill_blank", n, "A baby echidna is called a ___.", "puggle", "The last paragraph says, 'A baby echidna is called a puggle.'"),
+        typed(
+          "fill_blank",
+          n,
+          "A baby echidna is called a ___.",
+          "puggle",
+          "The last paragraph says, 'A baby echidna is called a puggle.'",
+        ),
       ),
     (n) =>
       read(
@@ -317,7 +355,13 @@ export const READING = levels(3130101, {
         multi(
           n,
           "Which of these facts are in the text? Choose all that are right.",
-          ["Echidnas lay eggs.", "Echidnas have sharp spines.", "Echidnas have big teeth.", "Echidnas live in trees.", "Echidnas have a sticky tongue."],
+          [
+            "Echidnas lay eggs.",
+            "Echidnas have sharp spines.",
+            "Echidnas have big teeth.",
+            "Echidnas live in trees.",
+            "Echidnas have a sticky tongue.",
+          ],
           [0, 1, 4],
           "The text says echidnas lay eggs, have sharp spines and a sticky tongue. It says they do NOT have teeth, and it never says they live in trees.",
         ),
@@ -330,7 +374,13 @@ export const READING = levels(3130101, {
         ordering(
           n,
           "Put these events in the order they happened.",
-          ["Ava and Dad got up at six o'clock.", "They baked lamingtons.", "They arrived at the school hall.", "Every lamington was sold.", "Ava counted the money in the tin."],
+          [
+            "Ava and Dad got up at six o'clock.",
+            "They baked lamingtons.",
+            "They arrived at the school hall.",
+            "Every lamington was sold.",
+            "Ava counted the money in the tin.",
+          ],
           "Follow the story from start to end: getting up, baking, arriving, selling out, then counting the money.",
         ),
       ),
@@ -342,7 +392,7 @@ export const READING = levels(3130101, {
           "Why did Ava say, “We should have made more”?",
           ["The lamingtons sold out quickly.", "The lamingtons were burnt.", "Nobody came to the sale.", "Dad ate them all."],
           0,
-          "Every lamington was gone by ten o'clock and people were still keen to buy, so Ava wished they had more to sell.",
+          "People lined up early and every lamington was gone by ten o'clock, so Ava wished they had more to sell.",
         ),
       ),
     (n) =>
@@ -364,7 +414,12 @@ export const READING = levels(3130101, {
         choice(
           n,
           "Why do you think Grandpa could not look after the garden himself?",
-          ["He uses a wheelchair and finds gardening hard.", "He did not like vegetables.", "He was away on holiday.", "He had lost his gloves."],
+          [
+            "He uses a wheelchair and finds gardening hard.",
+            "He did not like vegetables.",
+            "He was away on holiday.",
+            "He had lost his gloves.",
+          ],
           0,
           "The text says Grandpa 'wheeled his chair', which is a clue that he uses a wheelchair, so gardening would be hard for him.",
         ),
@@ -398,7 +453,12 @@ export const READING = levels(3130101, {
         choice(
           n,
           "What is the main purpose of this text?",
-          ["to give families information about the carnival", "to tell a story about a swimmer", "to explain how to swim", "to sell towels"],
+          [
+            "to give families information about the carnival",
+            "to tell a story about a swimmer",
+            "to explain how to swim",
+            "to sell towels",
+          ],
           0,
           "The notice tells readers when and where the carnival is, what to bring and how to get there. It gives information.",
         ),
@@ -473,17 +533,34 @@ export const LITERATURE = levels(3130201, {
     (n) =>
       read(
         RAIN_POEM,
-        choice(n, "Which word rhymes with 'street' in the poem?", ["feet", "roof", "rain", "play"], 0, "'Street' and 'feet' both end with the same sound: -eet."),
+        choice(
+          n,
+          "Which word rhymes with 'street' in the poem?",
+          ["feet", "roof", "rain", "play"],
+          0,
+          "'Street' and 'feet' both end with the same sound: -eet.",
+        ),
       ),
     (n) =>
       read(
         RAIN_POEM,
-        trueFalse(n, "This poem is about a hot, sunny day at the beach.", false, "The poem talks about rain, puddles, clouds and thunder, so it is about a rainy day."),
+        trueFalse(
+          n,
+          "This poem is about a hot, sunny day at the beach.",
+          false,
+          "The poem talks about rain, puddles, clouds and thunder, so it is about a rainy day.",
+        ),
       ),
     (n) =>
       read(
         RAIN_POEM,
-        typed("short_answer", n, "Which word in the last two lines rhymes with 'play'?", "away", "'Play' and 'away' both end with the sound -ay."),
+        typed(
+          "short_answer",
+          n,
+          "Which word in the last two lines rhymes with 'play'?",
+          "away",
+          "'Play' and 'away' both end with the sound -ay.",
+        ),
       ),
   ],
   easy: [
@@ -501,7 +578,13 @@ export const LITERATURE = levels(3130201, {
     (n) =>
       read(
         NEW_GIRL,
-        choice(n, "Where does the story take place?", ["at school", "at the beach", "at home", "at the shops"], 0, "The story happens at the classroom door and under a tree at lunch, so it is at school."),
+        choice(
+          n,
+          "Where does the story take place?",
+          ["at school", "at the beach", "at home", "at the shops"],
+          0,
+          "The story happens at the classroom door and under a tree at lunch, so it is at school.",
+        ),
       ),
     (n) =>
       read(
@@ -554,7 +637,13 @@ export const LITERATURE = levels(3130201, {
     (n) =>
       read(
         OLD_GUM,
-        choice(n, "Who is telling this story?", ["a gum tree", "a child", "the man with the clipboard", "a bird"], 0, "The narrator says, 'I am the oldest gum tree in the park.'"),
+        choice(
+          n,
+          "Who is telling this story?",
+          ["a gum tree", "a child", "the man with the clipboard", "a bird"],
+          0,
+          "The narrator says, 'I am the oldest gum tree in the park.'",
+        ),
       ),
     (n) =>
       read(
@@ -635,7 +724,13 @@ export const STORIES = levels(3150101, {
         1,
         "A verb tells what someone or something does. The dog 'ran', so 'ran' is the verb.",
       ),
-    (n) => trueFalse(n, "A sentence should start with a capital letter.", true, "Every sentence begins with a capital letter and ends with a full stop, question mark or exclamation mark."),
+    (n) =>
+      trueFalse(
+        n,
+        "A sentence should start with a capital letter.",
+        true,
+        "Every sentence begins with a capital letter and ends with a full stop, question mark or exclamation mark.",
+      ),
     (n) =>
       choice(
         n,
@@ -675,7 +770,12 @@ export const STORIES = levels(3150101, {
       choice(
         n,
         "Which sentence has the speech marks in the right place?",
-        ["“Let's go to the beach,” said Tom.", "“Let's go to the beach, said Tom.”", "Let's go to the beach, “said Tom.”", "“Let's go” to the beach, said Tom."],
+        [
+          "“Let's go to the beach,” said Tom.",
+          "“Let's go to the beach, said Tom.”",
+          "Let's go to the beach, “said Tom.”",
+          "“Let's go” to the beach, said Tom.",
+        ],
         0,
         "Speech marks go around only the words that are spoken: “Let's go to the beach,”. 'said Tom' is outside them.",
       ),
@@ -769,7 +869,13 @@ export const INFORMATIVE = levels(3150201, {
         0,
         "A fact can be checked and proven true. The others are opinions: what someone thinks or feels.",
       ),
-    (n) => trueFalse(n, "A heading tells the reader what a part of the text is about.", true, "Headings help readers find information quickly by telling them the topic of each part."),
+    (n) =>
+      trueFalse(
+        n,
+        "A heading tells the reader what a part of the text is about.",
+        true,
+        "Headings help readers find information quickly by telling them the topic of each part.",
+      ),
     (n) =>
       choice(
         n,
@@ -904,11 +1010,22 @@ export const PERSUASIVE = levels(3150301, {
       choice(
         n,
         "Which sentence is an opinion?",
-        ["Pizza is the best food in the world.", "Pizza has cheese on it.", "Pizza is cooked in an oven.", "Pizza is often cut into slices."],
+        [
+          "Pizza is the best food in the world.",
+          "Pizza has cheese on it.",
+          "Pizza is cooked in an oven.",
+          "Pizza is often cut into slices.",
+        ],
         0,
         "'The best food in the world' is what someone thinks. Other people might disagree, so it is an opinion.",
       ),
-    (n) => trueFalse(n, "A persuasive text tries to make the reader agree with the writer.", true, "To persuade means to try to get someone to agree with you or do something."),
+    (n) =>
+      trueFalse(
+        n,
+        "A persuasive text tries to make the reader agree with the writer.",
+        true,
+        "To persuade means to try to get someone to agree with you or do something.",
+      ),
     (n) =>
       choice(
         n,
@@ -931,7 +1048,12 @@ export const PERSUASIVE = levels(3150301, {
       multi(
         n,
         "Which sentences are facts? Choose all that are right.",
-        ["Netball is played with a ball.", "Netball is the most fun sport.", "A netball team has seven players on the court.", "Everyone should love netball."],
+        [
+          "Netball is played with a ball.",
+          "Netball is the most fun sport.",
+          "A netball team has seven players on the court.",
+          "Everyone should love netball.",
+        ],
         [0, 2],
         "Facts can be checked: netball uses a ball and has seven players on court. 'Most fun' and 'should love' are opinions.",
       ),

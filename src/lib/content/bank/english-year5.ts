@@ -478,12 +478,7 @@ export const READING = levels(5130101, {
         ordering(
           n,
           "Put these stages in the order they happen in the text.",
-          [
-            "Water evaporates.",
-            "Water vapour condenses into clouds.",
-            "Rain, hail or snow falls.",
-            "Water flows back to the ocean.",
-          ],
+          ["Water evaporates.", "Water vapour condenses into clouds.", "Rain, hail or snow falls.", "Water flows back to the ocean."],
           "The signal words help: First the water evaporates, then it cools and condenses, then precipitation falls, and Finally it flows back to the sea.",
         ),
       ),
@@ -511,12 +506,7 @@ export const READING = levels(5130101, {
         choice(
           n,
           "How is this text mainly organised?",
-          [
-            "as a sequence of stages in a cycle",
-            "as a problem and its solution",
-            "as a comparison of two things",
-            "as a list of opinions",
-          ],
+          ["as a sequence of stages in a cycle", "as a problem and its solution", "as a comparison of two things", "as a list of opinions"],
           0,
           "Words like First, As, When and Finally take us through each stage in order, and the last stage leads back to the first.",
         ),
@@ -672,7 +662,7 @@ export const LITERATURE = levels(5130201, {
             "She wants to keep the key for herself.",
             "She thinks the key is worth a lot of money.",
             "She is bored and looking for something to do.",
-        ],
+          ],
           0,
           "Writers show character through actions. Ellie puts the key where Nana can see it every day, which shows she cares and understands.",
         ),
@@ -865,7 +855,7 @@ export const GENRE_THEME = levels(5130301, {
             "Leo is telling the truth and Mrs Barker is not.",
             "They are talking about two different skate parks.",
             "Mrs Barker has never seen the skate park.",
-        ],
+          ],
           0,
           "A person's perspective depends on their situation. Leo gains a safe place to skate; Mrs Barker loses her peace and quiet.",
         ),
@@ -1071,7 +1061,7 @@ export const WRITING = levels(5150101, {
     (n) =>
       choice(
         n,
-        "Tom said, \"I am tired.\" Which sentence reports this correctly?",
+        'Tom said, "I am tired." Which sentence reports this correctly?',
         ["Tom said that he was tired.", "Tom said that I am tired.", 'Tom said that "he was tired."', "Tom said, he is tired."],
         0,
         "Reported speech has no speech marks, changes 'I' to 'he', and usually moves the verb back in time: am becomes was.",

@@ -1,6 +1,16 @@
 import { getSkill } from "../curriculum/skills";
 import type { Subject as SubjectKey, YearLevel as YearNumber } from "../curriculum/types";
 import * as Y3 from "./bank/maths-year3";
+import * as Y4A from "./bank/maths-year4a";
+import * as Y4B from "./bank/maths-year4b";
+import * as Y5A from "./bank/maths-year5a";
+import * as Y5B from "./bank/maths-year5b";
+import * as Y6A from "./bank/maths-year6a";
+import * as Y6B from "./bank/maths-year6b";
+import * as E3 from "./bank/english-year3";
+import * as E4 from "./bank/english-year4";
+import * as E5 from "./bank/english-year5";
+import * as E6 from "./bank/english-year6";
 import { choice, multi, ordering, type QuestionSpec, trueFalse, typed } from "./spec";
 import type { ContentQuestion, Country, State, Subject, Subtopic, Topic, YearLevel } from "./types";
 
@@ -82,6 +92,43 @@ interface TopicSpec {
   subtopics: SubtopicSpec[];
 }
 
+/** Written before the question bank; kept with its own questions. */
+const COMPARING_DECIMALS: SubtopicSpec = {
+  n: 50303,
+  title: "Comparing and ordering decimals",
+  description: "Compares and orders decimals using place value.",
+  questions: [
+    ordering(
+      5030301,
+      "Put these numbers in order, from smallest to largest.",
+      ["0.05", "0.5", "0.505", "0.55"],
+      "Compare the tenths first, then the hundredths, then the thousandths: 0.05, 0.5, 0.505, 0.55.",
+    ),
+    choice(
+      5030302,
+      "Which number is the largest?",
+      ["0.68", "0.7", "0.699", "0.07"],
+      1,
+      "0.7 has 7 tenths. The others have fewer tenths, so 0.7 is the largest.",
+    ),
+    trueFalse(5030303, "0.4 is the same as 0.40.", true, "0.40 is 4 tenths and 0 hundredths, which is the same as 0.4."),
+    multi(
+      5030304,
+      "Which of these numbers are greater than 0.5? Choose all that apply.",
+      ["0.51", "0.499", "0.6", "0.05", "0.500"],
+      [0, 2],
+      "0.51 and 0.6 are greater than 0.5. 0.500 is equal to 0.5, not greater.",
+    ),
+    typed(
+      "short_answer",
+      5030305,
+      "What number is exactly halfway between 0.2 and 0.3?",
+      "0.25",
+      "0.2 is 0.20 and 0.3 is 0.30. Halfway between 20 hundredths and 30 hundredths is 25 hundredths, or 0.25.",
+    ),
+  ],
+};
+
 const TOPIC_SPECS: TopicSpec[] = [
   // ---------- Mathematics, Year 3: 15 questions for each Stage 2 standard (see bank/maths-year3.ts) ----------
   {
@@ -150,7 +197,7 @@ const TOPIC_SPECS: TopicSpec[] = [
     subject: "maths",
     year: 3,
     title: "Measurement and time",
-    description: "Measuring length and working with time.",
+    description: "Length, area, capacity, mass and time.",
     subtopics: [
       {
         n: 30401,
@@ -165,6 +212,27 @@ const TOPIC_SPECS: TopicSpec[] = [
         description: "Measures and converts lengths in metres, centimetres and millimetres.",
         outcome: "MA2-GM-02",
         questions: Y3.LENGTH,
+      },
+      {
+        n: 30405,
+        title: "Area",
+        description: "Compares areas and measures them in square centimetres and square metres.",
+        outcome: "MA2-2DS-03",
+        questions: Y3.AREA,
+      },
+      {
+        n: 30404,
+        title: "Capacity and volume",
+        description: "Measures capacity in litres and millilitres, and volume with cubes.",
+        outcome: "MA2-3DS-02",
+        questions: Y3.CAPACITY,
+      },
+      {
+        n: 30403,
+        title: "Mass",
+        description: "Estimates, measures and compares mass in kilograms and grams.",
+        outcome: "MA2-NSM-01",
+        questions: Y3.MASS,
       },
     ],
   },
@@ -183,6 +251,13 @@ const TOPIC_SPECS: TopicSpec[] = [
         questions: Y3.DATA,
       },
       {
+        n: 30603,
+        title: "Collecting data and making graphs",
+        description: "Collects data with tally marks and draws graphs with a given scale.",
+        outcome: "MA2-DATA-01",
+        questions: Y3.DATA_COLLECT,
+      },
+      {
         n: 30602,
         title: "Chance",
         description: "Describes how likely events are and compares chances.",
@@ -191,160 +266,511 @@ const TOPIC_SPECS: TopicSpec[] = [
       },
     ],
   },
-  // ---------- Mathematics, Year 4 ----------
+  {
+    n: 307,
+    subject: "maths",
+    year: 3,
+    title: "Shapes, angles and position",
+    description: "2D shapes, 3D objects, angles and grid maps.",
+    subtopics: [
+      {
+        n: 30701,
+        title: "2D shapes",
+        description: "Names and compares 2D shapes by their sides and corners.",
+        outcome: "MA2-2DS-01",
+        questions: Y3.SHAPES_2D,
+      },
+      {
+        n: 30702,
+        title: "Moving and combining shapes",
+        description: "Flips, slides and turns shapes, and joins and splits them.",
+        outcome: "MA2-2DS-02",
+        questions: Y3.TRANSFORM,
+      },
+      {
+        n: 30703,
+        title: "3D objects",
+        description: "Names prisms, pyramids and other objects by their faces, edges and corners.",
+        outcome: "MA2-3DS-01",
+        questions: Y3.OBJECTS_3D,
+      },
+      {
+        n: 30704,
+        title: "Angles",
+        description: "Finds angles and compares them to a right angle.",
+        outcome: "MA2-GM-03",
+        questions: Y3.ANGLES,
+      },
+      {
+        n: 30705,
+        title: "Grid maps and directions",
+        description: "Finds places on a grid map and follows directions.",
+        outcome: "MA2-GM-01",
+        questions: Y3.POSITION,
+      },
+    ],
+  },
+  // ---------- Mathematics, Year 4: 15 questions for each Stage 2 standard (see bank/maths-year4a.ts and 4b) ----------
+  {
+    n: 404,
+    subject: "maths",
+    year: 4,
+    title: "Number and place value",
+    description: "Numbers to tens of thousands, and decimals to hundredths.",
+    subtopics: [
+      {
+        n: 40401,
+        title: "Place value",
+        description: "Reads, writes, orders and rounds numbers to tens of thousands.",
+        outcome: "MA2-RN-01",
+        questions: Y4A.PLACE_VALUE,
+      },
+      { n: 40202, skill: "ma2-decimals", questions: Y4A.DECIMALS },
+    ],
+  },
+  {
+    n: 405,
+    subject: "maths",
+    year: 4,
+    title: "Addition and subtraction",
+    description: "Mental and written strategies, and missing numbers.",
+    subtopics: [
+      {
+        n: 40501,
+        title: "Adding and subtracting",
+        description: "Adds and subtracts 2-, 3- and 4-digit numbers in your head and on paper.",
+        outcome: "MA2-AR-01",
+        questions: Y4A.ADD_SUB,
+      },
+      {
+        n: 40502,
+        title: "Missing numbers in + and −",
+        description: "Finds the missing number in addition and subtraction number sentences.",
+        outcome: "MA2-AR-02",
+        questions: Y4A.MISSING_ADD,
+      },
+    ],
+  },
   {
     n: 401,
     subject: "maths",
     year: 4,
     title: "Multiplication and division",
-    description: "Division facts and missing numbers.",
+    description: "Facts to 10 × 10, problems and missing numbers.",
     subtopics: [
-      { n: 40101, skill: "ma2-division-facts" },
-      { n: 40102, skill: "ma2-missing-factor" },
+      { n: 40101, skill: "ma2-division-facts", questions: Y4A.TIMES },
+      { n: 40102, skill: "ma2-missing-factor", questions: Y4A.MISSING_TIMES },
     ],
   },
   {
     n: 402,
     subject: "maths",
     year: 4,
-    title: "Fractions and decimals",
-    description: "Equivalent fractions, tenths and hundredths.",
+    title: "Fractions",
+    description: "Halves, quarters, thirds, fifths and their family on a number line.",
+    subtopics: [{ n: 40201, skill: "ma2-equivalent-fractions", questions: Y4A.FRACTIONS }],
+  },
+  {
+    n: 406,
+    subject: "maths",
+    year: 4,
+    title: "Measurement and time",
+    description: "Length, area, capacity, mass and time.",
     subtopics: [
-      { n: 40201, skill: "ma2-equivalent-fractions" },
-      { n: 40202, skill: "ma2-decimals" },
+      {
+        n: 40601,
+        title: "Length",
+        description: "Measures, estimates and converts lengths in metres, centimetres and millimetres.",
+        outcome: "MA2-GM-02",
+        questions: Y4A.LENGTH,
+      },
+      {
+        n: 40605,
+        title: "Area",
+        description: "Measures and compares areas in square centimetres and square metres.",
+        outcome: "MA2-2DS-03",
+        questions: Y4B.AREA,
+      },
+      {
+        n: 40604,
+        title: "Capacity and volume",
+        description: "Measures capacity in litres and millilitres, and volume in cubic centimetres.",
+        outcome: "MA2-3DS-02",
+        questions: Y4B.CAPACITY,
+      },
+      {
+        n: 40603,
+        title: "Mass",
+        description: "Estimates, measures and compares mass in kilograms and grams.",
+        outcome: "MA2-NSM-01",
+        questions: Y4B.MASS,
+      },
+      {
+        n: 40602,
+        title: "Time",
+        description: "Reads analog and digital time to the minute and works out durations.",
+        outcome: "MA2-NSM-02",
+        questions: Y4A.TIME,
+      },
     ],
   },
   {
     n: 403,
     subject: "maths",
     year: 4,
-    title: "Shapes",
-    description: "Naming and describing two-dimensional shapes.",
+    title: "Shapes, angles and position",
+    description: "2D shapes, 3D objects, angles and grid maps.",
     subtopics: [
       {
         n: 40301,
         title: "2D shapes",
         description: "Names 2D shapes and describes them by their sides and angles.",
-        questions: [
-          multi(
-            4030101,
-            "Which of these shapes have exactly 4 sides? Choose all that apply.",
-            ["square", "triangle", "rectangle", "pentagon", "rhombus"],
-            [0, 2, 4],
-            "Squares, rectangles and rhombuses all have 4 sides. A triangle has 3 and a pentagon has 5.",
-          ),
-          typed(
-            "short_answer",
-            4030102,
-            "How many sides does a hexagon have?",
-            ["6", "six"],
-            "A hexagon has 6 sides. Think of the cells in a beehive.",
-          ),
-          trueFalse(
-            4030103,
-            "Every square is also a rectangle.",
-            true,
-            "A rectangle has 4 sides and 4 right angles. A square has those too, with all sides the same length, so it's a special rectangle.",
-          ),
-          choice(4030104, "Which shape has 5 sides?", ["hexagon", "octagon", "pentagon", "quadrilateral"], 2, "A pentagon has 5 sides."),
-          typed("fill_blank", 4030105, "An octagon has ___ sides.", ["8", "eight"], "An octagon has 8 sides, like a stop sign."),
-          trueFalse(
-            4030106,
-            "A triangle can have two right angles.",
-            false,
-            "Two right angles already make 180°, which is all the angles in a triangle added together, so there'd be nothing left for the third angle.",
-          ),
-        ],
+        outcome: "MA2-2DS-01",
+        questions: Y4B.SHAPES_2D,
+      },
+      {
+        n: 40302,
+        title: "Moving and combining shapes",
+        description: "Flips, slides and turns shapes, and finds lines of symmetry.",
+        outcome: "MA2-2DS-02",
+        questions: Y4B.TRANSFORM,
+      },
+      {
+        n: 40303,
+        title: "3D objects",
+        description: "Describes prisms and pyramids and matches them to their nets.",
+        outcome: "MA2-3DS-01",
+        questions: Y4B.OBJECTS_3D,
+      },
+      {
+        n: 40304,
+        title: "Angles",
+        description: "Compares angles to a right angle: acute, right, obtuse and straight.",
+        outcome: "MA2-GM-03",
+        questions: Y4B.ANGLES,
+      },
+      {
+        n: 40305,
+        title: "Grid maps and directions",
+        description: "Uses grid references, compass directions and routes.",
+        outcome: "MA2-GM-01",
+        questions: Y4B.POSITION,
+      },
+    ],
+  },
+  {
+    n: 407,
+    subject: "maths",
+    year: 4,
+    title: "Data and chance",
+    description: "Collecting data, reading graphs and chance experiments.",
+    subtopics: [
+      {
+        n: 40702,
+        title: "Collecting data and making graphs",
+        description: "Collects data and draws graphs with a given scale.",
+        outcome: "MA2-DATA-01",
+        questions: Y4B.DATA_COLLECT,
+      },
+      {
+        n: 40701,
+        title: "Tables and graphs",
+        description: "Reads and compares data in tables, dot plots and column graphs.",
+        outcome: "MA2-DATA-02",
+        questions: Y4A.DATA,
+      },
+      {
+        n: 40703,
+        title: "Chance",
+        description: "Records chance experiments and compares the results.",
+        outcome: "MA2-CHAN-01",
+        questions: Y4B.CHANCE,
       },
     ],
   },
 
-  // ---------- Mathematics, Year 5 ----------
+  // ---------- Mathematics, Year 5: 15 questions for each Stage 3 standard (see bank/maths-year5a.ts and 5b) ----------
   {
     n: 501,
     subject: "maths",
     year: 5,
     title: "Number and place value",
-    description: "Large numbers and rounding.",
-    subtopics: [{ n: 50101, skill: "ma3-large-numbers" }],
+    description: "Large numbers, rounding, factors and primes.",
+    subtopics: [{ n: 50101, skill: "ma3-large-numbers", questions: Y5A.PLACE_VALUE }],
   },
   {
     n: 502,
     subject: "maths",
     year: 5,
-    title: "Multiplication and division",
-    description: "Multiplying larger numbers and dividing with remainders.",
+    title: "Calculating",
+    description: "Adding, subtracting, multiplying, dividing and the order of operations.",
     subtopics: [
-      { n: 50201, skill: "ma3-multiply" },
+      { n: 50302, skill: "ma3-add-sub-decimals", questions: Y5A.ADD_SUB },
+      { n: 50201, skill: "ma3-multiply", questions: Y5A.MULT_DIV },
       { n: 50202, skill: "ma3-divide-remainders" },
+      {
+        n: 50401,
+        title: "Number sentences",
+        description: "Completes number sentences using the order of operations.",
+        outcome: "MA3-MR-02",
+        questions: Y5A.NUMBER_SENTENCES,
+      },
     ],
   },
   {
     n: 503,
     subject: "maths",
     year: 5,
-    title: "Fractions and decimals",
-    description: "Decimals to thousandths, and adding and subtracting them.",
+    title: "Fractions, decimals and percentages",
+    description: "Decimals to thousandths, fractions and percentages.",
     subtopics: [
-      { n: 50301, skill: "ma3-decimals" },
-      { n: 50302, skill: "ma3-add-sub-decimals" },
+      { n: 50301, skill: "ma3-decimals", questions: Y5A.DECIMALS },
+      COMPARING_DECIMALS,
       {
-        n: 50303,
-        title: "Comparing and ordering decimals",
-        description: "Compares and orders decimals using place value.",
-        questions: [
-          ordering(
-            5030301,
-            "Put these numbers in order, from smallest to largest.",
-            ["0.05", "0.5", "0.505", "0.55"],
-            "Compare the tenths first, then the hundredths, then the thousandths: 0.05, 0.5, 0.505, 0.55.",
-          ),
-          choice(
-            5030302,
-            "Which number is the largest?",
-            ["0.68", "0.7", "0.699", "0.07"],
-            1,
-            "0.7 has 7 tenths. The others have fewer tenths, so 0.7 is the largest.",
-          ),
-          trueFalse(5030303, "0.4 is the same as 0.40.", true, "0.40 is 4 tenths and 0 hundredths, which is the same as 0.4."),
-          multi(
-            5030304,
-            "Which of these numbers are greater than 0.5? Choose all that apply.",
-            ["0.51", "0.499", "0.6", "0.05", "0.500"],
-            [0, 2],
-            "0.51 and 0.6 are greater than 0.5. 0.500 is equal to 0.5, not greater.",
-          ),
-          typed(
-            "short_answer",
-            5030305,
-            "What number is exactly halfway between 0.2 and 0.3?",
-            "0.25",
-            "0.2 is 0.20 and 0.3 is 0.30. Halfway between 20 hundredths and 30 hundredths is 25 hundredths, or 0.25.",
-          ),
-        ],
+        n: 50304,
+        title: "Comparing fractions",
+        description: "Compares, orders, adds and subtracts fractions.",
+        outcome: "MA3-RQF-01",
+        questions: Y5A.FRACTIONS,
+      },
+      {
+        n: 50305,
+        title: "Fractions of amounts",
+        description: "Finds a half, quarter, fifth and tenth of measures and amounts.",
+        outcome: "MA3-RQF-02",
+        questions: Y5A.FRACTION_OF,
+      },
+      {
+        n: 50306,
+        title: "Percentages",
+        description: "Finds percentages of amounts and matches them to fractions and decimals.",
+        outcome: "MA3-RN-03",
+        questions: Y5A.PERCENT,
+      },
+    ],
+  },
+  {
+    n: 505,
+    subject: "maths",
+    year: 5,
+    title: "Measurement",
+    description: "Length, area, volume, mass and time.",
+    subtopics: [
+      {
+        n: 50501,
+        title: "Length and perimeter",
+        description: "Measures lengths and distances, and works out perimeters.",
+        outcome: "MA3-GM-02",
+        questions: Y5B.LENGTH,
+      },
+      {
+        n: 50502,
+        title: "Area of rectangles",
+        description: "Works out areas, including rectangles, in the right units.",
+        outcome: "MA3-2DS-02",
+        questions: Y5B.AREA,
+      },
+      {
+        n: 50503,
+        title: "Area of triangles and parallelograms",
+        description: "Splits and rearranges shapes to find the area of triangles and parallelograms.",
+        outcome: "MA3-2DS-03",
+        questions: Y5B.AREA_TRI,
+      },
+      {
+        n: 50504,
+        title: "Volume and capacity",
+        description: "Estimates, measures and works out volumes and capacities.",
+        outcome: "MA3-3DS-02",
+        questions: Y5B.VOLUME,
+      },
+      { n: 50505, title: "Mass", description: "Chooses units and devices to measure mass.", outcome: "MA3-NSM-01", questions: Y5B.MASS },
+      {
+        n: 50506,
+        title: "Time",
+        description: "Uses 12- and 24-hour time and works out durations.",
+        outcome: "MA3-NSM-02",
+        questions: Y5B.TIME,
+      },
+    ],
+  },
+  {
+    n: 506,
+    subject: "maths",
+    year: 5,
+    title: "Geometry",
+    description: "Shapes, 3D objects, angles and coordinates.",
+    subtopics: [
+      {
+        n: 50601,
+        title: "Classifying shapes",
+        description: "Classifies triangles and quadrilaterals by their properties.",
+        outcome: "MA3-2DS-01",
+        questions: Y5B.SHAPES_2D,
+      },
+      {
+        n: 50602,
+        title: "Prisms, pyramids and nets",
+        description: "Visualises 3D objects and matches them to their nets.",
+        outcome: "MA3-3DS-01",
+        questions: Y5B.OBJECTS_3D,
+      },
+      {
+        n: 50603,
+        title: "Angles",
+        description: "Measures angles and uses angles on a line and at a point.",
+        outcome: "MA3-GM-03",
+        questions: Y5B.ANGLES,
+      },
+      {
+        n: 50604,
+        title: "Coordinates",
+        description: "Plots and reads points on a coordinate grid.",
+        outcome: "MA3-GM-01",
+        questions: Y5B.COORDINATES,
+      },
+    ],
+  },
+  {
+    n: 507,
+    subject: "maths",
+    year: 5,
+    title: "Data and chance",
+    description: "Graphs with scales, line graphs and probability.",
+    subtopics: [
+      {
+        n: 50701,
+        title: "Making graphs",
+        description: "Draws graphs using scales where one mark stands for many.",
+        outcome: "MA3-DATA-01",
+        questions: Y5A.GRAPHS,
+      },
+      {
+        n: 50702,
+        title: "Reading data displays",
+        description: "Interprets tables, graphs, timelines and line graphs.",
+        outcome: "MA3-DATA-02",
+        questions: Y5A.DATA,
+      },
+      {
+        n: 50703,
+        title: "Probability",
+        description: "Runs chance experiments and gives probabilities as numbers.",
+        outcome: "MA3-CHAN-01",
+        questions: Y5A.CHANCE,
       },
     ],
   },
 
-  // ---------- Mathematics, Year 6 ----------
+  // ---------- Mathematics, Year 6: 15 questions for each Stage 3 standard (see bank/maths-year6a.ts and 6b) ----------
+  {
+    n: 604,
+    subject: "maths",
+    year: 6,
+    title: "Number and place value",
+    description: "Large numbers, negative numbers and number properties.",
+    subtopics: [
+      {
+        n: 60401,
+        title: "Place value and number properties",
+        description: "Works with large and negative numbers, primes, composites and square numbers.",
+        outcome: "MA3-RN-01",
+        questions: Y6A.PLACE_VALUE,
+      },
+    ],
+  },
   {
     n: 601,
     subject: "maths",
     year: 6,
     title: "Calculating",
-    description: "Using the order of operations.",
-    subtopics: [{ n: 60101, skill: "ma3-order-of-operations" }],
+    description: "The four operations and the order of operations.",
+    subtopics: [
+      {
+        n: 60103,
+        title: "Adding and subtracting",
+        description: "Chooses strategies to add and subtract whole numbers and decimals.",
+        outcome: "MA3-AR-01",
+        questions: Y6A.ADD_SUB,
+      },
+      {
+        n: 60102,
+        title: "Multiplying and dividing",
+        description: "Chooses strategies to multiply and divide, including decimals.",
+        outcome: "MA3-MR-01",
+        questions: Y6A.MULT_DIV,
+      },
+      { n: 60101, skill: "ma3-order-of-operations", questions: Y6A.NUMBER_SENTENCES },
+    ],
   },
   {
     n: 602,
     subject: "maths",
     year: 6,
     title: "Fractions, decimals and percentages",
-    description: "Adding fractions, fractions of amounts and percentages.",
+    description: "Comparing and adding fractions, fractions of amounts, decimals and percentages.",
     subtopics: [
-      { n: 60201, skill: "ma3-add-fractions" },
-      { n: 60202, skill: "ma3-fraction-of-quantity" },
-      { n: 60203, skill: "ma3-percentages" },
+      {
+        n: 60204,
+        title: "Decimals",
+        description: "Compares and orders decimals to three decimal places.",
+        outcome: "MA3-RN-02",
+        questions: Y6A.DECIMALS,
+      },
+      { n: 60201, skill: "ma3-add-fractions", questions: Y6A.FRACTIONS },
+      { n: 60202, skill: "ma3-fraction-of-quantity", questions: Y6A.FRACTION_OF },
+      { n: 60203, skill: "ma3-percentages", questions: Y6A.PERCENT },
+    ],
+  },
+  {
+    n: 605,
+    subject: "maths",
+    year: 6,
+    title: "Measurement",
+    description: "Length, area, volume, mass and time.",
+    subtopics: [
+      {
+        n: 60501,
+        title: "Length and perimeter",
+        description: "Converts units of length and works out perimeters.",
+        outcome: "MA3-GM-02",
+        questions: Y6B.LENGTH,
+      },
+      {
+        n: 60502,
+        title: "Area",
+        description: "Works out areas of rectangles and composite shapes.",
+        outcome: "MA3-2DS-02",
+        questions: Y6B.AREA,
+      },
+      {
+        n: 60503,
+        title: "Area of triangles and parallelograms",
+        description: "Uses base and height to find the area of triangles and parallelograms.",
+        outcome: "MA3-2DS-03",
+        questions: Y6B.AREA_TRI,
+      },
+      {
+        n: 60504,
+        title: "Volume and capacity",
+        description: "Works out volumes of prisms and links cubic centimetres to millilitres.",
+        outcome: "MA3-3DS-02",
+        questions: Y6B.VOLUME,
+      },
+      {
+        n: 60505,
+        title: "Mass",
+        description: "Measures and converts mass in grams, kilograms and tonnes.",
+        outcome: "MA3-NSM-01",
+        questions: Y6B.MASS,
+      },
+      {
+        n: 60506,
+        title: "Time",
+        description: "Reads timetables, 24-hour time and Australian time zones.",
+        outcome: "MA3-NSM-02",
+        questions: Y6B.TIME,
+      },
     ],
   },
   {
@@ -352,55 +778,65 @@ const TOPIC_SPECS: TopicSpec[] = [
     subject: "maths",
     year: 6,
     title: "Geometry",
-    description: "Angles and their properties.",
+    description: "Angles, shapes, 3D objects and coordinates.",
     subtopics: [
       {
         n: 60301,
         title: "Angles",
         description: "Names types of angles and uses angle facts to find unknown angles.",
-        questions: [
-          choice(
-            6030101,
-            "What do we call an angle of exactly 90°?",
-            ["an acute angle", "a right angle", "an obtuse angle", "a straight angle"],
-            1,
-            "An angle of exactly 90° is a right angle, like the corner of a book.",
-          ),
-          typed(
-            "short_answer",
-            6030102,
-            "Angles on a straight line add up to how many degrees?",
-            "180",
-            "Angles on a straight line add up to 180°.",
-          ),
-          typed(
-            "short_answer",
-            6030103,
-            "Two angles together make a straight line. One is 65°. How many degrees is the other one?",
-            "115",
-            "Angles on a straight line add up to 180°, so the other angle is 180 − 65 = 115°.",
-          ),
-          multi(
-            6030104,
-            "Which of these angles are obtuse? Choose all that apply.",
-            ["45°", "120°", "90°", "170°", "200°"],
-            [1, 3],
-            "Obtuse angles are between 90° and 180°, so 120° and 170° are obtuse. 200° is a reflex angle.",
-          ),
-          trueFalse(
-            6030105,
-            "The angles inside any triangle add up to 180°.",
-            true,
-            "The three angles inside every triangle add up to 180°.",
-          ),
-          typed(
-            "short_answer",
-            6030106,
-            "Angles around a point add up to how many degrees?",
-            "360",
-            "A full turn is 360°, so angles around a point add up to 360°.",
-          ),
-        ],
+        outcome: "MA3-GM-03",
+        questions: Y6B.ANGLES,
+      },
+      {
+        n: 60302,
+        title: "Classifying shapes",
+        description: "Classifies triangles and quadrilaterals by their properties.",
+        outcome: "MA3-2DS-01",
+        questions: Y6B.SHAPES_2D,
+      },
+      {
+        n: 60303,
+        title: "Prisms, pyramids and nets",
+        description: "Visualises 3D objects from different views and matches them to their nets.",
+        outcome: "MA3-3DS-01",
+        questions: Y6B.OBJECTS_3D,
+      },
+      {
+        n: 60304,
+        title: "Coordinates",
+        description: "Plots and reads points in all four quadrants.",
+        outcome: "MA3-GM-01",
+        questions: Y6B.COORDINATES,
+      },
+    ],
+  },
+  {
+    n: 606,
+    subject: "maths",
+    year: 6,
+    title: "Data and chance",
+    description: "Graphs with scales, line graphs and probability.",
+    subtopics: [
+      {
+        n: 60601,
+        title: "Making graphs",
+        description: "Draws graphs using scales where one mark stands for many.",
+        outcome: "MA3-DATA-01",
+        questions: Y6A.GRAPHS,
+      },
+      {
+        n: 60602,
+        title: "Reading data displays",
+        description: "Interprets tables, graphs, timelines and line graphs.",
+        outcome: "MA3-DATA-02",
+        questions: Y6A.DATA,
+      },
+      {
+        n: 60603,
+        title: "Probability",
+        description: "Gives probabilities as fractions, decimals and percentages.",
+        outcome: "MA3-CHAN-01",
+        questions: Y6A.CHANCE,
       },
     ],
   },
@@ -412,7 +848,7 @@ const TOPIC_SPECS: TopicSpec[] = [
     year: 3,
     title: "Spelling",
     description: "Spelling patterns and rules.",
-    subtopics: [{ n: 31101, skill: "en2-spelling" }],
+    subtopics: [{ n: 31101, skill: "en2-spelling", questions: E3.SPELLING }],
   },
   {
     n: 312,
@@ -420,7 +856,7 @@ const TOPIC_SPECS: TopicSpec[] = [
     year: 3,
     title: "Vocabulary",
     description: "Word meanings.",
-    subtopics: [{ n: 31201, skill: "en2-vocabulary" }],
+    subtopics: [{ n: 31201, skill: "en2-vocabulary", questions: E3.VOCAB }],
   },
   {
     n: 313,
@@ -428,7 +864,16 @@ const TOPIC_SPECS: TopicSpec[] = [
     year: 3,
     title: "Reading",
     description: "Understanding what you read.",
-    subtopics: [{ n: 31301, skill: "en2-comprehension" }],
+    subtopics: [
+      { n: 31301, skill: "en2-comprehension", questions: E3.READING },
+      {
+        n: 31302,
+        title: "Stories and poems",
+        description: "Talks about characters, settings, feelings and the sound of poems.",
+        outcome: "EN2-UARL-01",
+        questions: E3.LITERATURE,
+      },
+    ],
   },
   {
     n: 314,
@@ -481,6 +926,37 @@ const TOPIC_SPECS: TopicSpec[] = [
     ],
   },
 
+  {
+    n: 315,
+    subject: "english",
+    year: 3,
+    title: "Writing",
+    description: "Stories, information texts and persuasive texts.",
+    subtopics: [
+      {
+        n: 31501,
+        title: "Story writing",
+        description: "Story structure, describing words, dialogue and punctuation.",
+        outcome: "EN2-CWT-01",
+        questions: E3.STORIES,
+      },
+      {
+        n: 31502,
+        title: "Information texts",
+        description: "Headings, facts, instructions and joining words.",
+        outcome: "EN2-CWT-02",
+        questions: E3.INFORMATIVE,
+      },
+      {
+        n: 31503,
+        title: "Persuasive texts",
+        description: "Opinions, reasons and persuasive words.",
+        outcome: "EN2-CWT-03",
+        questions: E3.PERSUASIVE,
+      },
+    ],
+  },
+
   // ---------- English, Year 4 ----------
   {
     n: 411,
@@ -491,6 +967,27 @@ const TOPIC_SPECS: TopicSpec[] = [
     subtopics: [
       { n: 41101, skill: "en2-imaginative" },
       { n: 41102, skill: "en2-persuasive" },
+      {
+        n: 41103,
+        title: "Story features",
+        description: "Story structure, dialogue, descriptive words and punctuation.",
+        outcome: "EN2-CWT-01",
+        questions: E4.STORIES,
+      },
+      {
+        n: 41104,
+        title: "Information texts",
+        description: "Headings, facts, procedures, reports and joining words.",
+        outcome: "EN2-CWT-02",
+        questions: E4.INFORMATIVE,
+      },
+      {
+        n: 41105,
+        title: "Persuasive features",
+        description: "Opinions, reasons, persuasive words and connectives.",
+        outcome: "EN2-CWT-03",
+        questions: E4.PERSUASIVE,
+      },
     ],
   },
   {
@@ -569,6 +1066,62 @@ const TOPIC_SPECS: TopicSpec[] = [
     ],
   },
 
+  {
+    n: 413,
+    subject: "english",
+    year: 4,
+    title: "Spelling",
+    description: "Spelling patterns, plurals, prefixes and suffixes.",
+    subtopics: [
+      {
+        n: 41301,
+        title: "Spelling patterns",
+        description: "Uses sounds, patterns and word parts to spell words.",
+        outcome: "EN2-SPELL-01",
+        questions: E4.SPELLING,
+      },
+    ],
+  },
+  {
+    n: 414,
+    subject: "english",
+    year: 4,
+    title: "Vocabulary",
+    description: "Word meanings.",
+    subtopics: [
+      {
+        n: 41401,
+        title: "Word meanings",
+        description: "Synonyms, antonyms, word families and meaning from context.",
+        outcome: "EN2-VOCAB-01",
+        questions: E4.VOCAB,
+      },
+    ],
+  },
+  {
+    n: 415,
+    subject: "english",
+    year: 4,
+    title: "Reading",
+    description: "Understanding stories, poems and information texts.",
+    subtopics: [
+      {
+        n: 41501,
+        title: "Reading comprehension",
+        description: "Finds information and makes inferences in a range of texts.",
+        outcome: "EN2-RECOM-01",
+        questions: E4.READING,
+      },
+      {
+        n: 41502,
+        title: "Stories and poems",
+        description: "Talks about characters, settings, point of view and the sound of poems.",
+        outcome: "EN2-UARL-01",
+        questions: E4.LITERATURE,
+      },
+    ],
+  },
+
   // ---------- English, Year 5 ----------
   {
     n: 511,
@@ -576,7 +1129,7 @@ const TOPIC_SPECS: TopicSpec[] = [
     year: 5,
     title: "Spelling",
     description: "Prefixes, suffixes and tricky words.",
-    subtopics: [{ n: 51101, skill: "en3-spelling" }],
+    subtopics: [{ n: 51101, skill: "en3-spelling", questions: E5.SPELLING }],
   },
   {
     n: 512,
@@ -584,7 +1137,7 @@ const TOPIC_SPECS: TopicSpec[] = [
     year: 5,
     title: "Vocabulary",
     description: "Choosing precise words.",
-    subtopics: [{ n: 51201, skill: "en3-vocabulary" }],
+    subtopics: [{ n: 51201, skill: "en3-vocabulary", questions: E5.VOCAB }],
   },
   {
     n: 513,
@@ -592,7 +1145,23 @@ const TOPIC_SPECS: TopicSpec[] = [
     year: 5,
     title: "Reading",
     description: "Inference and author's purpose.",
-    subtopics: [{ n: 51301, skill: "en3-comprehension" }],
+    subtopics: [
+      { n: 51301, skill: "en3-comprehension", questions: E5.READING },
+      {
+        n: 51302,
+        title: "Character, imagery and symbol",
+        description: "Explains how writers use character, imagery and symbols to share ideas.",
+        outcome: "EN3-UARL-01",
+        questions: E5.LITERATURE,
+      },
+      {
+        n: 51303,
+        title: "Genre, theme and point of view",
+        description: "Compares genres and themes, and how a writer's point of view shapes a text.",
+        outcome: "EN3-UARL-02",
+        questions: E5.GENRE_THEME,
+      },
+    ],
   },
   {
     n: 514,
@@ -645,6 +1214,23 @@ const TOPIC_SPECS: TopicSpec[] = [
     ],
   },
 
+  {
+    n: 515,
+    subject: "english",
+    year: 5,
+    title: "Writing",
+    description: "Writing for different purposes and audiences.",
+    subtopics: [
+      {
+        n: 51501,
+        title: "Writing skills",
+        description: "Text features, complex sentences, punctuation and cohesion across text types.",
+        outcome: "EN3-CWT-01",
+        questions: E5.WRITING,
+      },
+    ],
+  },
+
   // ---------- English, Year 6 ----------
   {
     n: 611,
@@ -655,6 +1241,13 @@ const TOPIC_SPECS: TopicSpec[] = [
     subtopics: [
       { n: 61101, skill: "en3-informative" },
       { n: 61102, skill: "en3-persuasive" },
+      {
+        n: 61103,
+        title: "Writing skills",
+        description: "Text features, complex sentences, punctuation and cohesion across text types.",
+        outcome: "EN3-CWT-01",
+        questions: E6.WRITING,
+      },
     ],
   },
   {
@@ -704,6 +1297,68 @@ const TOPIC_SPECS: TopicSpec[] = [
             "The sun can't really smile. Giving human actions to things that aren't human is personification.",
           ),
         ],
+      },
+    ],
+  },
+  {
+    n: 613,
+    subject: "english",
+    year: 6,
+    title: "Spelling",
+    description: "Word origins, prefixes, suffixes and tricky words.",
+    subtopics: [
+      {
+        n: 61301,
+        title: "Spelling",
+        description: "Uses roots, prefixes, suffixes and patterns to spell words.",
+        outcome: "EN3-SPELL-01",
+        questions: E6.SPELLING,
+      },
+    ],
+  },
+  {
+    n: 614,
+    subject: "english",
+    year: 6,
+    title: "Vocabulary",
+    description: "Precise and subject-specific words.",
+    subtopics: [
+      {
+        n: 61401,
+        title: "Word meanings",
+        description: "Precise meanings, word roots and words for each subject.",
+        outcome: "EN3-VOCAB-01",
+        questions: E6.VOCAB,
+      },
+    ],
+  },
+  {
+    n: 615,
+    subject: "english",
+    year: 6,
+    title: "Reading",
+    description: "Inference, author's purpose and literature.",
+    subtopics: [
+      {
+        n: 61501,
+        title: "Reading comprehension",
+        description: "Infers, finds the main idea and explains the author's purpose.",
+        outcome: "EN3-RECOM-01",
+        questions: E6.READING,
+      },
+      {
+        n: 61502,
+        title: "Character, imagery and symbol",
+        description: "Explains how writers use character, imagery and symbols to share ideas.",
+        outcome: "EN3-UARL-01",
+        questions: E6.LITERATURE,
+      },
+      {
+        n: 61503,
+        title: "Genre, theme and point of view",
+        description: "Compares genres and themes, and how a writer's point of view shapes a text.",
+        outcome: "EN3-UARL-02",
+        questions: E6.GENRE_THEME,
       },
     ],
   },

@@ -264,17 +264,16 @@ export const TRANSFORM = levels(4030201, {
           kind: "shape",
           points: [
             [0, 0],
-            [4, 0],
-            [4, 4],
-            [0, 4],
+            [6, 0],
+            [3, 5],
           ],
         },
         typed(
           "short_answer",
           n,
-          "How many lines of symmetry does this square have?",
-          ["4", "four"],
-          "A square folds exactly in half across the middle both ways and along both diagonals: 4 lines of symmetry.",
+          "This triangle has two equal sides. How many lines of symmetry does it have?",
+          ["1", "one"],
+          "Only the line from the top point straight down to the middle of the bottom side folds it into matching halves. So 1 line.",
         ),
       ),
   ],
@@ -288,23 +287,12 @@ export const TRANSFORM = levels(4030201, {
         "Each quarter turn goes a quarter of the way round, so 4 quarter turns take you all the way round.",
       ),
     (n) =>
-      pic(
-        {
-          kind: "shape",
-          points: [
-            [0, 0],
-            [8, 0],
-            [8, 4],
-            [0, 4],
-          ],
-        },
-        choice(
-          n,
-          "How many lines of symmetry does this rectangle have?",
-          ["0", "1", "2", "4"],
-          2,
-          "It folds in half across the middle going across and going up and down. The diagonals don't work, because the halves don't match. So 2 lines.",
-        ),
+      choice(
+        n,
+        "Which capital letter looks exactly the same after a half turn?",
+        ["H", "A", "T", "E"],
+        0,
+        "Turn each letter upside down. H still looks like H. A, T and E end up upside down.",
       ),
     (n) =>
       multi(
@@ -454,7 +442,13 @@ export const OBJECTS_3D = levels(4030301, {
         ),
       ),
     (n) =>
-      typed("short_answer", n, "How many faces does a cube have?", ["6", "six"], "A cube has a top, a bottom and 4 sides: 6 square faces."),
+      typed(
+        "short_answer",
+        n,
+        "How many vertices (corners) does a cube have?",
+        ["8", "eight"],
+        "A cube has 4 corners around the top and 4 around the bottom: 4 + 4 = 8.",
+      ),
   ],
   easy: [
     (n) =>
@@ -1061,13 +1055,13 @@ export const CAPACITY = levels(4060401, {
       ),
     (n) =>
       pic(
-        { kind: "cubes", length: 3, width: 2, height: 1 },
+        { kind: "cubes", length: 4, width: 3, height: 1 },
         typed(
           "short_answer",
           n,
-          "This block is made of 1 cm cubes. What is its volume in cubic centimetres?",
-          ["6", "6 cubic centimetres", "6 cm³"],
-          "There are 2 rows of 3 cubes: 3 + 3 = 6 cubes, so the volume is 6 cubic centimetres.",
+          "This flat block is one layer of 1 cm cubes. What is its volume in cubic centimetres?",
+          ["12", "12 cubic centimetres", "12 cm³"],
+          "There are 3 rows of 4 cubes: 4 + 4 + 4 = 12 cubes, so the volume is 12 cubic centimetres.",
         ),
       ),
     (n) =>
@@ -1117,7 +1111,7 @@ export const CAPACITY = levels(4060401, {
         "Which is the best estimate for how much water a kitchen sink holds?",
         ["200 mL", "2 L", "20 L", "2000 L"],
         2,
-        "A sink holds many big bottles of water, so 2 L is too small, but 2000 L would fill a small room. About 20 L fits.",
+        "A sink holds many big bottles of water, so 2 L is too small, but 2000 L is as much as a big rainwater tank. About 20 L fits.",
       ),
     (n) =>
       pic(
@@ -1275,17 +1269,17 @@ export const AREA = levels(4060501, {
           kind: "shape",
           points: [
             [0, 0],
-            [4, 0],
+            [6, 0],
             [0, 4],
           ],
           grid: true,
         },
         choice(
           n,
-          "Each small square is 1 square centimetre. What is the area of the triangle?",
-          ["6 square centimetres", "8 square centimetres", "10 square centimetres", "16 square centimetres"],
+          "Each small square is 1 square centimetre. The grid around the triangle is a 6 by 4 rectangle. What is the area of the triangle?",
+          ["10 square centimetres", "12 square centimetres", "20 square centimetres", "24 square centimetres"],
           1,
-          "The triangle is half of a 4 by 4 square. The square has 16 small squares, and half of 16 is 8.",
+          "The triangle is exactly half of the 6 by 4 rectangle. The rectangle has 4 × 6 = 24 small squares, and half of 24 is 12.",
         ),
       ),
     (n) =>

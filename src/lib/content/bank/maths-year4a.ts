@@ -940,7 +940,7 @@ export const TIME = levels(4060201, {
           "short_answer",
           n,
           "The clock shows when Mia started her art project. She finished 35 minutes later. What time did she finish?",
-          ["12:15", "12:15 pm", "12:15pm", "12:15 am"],
+          ["12:15", "12:15 pm", "12:15pm"],
           "The clock shows 11:40. 20 minutes takes it to 12:00, and 15 more minutes makes 12:15.",
         ),
       ),

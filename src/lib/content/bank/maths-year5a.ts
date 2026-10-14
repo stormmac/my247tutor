@@ -374,7 +374,7 @@ export const ADD_SUB = levels(5030201, {
         "short_answer",
         n,
         "12 345 + 2000 = ?",
-        "14 345",
+        ["14345", "14 345"],
         "Only the thousands change: 12 thousands and 2 thousands make 14 thousands, so 14 345.",
       ),
     (n) => typed("short_answer", n, "3.6 + 2.5 = ?", "6.1", "3 + 2 = 5 and 0.6 + 0.5 = 1.1. Then 5 + 1.1 = 6.1."),
@@ -393,7 +393,7 @@ export const ADD_SUB = levels(5030201, {
         "short_answer",
         n,
         "25 618 + 13 497 = ?",
-        "39 115",
+        ["39115", "39 115"],
         "Add the thousands: 25 000 + 13 000 = 38 000. Then 618 + 497 = 1115. 38 000 + 1115 = 39 115.",
       ),
     (n) =>
@@ -419,7 +419,7 @@ export const ADD_SUB = levels(5030201, {
         "short_answer",
         n,
         "50 000 − 26 384 = ?",
-        "23 616",
+        ["23616", "23 616"],
         "Count up from 26 384: 16 to 26 400, 600 to 27 000, then 23 000 to 50 000. 16 + 600 + 23 000 = 23 616.",
       ),
     (n) =>

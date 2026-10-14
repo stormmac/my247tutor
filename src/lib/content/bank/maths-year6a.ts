@@ -3,6 +3,7 @@
  * level from very easy to very hard. Year 6 works at the later Stage 3 level, harder than Year 5
  * on the same standard. Arithmetic answers are checked by the content tests.
  */
+import type { Picture } from "../picture";
 import { choice, levels, multi, ordering, pic, trueFalse, typed } from "../spec";
 
 /** MA3-RN-01: place value to millions and beyond, negative numbers, primes, composites, square and triangular numbers. */
@@ -860,7 +861,7 @@ export const FRACTION_OF = levels(6020201, {
   ],
 });
 
-const WATER_USED = {
+const WATER_USED: Picture = {
   kind: "column_graph",
   title: "Water used (L)",
   step: 20,
@@ -870,9 +871,9 @@ const WATER_USED = {
     { label: "Wed", value: 60 },
     { label: "Thu", value: 100 },
   ],
-} as const;
+};
 
-const GOALS = {
+const GOALS: Picture = {
   kind: "picture_graph",
   title: "Goals scored this season",
   thing: "goals",
@@ -882,7 +883,7 @@ const GOALS = {
     { label: "Tom", count: 7 },
     { label: "Ava", count: 5 },
   ],
-} as const;
+};
 
 /** MA3-DATA-01: constructing graphs with many-to-one scales. */
 export const GRAPHS = levels(6060101, {
@@ -1064,7 +1065,7 @@ export const GRAPHS = levels(6060101, {
   ],
 });
 
-const TEMPERATURE = {
+const TEMPERATURE: Picture = {
   kind: "line_graph",
   title: "Temperature in Sydney (°C)",
   step: 2,
@@ -1076,9 +1077,9 @@ const TEMPERATURE = {
     { label: "6 pm", value: 21 },
     { label: "9 pm", value: 17 },
   ],
-} as const;
+};
 
-const PUPPY = {
+const PUPPY: Picture = {
   kind: "line_graph",
   title: "Puppy's mass (kg)",
   step: 1,
@@ -1090,9 +1091,9 @@ const PUPPY = {
     { label: "Wk 5", value: 8 },
     { label: "Wk 6", value: 9 },
   ],
-} as const;
+};
 
-const HISTORY = {
+const HISTORY: Picture = {
   kind: "table",
   headings: ["Year", "Event"],
   rows: [
@@ -1101,9 +1102,9 @@ const HISTORY = {
     ["1901", "Federation"],
     ["1932", "Sydney Harbour Bridge opens"],
   ],
-} as const;
+};
 
-const TANK = {
+const TANK: Picture = {
   kind: "line_graph",
   title: "Water in the tank (L)",
   step: 100,
@@ -1115,7 +1116,7 @@ const TANK = {
     { label: "May", value: 900 },
     { label: "Jun", value: 1000 },
   ],
-} as const;
+};
 
 /** MA3-DATA-02: interpreting data displays, including timelines and line graphs. */
 export const DATA = levels(6060201, {

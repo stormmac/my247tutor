@@ -97,7 +97,9 @@ describe("question bank sets", () => {
           const text = q.question_text;
           if (!/^[\d\s.+−×÷()=_?]+$/.test(text) || !text.includes("=")) continue;
           const [left, right] = text.split("=").map((side) => side.trim());
-          const answers = Array.isArray(q.correct_answer) ? q.correct_answer : [q.correct_answer];
+          const answers = (Array.isArray(q.correct_answer) ? q.correct_answer : [q.correct_answer]).map((a) =>
+            a.replace(/(\d) (?=\d{3}\b)/g, "$1"),
+          );
           if (q.question_type === "true_false") expect(String(evaluate(left) === evaluate(right)), text).toBe(q.correct_answer);
           else if (right === "?") expect(Number(answers[0]), text).toBeCloseTo(evaluate(left), 9);
           else if (q.question_type !== "multiple_choice" && q.question_type !== "multi_select") {

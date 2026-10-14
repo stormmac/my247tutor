@@ -839,18 +839,18 @@ export const TIME = levels(6050601, {
           kind: "table",
           headings: ["Station", "Train departs"],
           rows: [
-            ["Central", "07:42"],
-            ["Strathfield", "07:56"],
-            ["Parramatta", "08:13"],
-            ["Blacktown", "08:29"],
+            ["Hornsby", "16:52"],
+            ["Berowra", "17:04"],
+            ["Woy Woy", "17:31"],
+            ["Gosford", "17:39"],
           ],
         },
         choice(
           n,
-          "Look at the train timetable. How long does the train take to go from Central to Parramatta?",
-          ["31 minutes", "29 minutes", "71 minutes", "13 minutes"],
+          "Look at the train timetable. How long does the train take to go from Hornsby to Woy Woy?",
+          ["39 minutes", "79 minutes", "21 minutes", "41 minutes"],
           0,
-          "07:42 to 08:00 is 18 minutes, and 08:00 to 08:13 is 13 minutes. 18 + 13 = 31 minutes.",
+          "16:52 to 17:00 is 8 minutes, and 17:00 to 17:31 is 31 minutes. 8 + 31 = 39 minutes.",
         ),
       ),
   ],
@@ -861,17 +861,17 @@ export const TIME = levels(6050601, {
           kind: "table",
           headings: ["Station", "Train departs"],
           rows: [
-            ["Central", "07:42"],
-            ["Strathfield", "07:56"],
-            ["Parramatta", "08:13"],
-            ["Blacktown", "08:29"],
+            ["Hornsby", "16:52"],
+            ["Berowra", "17:04"],
+            ["Woy Woy", "17:31"],
+            ["Gosford", "17:39"],
           ],
         },
         trueFalse(
           n,
-          "Look at the timetable. The train reaches Blacktown before half past eight in the morning.",
+          "Look at the timetable. The train reaches Gosford before quarter to six in the evening.",
           true,
-          "Half past eight in the morning is 08:30. The train is at Blacktown at 08:29, one minute earlier.",
+          "Quarter to six in the evening is 5:45 pm, or 17:45. The train is at Gosford at 17:39, six minutes earlier.",
         ),
       ),
     (n) =>
@@ -1027,10 +1027,10 @@ export const SHAPES_2D = levels(6030201, {
     (n) =>
       choice(
         n,
-        "Which quadrilateral has two pairs of equal sides next to each other, but no parallel sides?",
-        ["kite", "rhombus", "parallelogram", "trapezium"],
+        "How many pairs of parallel sides does a rhombus have?",
+        ["2", "1", "0", "4"],
         0,
-        "A kite has two pairs of equal sides that sit next to each other. A rhombus and a parallelogram have parallel sides.",
+        "A rhombus is a parallelogram, so both pairs of opposite sides are parallel: 2 pairs.",
       ),
     (n) =>
       typed(
@@ -1107,10 +1107,10 @@ export const SHAPES_2D = levels(6030201, {
     (n) =>
       choice(
         n,
-        "Which quadrilateral always has diagonals that are equal in length and cross at right angles?",
-        ["square", "rectangle", "rhombus", "parallelogram"],
+        "A quadrilateral's diagonals are equal in length and cut each other in half, but they do not cross at right angles. What is it?",
+        ["rectangle", "square", "rhombus", "kite"],
         0,
-        "A rectangle's diagonals are equal, and a rhombus's diagonals cross at right angles. Only the square has both.",
+        "Equal diagonals that cut each other in half make a rectangle. If they also crossed at right angles it would be a square, and a rhombus's diagonals are not equal.",
       ),
   ],
   very_hard: [
@@ -1369,7 +1369,7 @@ export const ANGLES = levels(6030101, {
           "Which is the best estimate for the size of this angle?",
           ["60°", "120°", "30°", "160°"],
           0,
-          "It is smaller than a right angle, so it is acute, and it is a bit less than 90°. 60° is the best fit; 30° would be much narrower.",
+          "It is smaller than a right angle, so it is acute. It is about two-thirds of a right angle, so 60° is the best fit. 30° would be much narrower.",
         ),
       ),
   ],
