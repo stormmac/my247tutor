@@ -270,13 +270,13 @@ export function SuniCompanion() {
   );
 }
 
-const MIC_PROBLEMS: Record<SpeechInputProblem, string> = {
+export const MIC_PROBLEMS: Record<SpeechInputProblem, string> = {
   blocked: "I can't hear you yet. Ask a grown-up to allow the microphone for this site, then try again.",
   "no-microphone": "I couldn't find a microphone. You can type to me instead.",
   failed: "I didn't catch that. Hold the microphone and try again, or type to me.",
 };
 
-function MicIcon() {
+export function MicIcon() {
   return (
     <svg
       width="20"

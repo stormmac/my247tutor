@@ -2,6 +2,7 @@ import { SKILLS, getSkill, skillsFor } from "../curriculum/skills";
 import type { Skill, Stage, Subject, YearLevel } from "../curriculum/types";
 import { yearToStage } from "../curriculum/types";
 import type { AssessmentRecord } from "./assessment";
+import type { ReadingProgress } from "../phonics/progress";
 
 export interface SkillState {
   /** Estimated probability the student can do this skill unaided, 0–1. */
@@ -64,6 +65,8 @@ export interface LearnerProfile {
   writing: WritingRecord[];
   /** The starting assessment in each subject, for the parents page. Missing on older profiles. */
   assessments?: AssessmentRecord[];
+  /** Reading age from the reading check, and Learn to Read progress. Missing until the check is done. */
+  reading?: ReadingProgress;
 }
 
 export const MASTERY_THRESHOLD = 0.8;
