@@ -79,7 +79,8 @@ Parent accounts follow myteacher's `users` table (same columns, with `parent` ad
 To switch accounts on:
 
 1. Create a Postgres database. On Vercel: Storage → Create Database → Neon (free tier). Any Postgres
-   works, including Azure.
+   works, including Azure and Supabase. On Supabase, use the **Transaction pooler** connection string
+   from Connect (the direct one is IPv6 only, which Vercel can't reach).
 2. In Vercel → Settings → Environment Variables, set `DATABASE_URL`, `AUTH_SECRET`
    (`openssl rand -base64 32`) and `ADMIN_EMAILS` (your email).
 3. Run `DATABASE_URL=… npm run db:migrate` once to create the tables (`database/006_my247tutor_accounts.sql`).
