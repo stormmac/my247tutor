@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AdminLearnPicker } from "@/components/AdminLearnPicker";
+import { ClassLearnPicker } from "@/components/ClassLearnPicker";
 import { Suni } from "@/components/Suni";
 import { useAccount } from "@/components/useAccount";
 import { switchChild, useChildren, useProfile } from "@/components/useProfile";
@@ -21,6 +22,9 @@ export default function LearnPage() {
   if (!loaded || !account.loaded) return null;
   // An admin picks a family or centre, then a student, to learn as.
   if (account.user?.role === "admin" && !self) return <AdminLearnPicker onSelf={() => setSelf(true)} />;
+  // A teacher or centre picks one of their students.
+  if ((account.user?.role === "teacher" || account.user?.role === "centre") && !self)
+    return <ClassLearnPicker onSelf={() => setSelf(true)} />;
   if (!profile) return <Setup onCreate={(name, year) => setProfile(newProfile(name, year))} />;
 
   return (

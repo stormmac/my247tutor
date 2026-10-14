@@ -392,3 +392,72 @@ export async function studentForViewer(viewer: User, learnerId: string): Promise
   );
   return rows[0] ? { ...(rows[0].profile as LearnerProfile), id: rows[0].id as string } : null;
 }
+
+/** A student a teacher or centre can learn as, from the Learn picker. */
+export interface LearnableStudent {
+  id: string;
+  name: string;
+  yearLevel: number;
+  username: string | null;
+  /** Their sign-in exists and is on, so they can be learned as. */
+  canSignIn: boolean;
+}
+
+/**
+ * The students on a teacher's Learn picker, class by class: a teacher's own classes, or every class
+ * at the centre, plus (for the centre) students not in any class yet.
+ */
+export async function learnableStudents(
+  viewer: User,
+): Promise<{
+  classes: { id: string; name: string; yearLevel: number; students: LearnableStudent[] }[];
+  unassigned: LearnableStudent[];
+} | null> {
+  const where = centreOf(viewer);
+  if (!where) return null;
+  const classes = await listClasses(where.centreId, where.teacherId);
+  const { rows } = await (
+    await ready()
+  ).query(
+    `SELECT l.id, l.name, l.year_level, u.username, COALESCE(u.is_active, FALSE) AS can_sign_in,
+       COALESCE(array_agg(e.class_id) FILTER (WHERE e.class_id IS NOT NULL), '{}') AS class_ids
+     FROM learners l
+     LEFT JOIN users u ON u.learner_id = l.id
+     LEFT JOIN class_enrolments e ON e.learner_id = l.id
+     WHERE l.parent_id = $1
+     GROUP BY l.id, u.username, u.is_active ORDER BY l.name`,
+    [where.centreId],
+  );
+  const students = rows.map((r) => ({
+    student: {
+      id: r.id as string,
+      name: r.name as string,
+      yearLevel: Number(r.year_level),
+      username: (r.username as string | null) ?? null,
+      canSignIn: Boolean(r.username) && (r.can_sign_in as boolean),
+    },
+    classIds: r.class_ids as string[],
+  }));
+  return {
+    classes: classes.map((c) => ({
+      id: c.id,
+      name: c.name,
+      yearLevel: c.yearLevel,
+      students: students.filter((s) => s.classIds.includes(c.id)).map((s) => s.student),
+    })),
+    unassigned: where.teacherId ? [] : students.filter((s) => s.classIds.length === 0).map((s) => s.student),
+  };
+}
+
+/**
+ * The sign-in a teacher or centre logs in as to learn as one of their students. A teacher only gets
+ * students in their own classes. Null when the viewer can't see the student.
+ */
+export async function learnAsStudent(viewer: User, learnerId: string): Promise<User | { error: string } | null> {
+  if (!(await studentForViewer(viewer, learnerId))) return null;
+  const { rows } = await (await ready()).query(`SELECT ${USER_COLUMNS} FROM users WHERE learner_id = $1`, [learnerId]);
+  const student = rows[0] ? toUser(rows[0]) : null;
+  if (!student) return { error: "This student has no sign-in yet. Add a username and password for them first." };
+  if (!student.isActive) return { error: "This student's sign-in is turned off." };
+  return student;
+}

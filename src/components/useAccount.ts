@@ -19,6 +19,8 @@ export interface Account {
   trialEndsAt?: number | null;
   /** The admin's name when an admin is logged in as this account from Admin. */
   actingAdmin?: string | null;
+  /** Who is logged in as this account: an admin, or a teacher or centre learning as their student. */
+  actingRole?: Role | null;
 }
 
 export interface AccountState {
@@ -72,9 +74,10 @@ export async function logInAs(userId: string): Promise<string | null> {
 
 const RETURN_KEY = "my247tutor.admin-return";
 
-/** An admin learns as one student from the Learn picker, then lands on their Learn page. */
-export async function learnAs(learnerId: string): Promise<string | null> {
-  const res = await fetch(`/api/admin/learners/${learnerId}/learn-as`, { method: "POST" }).catch(() => null);
+/** An admin, teacher or centre learns as one student from the Learn picker, then lands on their Learn page. */
+export async function learnAs(learnerId: string, from: "admin" | "classes" = "admin"): Promise<string | null> {
+  const url = from === "admin" ? `/api/admin/learners/${learnerId}/learn-as` : `/api/classes/learn-as/${learnerId}`;
+  const res = await fetch(url, { method: "POST" }).catch(() => null);
   const body = (await res?.json().catch(() => ({}))) as { pick?: string | null; error?: string } | undefined;
   if (!res?.ok) return body?.error ?? "That didn't work.";
   try {
@@ -86,10 +89,11 @@ export async function learnAs(learnerId: string): Promise<string | null> {
   return null;
 }
 
-/** Ends logging in as someone else and goes back to where the admin started: Admin, or the Learn picker. */
+/** Ends logging in as someone else and goes back to where they started: Admin, or the Learn picker. */
 export async function backToAdmin() {
   const res = await fetch("/api/auth/back-to-admin", { method: "POST" }).catch(() => null);
-  let back = "/admin";
+  const body = (await res?.json().catch(() => ({}))) as { role?: string } | undefined;
+  let back = body?.role === "admin" ? "/admin" : "/learn";
   try {
     localStorage.clear();
     back = sessionStorage.getItem(RETURN_KEY) ?? back;

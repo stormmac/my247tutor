@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   // A child has no email of their own; they see the username they sign in with.
   const email = username ?? result.user.email;
   const plan = planFor(result.user);
-  // An admin logged in as this account from Admin.
+  // An admin logged in as this account from Admin, or a teacher or centre learning as their student.
   const actorId = (await verifySession(request.cookies.get(SESSION_COOKIE)?.value))?.actorId;
   const actor = actorId ? await getUser(actorId) : null;
   return Response.json({
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
       needsPayment: needsPayment(result.user),
       trialEndsAt: plan === "trial" ? trialEndsAt : null,
       actingAdmin: actor ? actor.name : null,
+      actingRole: actor ? actor.role : null,
     },
   });
 }
