@@ -1332,3 +1332,142 @@ ul.tight {
   border-bottom: 4px solid var(--brand);
   color: var(--brand);
 }
+
+/* Times tables game. */
+.tables-game,
+.tables-result {
+  width: 100%;
+  margin: 0 auto;
+}
+.tables-speeds,
+.tables-one,
+.tables-ticks {
+  display: grid;
+  gap: 10px;
+}
+.tables-speeds {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.tables-speeds .choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.tables-one,
+.tables-ticks {
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+}
+.tables-one .choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 6px;
+}
+.tables-num {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+.tables-tick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 6px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 1.3rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.tables-tick input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+.tables-tick.on {
+  border-color: var(--brand);
+  background: var(--brand-tint);
+}
+.tables-clock {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.tables-clock.ending {
+  color: var(--bad);
+}
+.tables-right {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+.tables-question {
+  font-size: clamp(2rem, 11vw, 3rem);
+  white-space: nowrap;
+  font-weight: 800;
+  text-align: center;
+  margin: 8px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.tables-answer {
+  display: inline-block;
+  min-width: 2.2em;
+  border-bottom: 4px solid var(--brand);
+  color: var(--brand);
+}
+.tables-answer.right {
+  color: var(--good);
+  border-color: var(--good);
+}
+.tables-answer.wrong {
+  color: var(--bad);
+  border-color: var(--bad);
+  text-decoration: line-through;
+}
+.tables-game .feedback {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+.tables-pad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 340px;
+  width: 100%;
+  margin: 0 auto;
+}
+.tables-pad .choice {
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 800;
+  padding: 12px 0;
+}
+.tables-pad .choice.ok {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  font-size: 1.3rem;
+}
+.tables-score {
+  font-size: 3rem;
+  font-weight: 800;
+  margin: 0;
+}
+.tables-score .muted {
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+.tables-missed {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.tables-missed span {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--warn-tint);
+  font-weight: 700;
+}

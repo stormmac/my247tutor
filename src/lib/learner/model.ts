@@ -3,6 +3,7 @@ import type { Skill, Stage, Subject, YearLevel } from "../curriculum/types";
 import { yearToStage } from "../curriculum/types";
 import type { AssessmentRecord } from "./assessment";
 import type { ReadingProgress } from "../phonics/progress";
+import type { TablesRecord } from "../tables/game";
 
 export interface SkillState {
   /** Estimated probability the student can do this skill unaided, 0–1. */
@@ -67,6 +68,8 @@ export interface LearnerProfile {
   assessments?: AssessmentRecord[];
   /** Reading age from the reading check, and Learn to Read progress. Missing until the check is done. */
   reading?: ReadingProgress;
+  /** Times tables game scores. Missing until the first game. */
+  tables?: TablesRecord;
 }
 
 export const MASTERY_THRESHOLD = 0.8;

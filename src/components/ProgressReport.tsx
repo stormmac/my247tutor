@@ -27,6 +27,7 @@ import {
   unitsDone,
 } from "@/lib/phonics/progress";
 import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
+import { describeTables, SPEEDS, tablesOf, trickyFacts } from "@/lib/tables/game";
 import { UNITS } from "@/lib/phonics/sequence";
 import { COMPETENCY_LABELS, competency, recommendedPlan, subjectLevel, type Competency, type Standing } from "@/lib/learner/report";
 
@@ -104,6 +105,7 @@ export function ProgressReport({
       />
 
       <ReadingReport profile={profile} onChange={onChange} />
+      <TablesReport profile={profile} />
       <RecentQuestions profile={profile} />
       <TopicResults profile={profile} />
 
@@ -585,6 +587,49 @@ function TopicResults({ profile }: { profile: LearnerProfile }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/** Times tables game scores: recent games and the facts missed most. Hidden until the first game. */
+function TablesReport({ profile }: { profile: LearnerProfile }) {
+  const record = tablesOf(profile);
+  if (!record.games.length) return null;
+  const recent = record.games.slice(-5).reverse();
+  const tricky = trickyFacts(record);
+  return (
+    <div className="card stack tables-report">
+      <h2 style={{ margin: 0 }}>Times tables game</h2>
+      <p className="muted" style={{ margin: 0 }}>
+        {record.games.length} game{record.games.length === 1 ? "" : "s"} played. Each game is 2 minutes.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Tables</th>
+            <th>Speed</th>
+            <th>Right</th>
+          </tr>
+        </thead>
+        <tbody>
+          {recent.map((g) => (
+            <tr key={g.at}>
+              <td>{new Date(g.at).toLocaleDateString("en-AU")}</td>
+              <td>{describeTables(g.tables)}</td>
+              <td>{SPEEDS[g.speed]?.label ?? g.speed}</td>
+              <td>
+                {g.right} of {g.asked}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {tricky.length > 0 && (
+        <p style={{ margin: 0 }}>
+          Missed most lately: <strong>{tricky.join(", ")}</strong>.
+        </p>
+      )}
     </div>
   );
 }
