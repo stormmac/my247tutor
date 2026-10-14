@@ -6,7 +6,7 @@ import { newProfile, type LearnerProfile } from "@/lib/learner/model";
 import { summarise, type StudentSummary } from "@/lib/learner/summary";
 import { newReading, setEnrolled } from "@/lib/phonics/progress";
 import { ready } from "./db";
-import { MAX_CENTRE_STUDENTS } from "./rules";
+import { MAX_CENTRE_STUDENTS, type ClassTime } from "./rules";
 import { audit, toUser, USER_COLUMNS, type User } from "./users";
 
 /** A teacher at a tutoring centre, as the centre sees them. */
@@ -26,6 +26,8 @@ export interface CentreClass {
   teacherId: string | null;
   teacherName: string | null;
   students: number;
+  /** When it meets each week, in day and time order. */
+  times: ClassTime[];
 }
 
 /** A centre's student: a learner the centre owns, with the sign-in they use. */
@@ -97,12 +99,14 @@ export async function listClasses(centreId: string, teacherId?: string): Promise
   const { rows } = await (
     await ready()
   ).query(
-    `SELECT c.id, c.name, c.year_level, c.subject, c.teacher_id, t.display_name AS teacher_name, COUNT(e.learner_id) AS students
+    `SELECT c.id, c.name, c.year_level, c.subject, c.teacher_id, t.display_name AS teacher_name,
+       (SELECT COUNT(*) FROM class_enrolments e WHERE e.class_id = c.id) AS students,
+       (SELECT COALESCE(json_agg(json_build_object('weekday', ct.weekday, 'start', to_char(ct.starts_at, 'HH24:MI'), 'minutes', ct.minutes)
+          ORDER BY ct.weekday, ct.starts_at), '[]') FROM class_times ct WHERE ct.class_id = c.id) AS times
      FROM centre_classes c
      LEFT JOIN users t ON t.id = c.teacher_id
-     LEFT JOIN class_enrolments e ON e.class_id = c.id
      WHERE c.centre_id = $1 AND ($2::uuid IS NULL OR c.teacher_id = $2)
-     GROUP BY c.id, t.display_name ORDER BY c.year_level, c.name`,
+     ORDER BY c.year_level, c.name`,
     [centreId, teacherId ?? null],
   );
   return rows.map((r) => ({
@@ -113,10 +117,23 @@ export async function listClasses(centreId: string, teacherId?: string): Promise
     teacherId: (r.teacher_id as string | null) ?? null,
     teacherName: (r.teacher_name as string | null) ?? null,
     students: Number(r.students),
+    times: (r.times as ClassTime[]) ?? [],
   }));
 }
 
-type ClassDetails = { name: string; yearLevel: number; subject: CentreClass["subject"]; teacherId: string | null };
+type ClassDetails = { name: string; yearLevel: number; subject: CentreClass["subject"]; teacherId: string | null; times: ClassTime[] };
+
+/** Replaces a class's weekly times. */
+async function setTimes(client: PoolClient, classId: string, times: ClassTime[]) {
+  await client.query(`DELETE FROM class_times WHERE class_id = $1`, [classId]);
+  for (const t of times)
+    await client.query(`INSERT INTO class_times (class_id, weekday, starts_at, minutes) VALUES ($1, $2, $3, $4)`, [
+      classId,
+      t.weekday,
+      t.start,
+      t.minutes,
+    ]);
+}
 
 async function teacherOk(centreId: string, teacherId: string | null) {
   return teacherId === null || Boolean(await centreTeacher(centreId, teacherId));
@@ -124,17 +141,16 @@ async function teacherOk(centreId: string, teacherId: string | null) {
 
 export async function createClass(centre: User, details: ClassDetails): Promise<{ id: string } | { error: string }> {
   if (!(await teacherOk(centre.id, details.teacherId))) return { error: "That teacher isn't at your centre." };
-  const { rows } = await (
-    await ready()
-  ).query(`INSERT INTO centre_classes (centre_id, teacher_id, name, year_level, subject) VALUES ($1, $2, $3, $4, $5) RETURNING id`, [
-    centre.id,
-    details.teacherId,
-    details.name,
-    details.yearLevel,
-    details.subject,
-  ]);
-  await audit(centre.id, "add_class", rows[0].id as string, { name: details.name });
-  return { id: rows[0].id as string };
+  const id = await inTransaction(async (client) => {
+    const { rows } = await client.query(
+      `INSERT INTO centre_classes (centre_id, teacher_id, name, year_level, subject) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [centre.id, details.teacherId, details.name, details.yearLevel, details.subject],
+    );
+    await setTimes(client, rows[0].id as string, details.times);
+    return rows[0].id as string;
+  });
+  await audit(centre.id, "add_class", id, { name: details.name });
+  return { id };
 }
 
 export async function updateClass(
@@ -143,13 +159,15 @@ export async function updateClass(
   details: ClassDetails,
 ): Promise<{ ok: true } | { error: string; status: number }> {
   if (!(await teacherOk(centre.id, details.teacherId))) return { error: "That teacher isn't at your centre.", status: 400 };
-  const { rowCount } = await (
-    await ready()
-  ).query(
-    `UPDATE centre_classes SET teacher_id = $3, name = $4, year_level = $5, subject = $6, updated_at = NOW() WHERE id = $1 AND centre_id = $2`,
-    [classId, centre.id, details.teacherId, details.name, details.yearLevel, details.subject],
-  );
-  return rowCount ? { ok: true } : { error: "No such class.", status: 404 };
+  const found = await inTransaction(async (client) => {
+    const { rowCount } = await client.query(
+      `UPDATE centre_classes SET teacher_id = $3, name = $4, year_level = $5, subject = $6, updated_at = NOW() WHERE id = $1 AND centre_id = $2`,
+      [classId, centre.id, details.teacherId, details.name, details.yearLevel, details.subject],
+    );
+    if (rowCount) await setTimes(client, classId, details.times);
+    return Boolean(rowCount);
+  });
+  return found ? { ok: true } : { error: "No such class.", status: 404 };
 }
 
 /** Deletes a class. Its students stay at the centre. */

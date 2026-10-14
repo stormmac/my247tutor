@@ -4,7 +4,7 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useAccount } from "@/components/useAccount";
 import { ProgressReport } from "@/components/ProgressReport";
-import { CLASS_SUBJECTS } from "@/lib/auth/rules";
+import { CLASS_SUBJECTS, describeTime, type ClassTime } from "@/lib/auth/rules";
 import type { LearnerProfile } from "@/lib/learner/model";
 import type { Standing } from "@/lib/learner/report";
 import type { StudentSummary } from "@/lib/learner/summary";
@@ -22,7 +22,14 @@ interface ClassStudent {
 }
 
 interface ClassView {
-  class: { id: string; name: string; yearLevel: number; subject: keyof typeof CLASS_SUBJECTS; teacherName: string | null };
+  class: {
+    id: string;
+    name: string;
+    yearLevel: number;
+    subject: keyof typeof CLASS_SUBJECTS;
+    teacherName: string | null;
+    times: ClassTime[];
+  };
   students: ClassStudent[];
 }
 
@@ -90,6 +97,7 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
             Year {c.yearLevel}, {CLASS_SUBJECTS[c.subject]}
             {c.teacherName ? `, with ${c.teacherName}` : ""}. {view.students.length} {view.students.length === 1 ? "student" : "students"}.
           </p>
+          {c.times.length > 0 && <p style={{ margin: "4px 0 0" }}>🗓 {c.times.map(describeTime).join("; ")}</p>}
         </div>
         <button className="btn secondary small no-print" onClick={() => window.print()}>
           Print or save as PDF

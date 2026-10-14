@@ -1471,3 +1471,143 @@ ul.tight {
   background: var(--warn-tint);
   font-weight: 700;
 }
+
+/* Class timetable: a week grid on wide screens, a list of days on phones. */
+.week-cal {
+  display: grid;
+  column-gap: 4px;
+}
+.week-cal-day {
+  text-align: center;
+  font-weight: 700;
+  padding-bottom: 6px;
+}
+.week-cal-hours,
+.week-cal-col {
+  position: relative;
+}
+.week-cal-hours span {
+  position: absolute;
+  right: 6px;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.week-cal-hours span:first-child {
+  transform: none;
+}
+.week-cal-col {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.week-cal-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--border);
+}
+.week-cal-line:first-child {
+  display: none;
+}
+.week-cal-class {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border-left-width: 4px;
+  border-left-style: solid;
+  font-size: 0.8rem;
+  line-height: 1.25;
+  color: var(--text);
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.week-cal-class strong {
+  font-size: 0.85rem;
+}
+.week-cal-class:hover {
+  filter: brightness(0.96);
+}
+.cal-c0 {
+  background: #e3f1ea;
+  border-color: #1f7a5a;
+}
+.cal-c1 {
+  background: #e6eefb;
+  border-color: #2f62c9;
+}
+.cal-c2 {
+  background: #fdf0dc;
+  border-color: #c77d12;
+}
+.cal-c3 {
+  background: #f6e6f3;
+  border-color: #9b3d8c;
+}
+.cal-c4 {
+  background: #fde8e6;
+  border-color: #c4473a;
+}
+.cal-c5 {
+  background: #e8f4f6;
+  border-color: #23798a;
+}
+.week-list {
+  display: none;
+}
+.week-list-day h3 {
+  margin: 12px 0 6px;
+  font-size: 1rem;
+}
+.week-list-class {
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  border-left-width: 4px;
+  border-left-style: solid;
+  color: var(--text);
+  text-decoration: none;
+}
+.week-list-time {
+  min-width: 128px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 720px) {
+  .week-cal {
+    display: none;
+  }
+  .week-list {
+    display: block;
+  }
+  .week-list-time {
+    min-width: 0;
+  }
+  .week-list-class {
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+.class-times {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.class-time-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+@media (max-width: 560px) {
+  .class-time-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

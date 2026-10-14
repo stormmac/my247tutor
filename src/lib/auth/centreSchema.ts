@@ -38,3 +38,18 @@ CREATE TABLE IF NOT EXISTS class_enrolments (
 CREATE INDEX IF NOT EXISTS idx_class_enrolments_learner ON class_enrolments(learner_id);
 ALTER TABLE centre_classes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE class_enrolments ENABLE ROW LEVEL SECURITY;`;
+
+/**
+ * When each class meets (database/012_my247tutor_class_times.sql, kept identical by a test): a weekly
+ * time and length. A class can meet more than once a week. Times are the centre's local time.
+ */
+export const CLASS_TIMES_SQL = `CREATE TABLE IF NOT EXISTS class_times (
+  id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id  UUID NOT NULL REFERENCES centre_classes(id) ON DELETE CASCADE,
+  -- 1 is Monday, 7 is Sunday.
+  weekday   SMALLINT NOT NULL CHECK (weekday BETWEEN 1 AND 7),
+  starts_at TIME NOT NULL,
+  minutes   SMALLINT NOT NULL CHECK (minutes BETWEEN 15 AND 240)
+);
+CREATE INDEX IF NOT EXISTS idx_class_times_class ON class_times(class_id);
+ALTER TABLE class_times ENABLE ROW LEVEL SECURITY;`;
