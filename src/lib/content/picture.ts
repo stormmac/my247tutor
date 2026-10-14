@@ -34,7 +34,52 @@ export type Picture =
   /** Dots in rows and columns, for multiplication. */
   | { kind: "array"; rows: number; columns: number }
   /** Base-ten blocks: hundreds flats, tens rods and ones cubes. */
-  | { kind: "blocks"; hundreds: number; tens: number; ones: number };
+  | { kind: "blocks"; hundreds: number; tens: number; ones: number }
+  /** An angle between two arms, with one arm flat. Right angles get a square mark. `label` is written inside the angle. */
+  | { kind: "angle"; degrees: number; label?: string }
+  /**
+   * Any straight-sided shape, from its corner points on a grid where x runs 0–12 and y runs 0–8
+   * (y counts up). Optional labels for each side (side i joins corner i to corner i + 1) and
+   * each corner. `grid` draws the squares behind it, for area questions.
+   */
+  | { kind: "shape"; points: [number, number][]; sideLabels?: string[]; cornerLabels?: string[]; grid?: boolean }
+  /**
+   * A grid of squares. `axes` numbers the lines from 0 for coordinates (points sit on line
+   * crossings); `map` letters the columns and numbers the rows (points sit in squares, like a
+   * street map). `cells` shades squares, counted from the bottom left from 0. `path` draws a route.
+   */
+  | {
+      kind: "grid";
+      columns: number;
+      rows: number;
+      axes?: boolean;
+      map?: boolean;
+      points?: { x: number; y: number; label: string }[];
+      cells?: [number, number][];
+      path?: [number, number][];
+    }
+  /** A line graph. */
+  | { kind: "line_graph"; title: string; points: { label: string; value: number }[]; step?: number }
+  /** A kitchen scale with a dial, pointing at `value`. */
+  | { kind: "scale"; max: number; value: number; step: number; unit: "g" | "kg" }
+  /** A measuring jug filled to `value`. */
+  | { kind: "jug"; max: number; value: number; step: number; unit: "mL" | "L" }
+  /** A 3D object. */
+  | { kind: "solid"; shape: Solid }
+  /** A rectangular prism built from unit cubes. */
+  | { kind: "cubes"; length: number; width: number; height: number };
+
+export const SOLIDS = [
+  "cube",
+  "rectangular_prism",
+  "triangular_prism",
+  "square_pyramid",
+  "triangular_pyramid",
+  "cylinder",
+  "cone",
+  "sphere",
+] as const;
+export type Solid = (typeof SOLIDS)[number];
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -74,6 +119,22 @@ export function describePicture(p: Picture): string {
       return `${plural(p.rows, "row")} of dots with ${p.columns} in each row.`;
     case "blocks":
       return `Base-ten blocks: ${plural(p.hundreds, "hundred")}, ${plural(p.tens, "ten")} and ${plural(p.ones, "one")}.`;
+    case "angle":
+      return `An angle${p.label ? ` marked ${p.label}` : ""}.`;
+    case "shape":
+      return `A ${p.points.length}-sided shape${p.sideLabels?.length ? ` with sides marked ${p.sideLabels.filter(Boolean).join(", ")}` : ""}.`;
+    case "grid":
+      return `A grid ${p.columns} squares wide and ${p.rows} high${p.points?.length ? `, with ${p.points.map((q) => q.label).join(", ")} marked` : ""}${p.cells?.length ? `, with ${plural(p.cells.length, "square")} shaded` : ""}.`;
+    case "line_graph":
+      return `Line graph, ${p.title}: ${p.points.map((q) => `${q.label} ${q.value}`).join(", ")}.`;
+    case "scale":
+      return `A kitchen scale marked in ${p.unit} up to ${p.max}.`;
+    case "jug":
+      return `A measuring jug marked in ${p.unit} up to ${p.max}, with some water in it.`;
+    case "solid":
+      return `A ${p.shape.replace(/_/g, " ")}.`;
+    case "cubes":
+      return `A block made of small cubes, ${p.length} long, ${p.width} wide and ${p.height} high.`;
   }
 }
 
@@ -113,6 +174,39 @@ export function pictureProblems(p: Picture): string[] {
       break;
     case "blocks":
       if (!(p.hundreds <= 9 && p.tens <= 9 && p.ones <= 9)) out.push("too many blocks");
+      break;
+    case "angle":
+      if (!(p.degrees > 0 && p.degrees <= 360)) out.push("angle out of range");
+      break;
+    case "shape":
+      if (p.points.length < 3) out.push("shape needs 3 or more corners");
+      if (p.points.some(([x, y]) => !(x >= 0 && x <= 12 && y >= 0 && y <= 8))) out.push("corner off the 12 × 8 grid");
+      if (p.sideLabels && p.sideLabels.length > p.points.length) out.push("more side labels than sides");
+      break;
+    case "grid":
+      if (!(p.columns >= 1 && p.columns <= 12 && p.rows >= 1 && p.rows <= 10)) out.push("grid too big");
+      if (p.axes && p.map) out.push("grid can't be both axes and map");
+      for (const q of p.points ?? [])
+        if (!(q.x >= 0 && q.y >= 0 && (p.map ? q.x < p.columns && q.y < p.rows : q.x <= p.columns && q.y <= p.rows)))
+          out.push(`point ${q.label} off the grid`);
+      for (const [x, y] of p.cells ?? []) if (!(x >= 0 && y >= 0 && x < p.columns && y < p.rows)) out.push("cell off the grid");
+      break;
+    case "line_graph":
+      if (p.points.length < 2 || p.points.length > 8) out.push("needs 2 to 8 points");
+      break;
+    case "scale":
+    case "jug":
+      if (!(
+        p.value >= 0 &&
+        p.value <= p.max &&
+        p.step > 0 &&
+        p.max / p.step <= 20 &&
+        Number.isInteger(Math.round((p.max / p.step) * 1e6) / 1e6)
+      ))
+        out.push("bad scale");
+      break;
+    case "cubes":
+      if (![p.length, p.width, p.height].every((n) => whole(n) && n >= 1 && n <= 6)) out.push("cubes need 1 to 6 each way");
       break;
   }
   return out;

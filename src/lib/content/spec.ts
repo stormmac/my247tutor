@@ -3,7 +3,7 @@
  * which tree.ts fills in from `n` (see the id scheme there).
  */
 import type { Picture } from "./picture";
-import type { ContentQuestion, Difficulty, QuestionType } from "./types";
+import type { ContentQuestion, Difficulty, Passage, QuestionType } from "./types";
 
 export type QuestionSpec = Omit<ContentQuestion, "id" | "subtopic_id" | "points" | "difficulty"> & {
   n: number;
@@ -48,6 +48,11 @@ export function ordering(n: number, question_text: string, inOrder: string[], ex
 /** Adds a picture to a question: `pic({ kind: "clock", hour: 3, minute: 30 }, choice(...))`. */
 export function pic(picture: Picture, q: QuestionSpec): QuestionSpec {
   return { ...q, picture };
+}
+
+/** Adds a reading passage to a question. Several questions can share one passage. */
+export function read(passage: Passage, q: QuestionSpec): QuestionSpec {
+  return { ...q, passage };
 }
 
 /**

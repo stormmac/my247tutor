@@ -59,7 +59,7 @@ describe("content tree", () => {
   it("covers Years 3 to 6 in both subjects", () => {
     expect(yearsWithContent("maths")).toEqual([3, 4, 5, 6]);
     expect(yearsWithContent("english")).toEqual([3, 4, 5, 6]);
-    expect(topicsFor("maths", 4).map((t) => t.sort_order)).toEqual([1, 2, 3]);
+    expect(topicsFor("maths", 4).map((t) => t.sort_order)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
   it("uses all six question types, with answers that point at real options", () => {
@@ -76,7 +76,7 @@ describe("content tree", () => {
   });
 
   it("finds the full path to a subtopic", () => {
-    const path = subtopicPath(SUBTOPICS.find((s) => s.title === "Angles")!.id)!;
+    const path = subtopicPath(SUBTOPICS.find((s) => s.id.endsWith("000000060301"))!.id)!;
     expect([path.country.code, path.state.code, path.subject.name, path.year.name, path.topic.title]).toEqual([
       "AU",
       "NSW",
@@ -170,20 +170,26 @@ describe("SQL export", () => {
 describe("question bank", () => {
   const LEVELS = ["very_easy", "easy", "medium", "hard", "very_hard"] as const;
 
-  it("gives every Year 3 Maths standard 15 questions, three at each level", () => {
-    const year3 = topicsFor("maths", 3).flatMap((t) => subtopicsOf(t.id));
-    const stage2 = OUTCOMES.filter((o) => o.subject === "maths" && o.stage === 2);
-    expect(stage2.length).toBe(11);
-    for (const outcome of stage2) {
-      const questions = year3.filter((s) => s.outcome_code === outcome.code).flatMap((s) => questionsOf(s.id));
-      expect(questions, outcome.code).toHaveLength(15);
-      for (const level of LEVELS)
-        expect(
-          questions.filter((q) => q.difficulty === level),
-          `${outcome.code} ${level}`,
-        ).toHaveLength(3);
-    }
-  });
+  // Speaking, reading aloud and handwriting can't be marked by a quiz, so they have no question sets.
+  const NOT_QUIZZED = /-(OLC|REFLU|HANDW)-/;
+
+  for (const subject of ["maths", "english"] as const)
+    for (const year of [3, 4, 5, 6] as const)
+      it(`gives every Year ${year} ${subject} standard 15 questions, three at each level`, () => {
+        const subtopics = topicsFor(subject, year).flatMap((t) => subtopicsOf(t.id));
+        const stage = year <= 4 ? 2 : 3;
+        const outcomes = OUTCOMES.filter((o) => o.subject === subject && o.stage === stage && !NOT_QUIZZED.test(o.code));
+        expect(outcomes.length).toBe({ maths: { 2: 20, 3: 21 }, english: { 2: 7, 3: 6 } }[subject][stage]);
+        for (const outcome of outcomes) {
+          const questions = subtopics.filter((s) => s.outcome_code === outcome.code).flatMap((s) => questionsOf(s.id));
+          expect(questions, outcome.code).toHaveLength(15);
+          for (const level of LEVELS)
+            expect(
+              questions.filter((q) => q.difficulty === level),
+              `${outcome.code} ${level}`,
+            ).toHaveLength(3);
+        }
+      });
 
   it("only names standards that exist", () => {
     for (const s of SUBTOPICS) if (s.outcome_code) expect(OUTCOMES.map((o) => o.code)).toContain(s.outcome_code);
@@ -203,7 +209,9 @@ describe("question bank", () => {
       const text = q.question_text;
       if (!/^[\d\s.+−×÷=_?]+$/.test(text) || !text.includes("=")) continue;
       const [left, right] = text.split("=").map((side) => side.trim());
-      const answers = Array.isArray(q.correct_answer) ? q.correct_answer : [q.correct_answer];
+      const answers = (Array.isArray(q.correct_answer) ? q.correct_answer : [q.correct_answer]).map((a) =>
+        a.replace(/(\d) (?=\d{3}\b)/g, "$1"),
+      );
       if (q.question_type === "true_false") expect(String(evaluate(left) === evaluate(right)), text).toBe(q.correct_answer);
       else if (right === "?") expect(Number(answers[0]), text).toBeCloseTo(evaluate(left), 9);
       else {

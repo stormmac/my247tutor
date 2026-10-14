@@ -915,3 +915,9 @@ main {
 .admin-picture .picture {
   margin: 6px 0;
 }
+.pic-block-dark {
+  fill: var(--brand);
+  fill-opacity: 0.55;
+  stroke: var(--text);
+  stroke-width: 1;
+}
