@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Suni } from "@/components/Suni";
-import { useProfile } from "@/components/useProfile";
-import { newProfile, pickNextSkill, skillState, type LearnerProfile } from "@/lib/learner/model";
+import { switchChild, useChildren, useProfile } from "@/components/useProfile";
+import { MAX_CHILDREN, newProfile, pickNextSkill, skillState, type LearnerProfile } from "@/lib/learner/model";
 import { skillsFor } from "@/lib/curriculum/skills";
 import type { Subject, YearLevel } from "@/lib/curriculum/types";
 
@@ -82,34 +82,56 @@ function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; sub
 
 function Setup({ onCreate }: { onCreate: (name: string, year: YearLevel) => void }) {
   const [name, setName] = useState("");
-  const [year, setYear] = useState<YearLevel>(3);
+  // No year is picked for them: the starting check is set from it, so a grown-up has to choose.
+  const [year, setYear] = useState<YearLevel | null>(null);
+  const { children } = useChildren();
+  const ready = name.trim() !== "" && year !== null;
   return (
     <form
       className="card narrow stack"
       onSubmit={(e) => {
         e.preventDefault();
-        if (name.trim()) onCreate(name.trim().slice(0, 20), year);
+        if (ready) onCreate(name.trim().slice(0, 20), year);
       }}
     >
-      <h1>Let's get started</h1>
-      <p className="muted">A grown-up should help with this step. We only need a first name or nickname.</p>
+      <h1>{children.length ? "Add a child" : "Let's get started"}</h1>
+      <p className="muted">
+        A grown-up should help with this step. We only need a first name or nickname and their school year.
+        {children.length > 0 && ` You can have up to ${MAX_CHILDREN} children.`}
+      </p>
       <div>
         <label htmlFor="name">First name or nickname</label>
         <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={20} autoComplete="off" />
       </div>
-      <div>
-        <label htmlFor="year">School year</label>
-        <select id="year" value={year} onChange={(e) => setYear(Number(e.target.value) as YearLevel)}>
-          {[3, 4, 5, 6].map((y) => (
-            <option key={y} value={y}>
+      <fieldset className="year-picker">
+        <legend>What year are they in at school now?</legend>
+        <div className="tabs">
+          {([3, 4, 5, 6] as const).map((y) => (
+            <button
+              key={y}
+              type="button"
+              className={`tab${year === y ? " active" : ""}`}
+              aria-pressed={year === y}
+              onClick={() => setYear(y)}
+            >
               Year {y}
-            </option>
+            </button>
           ))}
-        </select>
-      </div>
-      <button className="btn" disabled={!name.trim()}>
+        </div>
+        <p className="muted small" style={{ margin: "8px 0 0" }}>
+          {year === null
+            ? "Their first check starts two years below this, then moves up to find their level."
+            : `Their first check starts at Year ${Math.max(3, year - 2)} and moves up to find their level.`}
+        </p>
+      </fieldset>
+      <button className="btn" disabled={!ready}>
         Continue
       </button>
+      {children.length > 0 && (
+        <button type="button" className="btn secondary" onClick={() => children[0].id && switchChild(children[0].id)}>
+          Cancel
+        </button>
+      )}
     </form>
   );
 }

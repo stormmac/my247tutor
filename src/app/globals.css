@@ -99,8 +99,11 @@ p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
-  gap: 12px;
+  min-height: 60px;
+  gap: 4px 12px;
+  /* On a phone the links drop under the logo rather than running off the screen. */
+  flex-wrap: wrap;
+  padding-block: 8px;
 }
 .logo {
   font-weight: 800;
@@ -131,8 +134,9 @@ p {
 }
 @media (max-width: 420px) {
   .nav {
-    gap: 12px;
+    gap: 6px 12px;
     font-size: 0.9rem;
+    flex-wrap: wrap;
   }
   /* The trial pill already leads to sign-up and sign-in. */
   .nav .trial-pill ~ .nav-signin {
@@ -963,4 +967,33 @@ ul.tight {
   fill-opacity: 0.55;
   stroke: var(--text);
   stroke-width: 1;
+}
+
+/* Which child is learning, in the top bar. */
+.child-switcher {
+  font: inherit;
+  font-size: 0.9rem;
+  min-width: 72px;
+  max-width: 130px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  text-overflow: ellipsis;
+}
+@media (max-width: 420px) {
+  .child-switcher {
+    max-width: 110px;
+  }
+}
+.year-picker {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.year-picker legend {
+  font-weight: 700;
+  margin-bottom: 8px;
+  padding: 0;
 }

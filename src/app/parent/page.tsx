@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ChangePassword } from "@/components/ChangePassword";
 import { useAccount } from "@/components/useAccount";
-import { useProfile } from "@/components/useProfile";
+import { ChildTabs } from "@/components/ChildSwitcher";
+import { removeCurrentChild, useProfile } from "@/components/useProfile";
 import { getOutcome } from "@/lib/curriculum/outcomes";
 import { getSkill, skillsFor } from "@/lib/curriculum/skills";
 import type { Skill, Subject } from "@/lib/curriculum/types";
@@ -31,9 +32,10 @@ export default function ParentPage() {
   if (!unlocked && (!account.user || account.user.role === "student")) return <ParentGate onPass={() => setUnlocked(true)} />;
   if (!profile) {
     return (
-      <div className="card narrow">
+      <div className="card narrow stack">
+        <ChildTabs />
         <h1>No learner yet</h1>
-        <p>Set up your child's learner profile to start.</p>
+        <p>Set up your child's learner profile to start. You can add up to three children.</p>
         <Link className="btn" href="/learn">
           Set up
         </Link>
@@ -46,6 +48,7 @@ export default function ParentPage() {
 
   return (
     <div className="stack">
+      <ChildTabs />
       <div className="row spread">
         <div>
           <h1>{profile.name}'s progress</h1>
@@ -174,7 +177,7 @@ export default function ParentPage() {
           <button
             className="btn secondary small"
             onClick={() => {
-              if (confirm(`Delete all of ${profile.name}'s progress?`)) setProfile(null);
+              if (confirm(`Delete all of ${profile.name}'s progress?`)) removeCurrentChild();
             }}
           >
             Delete learner
