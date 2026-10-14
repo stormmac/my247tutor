@@ -1,14 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
   answerCheck,
+  buildBlendPractice,
   buildLesson,
+  buildSightLesson,
   CHECK_WORDS,
+  currentSightLevel,
   currentUnit,
   formatReadingAge,
   isOpen,
+  isSightOpen,
   newReading,
+  openUnits,
+  readingOf,
   readingAge,
   readWell,
+  recordBlending,
   recordCheck,
   recordLesson,
   setEnrolled,
@@ -16,6 +23,7 @@ import {
   startingUnitIndex,
 } from "../phonics/progress";
 import { graphemesOf, soundFor, soundsUpTo, UNITS } from "../phonics/sequence";
+import { SIGHT_LEVELS } from "../phonics/sightWords";
 
 /** A repeatable random number generator, so lessons come out the same each run. */
 function seeded(seed: number) {
@@ -136,5 +144,69 @@ describe("Learn to Read lessons", () => {
     expect(readWell("The cat sat on a mat.", "the cat sat on the mat")).toBe(true);
     expect(readWell("The cat sat on a mat.", "cat")).toBe(false);
     expect(readWell("The cat sat on a mat.", "")).toBe(false);
+  });
+});
+
+describe("sight words", () => {
+  it("has 8 different words a level, each with one gap in its sentence", () => {
+    const all = SIGHT_LEVELS.flatMap((l) => l.words.map((w) => w.word.toLowerCase()));
+    expect(new Set(all).size).toBe(all.length);
+    for (const level of SIGHT_LEVELS) {
+      expect(level.words).toHaveLength(8);
+      for (const w of level.words) expect(w.gap.split("___"), `${level.id}: ${w.word}`).toHaveLength(2);
+    }
+  });
+
+  it("meets the words, asks 8 questions about them, then reads a sentence", () => {
+    const level = SIGHT_LEVELS[2];
+    const words = level.words.map((w) => w.word);
+    const steps = buildSightLesson(level.id, seeded(3));
+    expect(steps[0]).toEqual({ kind: "meetWords", words });
+    expect(steps.at(-1)).toEqual({ kind: "read", sentence: level.sentence });
+    const questions = steps.slice(1, -1);
+    expect(questions.map((q) => q.kind)).toEqual(["listen", "listen", "listen", "listen", "gap", "gap", "gap", "gap"]);
+    const asked = new Set<string>();
+    for (const q of questions) {
+      if (q.kind !== "listen" && q.kind !== "gap") throw new Error(q.kind);
+      const word = q.kind === "listen" ? q.word.word : q.word;
+      expect(words).toContain(word);
+      expect(q.options).toContain(word);
+      expect(new Set(q.options).size).toBe(4);
+      asked.add(word);
+    }
+    // Every word in the level is asked once.
+    expect(asked.size).toBe(8);
+  });
+
+  it("opens each level once the one before is done, and starts at the check's level", () => {
+    let r = { ...newReading(), enrolled: true };
+    expect(currentSightLevel(r)?.id).toBe("sight-1");
+    expect(isSightOpen(r, "sight-2")).toBe(false);
+    r = recordLesson(r, "sight-1", 8, 8);
+    expect(currentSightLevel(r)?.id).toBe("sight-2");
+    expect(isSightOpen(r, "sight-2")).toBe(true);
+    // A reading age of 6.5 is 60% of the way from 5 to 7.5, so the first 4 of 8 levels count as done.
+    const checked = recordCheck(newReading(), 9);
+    expect(currentSightLevel(checked)?.id).toBe("sight-5");
+  });
+});
+
+describe("Sound It Out", () => {
+  it("asks 8 words from the sounds open so far, then reads a sentence", () => {
+    const r = recordLesson({ ...newReading(), enrolled: true }, "satp", 8, 8);
+    expect(openUnits(r).map((u) => u.id)).toEqual(["satp", "inmd"]);
+    const words = new Set([...UNITS[0].words, ...UNITS[1].words].map((w) => w.word));
+    const steps = buildBlendPractice(r, seeded(5));
+    expect(steps).toHaveLength(9);
+    for (const q of steps.slice(0, -1)) {
+      if (q.kind !== "picture" && q.kind !== "listen") throw new Error(q.kind);
+      expect(words.has(q.word.word)).toBe(true);
+    }
+    expect([UNITS[0].sentence, UNITS[1].sentence]).toContain((steps.at(-1) as { sentence: string }).sentence);
+  });
+
+  it("adds up practice, and old profiles start with none", () => {
+    const r = recordBlending(recordBlending(readingOf({ reading: { enrolled: true } }), 6, 8), 8, 8);
+    expect(r.blending).toEqual({ sessions: 2, right: 14, asked: 16 });
   });
 });

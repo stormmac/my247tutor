@@ -94,6 +94,6 @@ describe("Learn to Read for centre students", () => {
 
   it("shows reading age in the class list", () => {
     const profile = newProfile("Mia", 3);
-    expect(summarise(profile).reading).toEqual({ age: null, enrolled: false, unitsDone: 0 });
+    expect(summarise(profile).reading).toEqual({ age: null, enrolled: false, unitsDone: 0, sightLevelsDone: 0 });
   });
 });

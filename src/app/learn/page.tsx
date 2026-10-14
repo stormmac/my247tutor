@@ -7,7 +7,8 @@ import { switchChild, useChildren, useProfile } from "@/components/useProfile";
 import { MAX_CHILDREN, newProfile, pickNextSkill, skillState, type LearnerProfile } from "@/lib/learner/model";
 import { skillsFor } from "@/lib/curriculum/skills";
 import type { Subject, YearLevel } from "@/lib/curriculum/types";
-import { currentUnit, readingOf, unitsDone } from "@/lib/phonics/progress";
+import { currentSightLevel, currentUnit, readingOf, sightLevelsDone, unitsDone } from "@/lib/phonics/progress";
+import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
 import { UNITS } from "@/lib/phonics/sequence";
 
 export default function LearnPage() {
@@ -57,28 +58,39 @@ function ReadingCard({ profile }: { profile: LearnerProfile }) {
   if (reading.enrolled) {
     const next = currentUnit(reading);
     const done = unitsDone(reading);
+    const nextSight = currentSightLevel(reading);
+    const sightDone = sightLevelsDone(reading);
     return (
       <div className="card stack reading-card">
         <div className="row spread">
           <h2 style={{ margin: 0 }}>📖 Learn to Read</h2>
           <span className="pill good">
-            {done} of {UNITS.length} sounds
+            {done} of {UNITS.length} sounds · {sightDone} of {SIGHT_LEVELS.length} word levels
           </span>
         </div>
-        <div className="progress" aria-label={`${done} of ${UNITS.length} sound groups done`}>
-          <div style={{ width: `${(done / UNITS.length) * 100}%` }} />
+        <div className="progress" aria-label={`${done + sightDone} of ${UNITS.length + SIGHT_LEVELS.length} parts done`}>
+          <div style={{ width: `${((done + sightDone) / (UNITS.length + SIGHT_LEVELS.length)) * 100}%` }} />
         </div>
         <p className="muted" style={{ margin: 0 }}>
-          {next
-            ? `Next sounds: ${next.title.replace(/_/g, "–")}`
-            : "You've learnt every sound! Do the reading check again to see how far you've come."}
+          {next || nextSight
+            ? [next && `Next sounds: ${next.title.replace(/_/g, "–")}.`, nextSight && `Next sight words: ${nextSight.title}.`]
+                .filter(Boolean)
+                .join(" ")
+            : "You've learnt every sound and sight word! Do the reading check again to see how far you've come."}
         </p>
         <div className="row">
-          <Link href={next ? `/read/${next.id}` : "/read/check"} className="btn">
-            {next ? "Practise sounds" : "Reading check"}
-          </Link>
+          {next || !nextSight ? (
+            <Link href={next ? `/read/${next.id}` : "/read/check"} className="btn">
+              {next ? "Practise sounds" : "Reading check"}
+            </Link>
+          ) : null}
+          {nextSight && (
+            <Link href={`/read/words/${nextSight.id}`} className={next ? "btn secondary" : "btn"}>
+              Sight words
+            </Link>
+          )}
           <Link href="/read" className="btn secondary">
-            All sounds
+            All of Learn to Read
           </Link>
         </div>
       </div>

@@ -1317,3 +1317,18 @@ ul.tight {
   color: var(--warn-text);
   font-weight: 700;
 }
+
+/* Learn to Read: sight words. */
+.unit-words {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.word-card .sound-grapheme {
+  font-size: 2.2rem;
+}
+.gap-sentence .gap {
+  display: inline-block;
+  min-width: 3.5em;
+  border-bottom: 4px solid var(--brand);
+  color: var(--brand);
+}

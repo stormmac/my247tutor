@@ -1,7 +1,7 @@
 import type { YearLevel } from "../curriculum/types";
 import type { LearnerProfile } from "./model";
 import { subjectLevel, type Standing } from "./report";
-import { readingOf, unitsDone } from "../phonics/progress";
+import { readingOf, sightLevelsDone, unitsDone } from "../phonics/progress";
 
 /** One line of a class list: how a student is going, at a glance. */
 export interface StudentSummary {
@@ -13,7 +13,7 @@ export interface StudentSummary {
   maths: { workingAtYear: YearLevel; standing: Standing };
   english: { workingAtYear: YearLevel; standing: Standing };
   /** Reading age from the reading check (null before it), and Learn to Read progress. */
-  reading: { age: number | null; enrolled: boolean; unitsDone: number };
+  reading: { age: number | null; enrolled: boolean; unitsDone: number; sightLevelsDone: number };
 }
 
 export function summarise(profile: LearnerProfile, now = Date.now()): StudentSummary {
@@ -31,7 +31,7 @@ export function summarise(profile: LearnerProfile, now = Date.now()): StudentSum
     english: level("english"),
     reading: (() => {
       const r = readingOf(profile);
-      return { age: r.age, enrolled: r.enrolled, unitsDone: unitsDone(r) };
+      return { age: r.age, enrolled: r.enrolled, unitsDone: unitsDone(r), sightLevelsDone: sightLevelsDone(r) };
     })(),
   };
 }
