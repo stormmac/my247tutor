@@ -4,6 +4,7 @@ import { BILLING_SQL } from "./billingSchema";
 import { CENTRE_SQL, CLASS_TIMES_SQL } from "./centreSchema";
 import { CHILD_SQL } from "./childSchema";
 import { INVITE_SQL } from "./inviteSchema";
+import { PRAISE_SQL } from "./praiseSchema";
 import { connectionString, databaseUrl } from "./dburl";
 
 let pool: Pool | null = null;
@@ -20,9 +21,9 @@ export function db(): Pool {
 
 let schema: Promise<Pool> | null = null;
 
-const LATER_SQL = `${BILLING_SQL}\n${INVITE_SQL}\n${CHILD_SQL}\n${CENTRE_SQL}\n${CLASS_TIMES_SQL}`;
+const LATER_SQL = `${BILLING_SQL}\n${INVITE_SQL}\n${CHILD_SQL}\n${CENTRE_SQL}\n${CLASS_TIMES_SQL}\n${PRAISE_SQL}`;
 
-/** The pool, once the card-payment columns, invite table, child sign-in columns, centre tables and class times exist. Tried again on the next call if it fails. */
+/** The pool, once the card-payment columns, invite table, child sign-in columns, centre tables, class times and praise phrases exist. Tried again on the next call if it fails. */
 export function ready(): Promise<Pool> {
   schema ??= db()
     .query(LATER_SQL)

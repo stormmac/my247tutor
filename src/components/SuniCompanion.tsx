@@ -25,6 +25,8 @@ interface SuniApi {
   say: (message: string) => void;
   bubble: string | null;
   setBubble: (message: string | null) => void;
+  /** Goes up each time Suni is asked to say something, so the same words twice are said twice. */
+  said: number;
 }
 
 const SuniContext = createContext<SuniApi | null>(null);
@@ -32,8 +34,12 @@ const SuniContext = createContext<SuniApi | null>(null);
 export function SuniProvider({ children }: { children: React.ReactNode }) {
   const [focus, setFocus] = useState<SuniFocus | null>(null);
   const [bubble, setBubble] = useState<string | null>(null);
-  const say = useCallback((message: string) => setBubble(message), []);
-  return <SuniContext.Provider value={{ focus, setFocus, say, bubble, setBubble }}>{children}</SuniContext.Provider>;
+  const [said, setSaid] = useState(0);
+  const say = useCallback((message: string) => {
+    setBubble(message);
+    setSaid((n) => n + 1);
+  }, []);
+  return <SuniContext.Provider value={{ focus, setFocus, say, bubble, setBubble, said }}>{children}</SuniContext.Provider>;
 }
 
 function useSuniApi(): SuniApi {
@@ -68,7 +74,7 @@ const HIDDEN_ON = ["/parent", "/login"];
 /** Suni flies over every page. Tap Suni to chat. */
 export function SuniCompanion() {
   const pathname = usePathname();
-  const { focus, bubble, setBubble } = useSuniApi();
+  const { focus, bubble, setBubble, said } = useSuniApi();
   const { profile, setProfile, loaded } = useProfile();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -101,7 +107,7 @@ export function SuniCompanion() {
   // Speech bubbles are said aloud too (browsers only allow it once the page has been tapped).
   useEffect(() => {
     if (bubble && !open) voice.say(bubble);
-  }, [bubble]);
+  }, [bubble, said]);
 
   // Say hello once, shortly after arriving.
   useEffect(() => {
