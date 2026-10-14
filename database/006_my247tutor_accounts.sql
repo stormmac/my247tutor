@@ -57,4 +57,11 @@ CREATE TABLE IF NOT EXISTS audit_log (
   at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Turn on row level security with no policies, so hosts that publish the public schema over an API
+-- (Supabase's Data API) can't read these tables. The app connects as the table owner, which RLS doesn't restrict.
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE learners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE login_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+
 COMMIT;
