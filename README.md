@@ -84,7 +84,8 @@ To switch accounts on:
 2. In Vercel → Settings → Environment Variables, set `DATABASE_URL`, `AUTH_SECRET`
    (`openssl rand -base64 32`) and `ADMIN_EMAILS` (your email). If Vercel's Supabase integration
    already set `POSTGRES_URL`, that is used when `DATABASE_URL` is missing.
-3. Run `DATABASE_URL=… npm run db:migrate` once to create the tables (`database/006_my247tutor_accounts.sql`).
+3. Run `DATABASE_URL=… npm run db:migrate` once to create the tables (`database/006_my247tutor_accounts.sql`
+   and `008_my247tutor_billing.sql`).
 4. Redeploy, then sign up with your admin email.
 
 When both `DATABASE_URL` and `AUTH_SECRET` are set:
@@ -96,8 +97,27 @@ When both `DATABASE_URL` and `AUTH_SECRET` are set:
   starts a new one. When the hour is up they're asked to sign up, and their progress comes with them.
 - The child's progress is saved to the parent's account and loads on any device. Progress already in
   the browser moves into the account on first sign-in. Signing out clears it from the device.
-- Admins see `/admin`: every account, change roles, turn accounts off (signs them out at once) and
-  reset passwords to a temporary one. Admin changes are recorded in `audit_log`.
+- Admins see `/admin`: every account, add accounts (with a temporary password to pass on), change
+  roles, give free access, turn accounts off (signs them out at once) and reset passwords to a
+  temporary one. Admin changes are recorded in `audit_log`.
+
+## Card payments (Stripe)
+
+Once accounts are on, setting these switches on payments: a parent's free trial carries on from the
+browser's free hour (or lasts an hour from sign-up), then they're asked to add a card at `/billing`.
+They change their card, see receipts or cancel in Stripe's customer portal. Admins and teachers never
+pay, and admins can give any parent free access. Accounts made before payments existed get free
+access automatically.
+
+1. In Stripe, add a product with a recurring price and copy its price ID (`price_…`).
+2. In Stripe, open Settings → Billing → Customer portal and save it, so parents can manage their card.
+3. In Stripe → Developers → Webhooks, add `https://<your site>/api/billing/webhook` with the events
+   `checkout.session.completed` and `customer.subscription.created`, `.updated` and `.deleted`.
+4. In Vercel, set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` and `STRIPE_WEBHOOK_SECRET` (the endpoint's
+   signing secret, `whsec_…`), then redeploy. `/admin` shows what's still missing.
+
+The payment columns (`database/008_my247tutor_billing.sql`) are added by `npm run db:migrate`, and by
+the app itself on first use. Use Stripe's test keys first and pay with card 4242 4242 4242 4242.
 
 Security:
 

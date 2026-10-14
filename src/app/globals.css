@@ -779,6 +779,11 @@ main {
   }
 }
 
+.admin-table .btn,
+.admin-table .pill {
+  white-space: nowrap;
+}
+
 /* Parents page results: on a phone each row becomes a small card. */
 @media (max-width: 600px) {
   .results-table thead {

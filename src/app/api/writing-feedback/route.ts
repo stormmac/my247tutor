@@ -1,3 +1,5 @@
+import type { NextRequest } from "next/server";
+import { paymentRequired } from "@/lib/billing/access";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { getSkill } from "@/lib/curriculum/skills";
@@ -13,7 +15,9 @@ const RequestSchema = z.object({
   text: z.string().min(1).max(8000),
 });
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const unpaid = await paymentRequired(request);
+  if (unpaid) return unpaid;
   const parsed = RequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
   const { skillId, taskIndex, yearLevel, text } = parsed.data;

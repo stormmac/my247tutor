@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccountMenu } from "@/components/AccountMenu";
+import { PaymentGate } from "@/components/PaymentGate";
 import { ProfileSync } from "@/components/ProfileSync";
 import { SuniCompanion, SuniProvider } from "@/components/SuniCompanion";
 import "./globals.css";
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </main>
           <SuniCompanion />
           <ProfileSync />
+          <PaymentGate />
         </SuniProvider>
       </body>
     </html>

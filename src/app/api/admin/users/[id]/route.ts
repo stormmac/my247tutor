@@ -1,8 +1,13 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
+import { ASSIGNABLE_ROLES } from "@/lib/auth/rules";
 import { requireUser, updateUser } from "@/lib/auth/users";
 
-const ChangeSchema = z.object({ role: z.enum(["parent", "teacher", "admin"]).optional(), isActive: z.boolean().optional() });
+const ChangeSchema = z.object({
+  role: z.enum(ASSIGNABLE_ROLES).optional(),
+  isActive: z.boolean().optional(),
+  freeAccess: z.boolean().optional(),
+});
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const result = await requireUser(request, "admin");

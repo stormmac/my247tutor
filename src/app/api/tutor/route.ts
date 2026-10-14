@@ -1,3 +1,5 @@
+import type { NextRequest } from "next/server";
+import { paymentRequired } from "@/lib/billing/access";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { buildContextPrompt, TutorContextSchema } from "@/lib/tutor/prompt";
@@ -27,7 +29,9 @@ function ndjson(events: AsyncIterable<TutorEvent> | TutorEvent[]): Response {
   return new Response(body, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" } });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const unpaid = await paymentRequired(request);
+  if (unpaid) return unpaid;
   const parsed = RequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
 
