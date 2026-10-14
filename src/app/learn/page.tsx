@@ -66,7 +66,7 @@ function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; sub
           ? next
             ? `Next up: ${next.skill.title}`
             : "You've mastered everything here!"
-          : "Start with a quick five-question check so we know where to begin."}
+          : "Start with a short check. It begins easy and gets harder, so we know where to begin."}
       </p>
       <div className="row">
         <Link href={`/learn/${subject}`} className="btn">

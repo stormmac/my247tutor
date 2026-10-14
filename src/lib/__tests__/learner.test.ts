@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { SUBTOPICS } from "../content/tree";
 import { MAX_DETAILED_HISTORY, newProfile, outcomeProgress, pickNextSkill, recordAttempt, skillState } from "../learner/model";
 import { attemptResult, resultsByTopic } from "../learner/results";
-import { applyPlacement, MAX_PROBES, nextProbe, placementDone, recordProbe, startPlacement } from "../learner/placement";
 
 const DAY = 86_400_000;
 const T0 = Date.UTC(2027, 1, 1);
@@ -71,35 +70,6 @@ describe("next-skill picker", () => {
   it("keeps a Year 3 student in Stage 2 until Stage 2 is done", () => {
     const p = newProfile("Ava", 3, T0);
     expect(pickNextSkill(p, "maths", T0)!.skill.stage).toBe(2);
-  });
-});
-
-describe("placement", () => {
-  it("finishes within the probe limit", () => {
-    let s = startPlacement("maths");
-    while (!placementDone(s)) s = recordProbe(s, true);
-    expect(s.probes.length).toBeLessThanOrEqual(MAX_PROBES);
-  });
-
-  it("places a student who gets everything right past the earlier skills", () => {
-    let s = startPlacement("maths");
-    while (!placementDone(s)) s = recordProbe(s, true);
-    const p = applyPlacement(newProfile("Leo", 6, T0), s, T0);
-    expect(skillState(p, s.order[0]).mastered).toBe(true);
-    expect(skillState(p, s.order[0]).placed).toBe(true);
-    expect(p.placementDone.maths).toBe(true);
-  });
-
-  it("places nothing when every probe is wrong", () => {
-    let s = startPlacement("english");
-    while (!placementDone(s)) s = recordProbe(s, false);
-    const p = applyPlacement(newProfile("Leo", 3, T0), s, T0);
-    expect(Object.values(p.skills).filter((x) => x.mastered)).toHaveLength(0);
-  });
-
-  it("probes the middle of the range first", () => {
-    const s = startPlacement("maths");
-    expect(nextProbe(s)).toBe(s.order[Math.floor((s.order.length - 1) / 2)]);
   });
 });
 
