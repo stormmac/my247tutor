@@ -1,32 +1,31 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { TutorContext } from "@/lib/tutor/prompt";
 
 type ChatMessage = { role: "user" | "assistant" | "notice"; content: string };
 
-interface Props {
-  context: TutorContext;
-  /** Called when the safety check spots a wellbeing concern, so the parent can be told. */
-  onWellbeingConcern: (studentMessage: string) => void;
-  greeting: string;
-}
+export type { ChatMessage };
 
-export function TutorChat({ context, onWellbeingConcern, greeting }: Props) {
+/**
+ * The conversation with Suni: sends the chat to /api/tutor and streams the reply in.
+ * Safety notices from the server appear as their own messages, and a wellbeing concern
+ * is passed to onWellbeingConcern so the parent dashboard can show it.
+ */
+export function useTutorChat(context: TutorContext | null, greeting: string, onWellbeingConcern: (studentMessage: string) => void) {
   const [messages, setMessages] = useState<ChatMessage[]>([{ role: "assistant", content: greeting }]);
-  const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const scroller = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  // A new topic (or a new learner) starts a fresh conversation.
+  const conversationKey = `${context?.studentName ?? ""}|${context?.skillId ?? ""}`;
+  const [currentKey, setCurrentKey] = useState(conversationKey);
+  if (conversationKey !== currentKey) {
+    setCurrentKey(conversationKey);
+    setMessages([{ role: "assistant", content: greeting }]);
+  }
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text || busy) return;
-    setInput("");
+  async function send(text: string) {
+    if (!text || busy || !context) return;
     setBusy(true);
 
     const history = [...messages, { role: "user" as const, content: text }];
@@ -80,29 +79,5 @@ export function TutorChat({ context, onWellbeingConcern, greeting }: Props) {
     }
   }
 
-  return (
-    <div className="card chat" aria-label="Tutor chat">
-      <header>Ask Wattle, your tutor</header>
-      <div className="messages" ref={scroller} aria-live="polite">
-        {messages.map((m, i) => (
-          <div key={i} className={`msg ${m.role}`}>
-            {m.content || (busy && i === messages.length - 1 ? "…" : "")}
-          </div>
-        ))}
-      </div>
-      <form onSubmit={send}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask for help…"
-          maxLength={1000}
-          aria-label="Message the tutor"
-        />
-        <button className="btn small" disabled={busy || !input.trim()}>
-          Send
-        </button>
-      </form>
-    </div>
-  );
+  return { messages, busy, send };
 }

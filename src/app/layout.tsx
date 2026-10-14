@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AccountMenu } from "@/components/AccountMenu";
+import { ProfileSync } from "@/components/ProfileSync";
+import { SuniCompanion, SuniProvider } from "@/components/SuniCompanion";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,20 +14,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en-AU">
       <body>
-        <div className="topbar">
-          <div className="container">
-            <Link href="/" className="logo">
-              my<span>247</span>tutor
-            </Link>
-            <nav className="nav">
-              <Link href="/learn">Learn</Link>
-              <Link href="/parent">Parents</Link>
-            </nav>
+        <SuniProvider>
+          <div className="topbar">
+            <div className="container">
+              <Link href="/" className="logo">
+                my<span>247</span>tutor
+              </Link>
+              <nav className="nav">
+                <Link href="/learn">Learn</Link>
+                <Link href="/parent">Parents</Link>
+                <AccountMenu />
+              </nav>
+            </div>
           </div>
-        </div>
-        <main>
-          <div className="container">{children}</div>
-        </main>
+          <main>
+            <div className="container">{children}</div>
+          </main>
+          <SuniCompanion />
+          <ProfileSync />
+        </SuniProvider>
       </body>
     </html>
   );

@@ -68,7 +68,57 @@ export function checkAnswer(answer: Answer, input: string): CheckResult {
       const index = Number(input);
       return { correct: Number.isInteger(index) && index === answer.index };
     }
+    case "text":
+      return { correct: answer.accepted.some((a) => textMatches(a, input)) };
+    case "multi": {
+      const given = parseIndexList(input);
+      if (!given.length) return { correct: false, feedback: "Choose at least one answer.", unreadable: true };
+      const want = [...answer.indices].sort((a, b) => a - b);
+      const got = [...new Set(given)].sort((a, b) => a - b);
+      if (got.length === want.length && got.every((v, i) => v === want[i])) return { correct: true };
+      const allRight = got.every((v) => want.includes(v));
+      return { correct: false, feedback: allRight ? "Those are right, but there's at least one more." : undefined };
+    }
+    case "order": {
+      const given = parseIndexList(input);
+      return { correct: given.length === answer.order.length && given.every((v, i) => v === answer.order[i]) };
+    }
   }
+}
+
+/** "0,2,3" from a multi-select or ordering answer. */
+function parseIndexList(input: string): number[] {
+  return input
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map(Number)
+    .filter(Number.isInteger);
+}
+
+function normaliseText(s: string): string {
+  return s
+    .trim()
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+/**
+ * Typed answers are forgiving about case, spacing, curly apostrophes and a final full stop.
+ * Numbers are compared as numbers, and a unit after them is ignored ("115°", "60 minutes").
+ */
+export function textMatches(accepted: string, input: string): boolean {
+  const want = normaliseText(accepted);
+  const got = normaliseText(input);
+  if (want === got) return true;
+  const expected = parseNumber(want);
+  if (expected !== null) {
+    const value = parseNumber(got.replace(/\s*(°|%|[a-z]+)\.?$/, ""));
+    return value !== null && Math.abs(value - expected) < EPS;
+  }
+  const strip = (t: string) => t.replace(/[.!?]+$/, "");
+  return /\w/.test(want) && strip(want) === strip(got);
 }
 
 /** The correct answer as the student would type or see it. */
@@ -82,5 +132,11 @@ export function answerText(answer: Answer, choices?: string[]): string {
       return answer.remainder ? `${answer.quotient} r ${answer.remainder}` : String(answer.quotient);
     case "choice":
       return choices?.[answer.index] ?? String(answer.index);
+    case "text":
+      return answer.accepted[0];
+    case "multi":
+      return answer.indices.map((i) => choices?.[i] ?? String(i)).join(", ");
+    case "order":
+      return answer.order.map((i) => choices?.[i] ?? String(i)).join(", then ");
   }
 }

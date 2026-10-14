@@ -14,24 +14,44 @@ interface Props {
   onNext: () => void;
   onHintsChange?: (hintsShown: number) => void;
   onAnsweredChange?: (answered: boolean) => void;
+  /** Called after a wrong answer when the student still has another try. */
+  onTryAgain?: () => void;
 }
 
 const MAX_TRIES = 2;
 
-export function QuestionView({ question, placement, onDone, onNext, onHintsChange, onAnsweredChange }: Props) {
+export function QuestionView({ question, placement, onDone, onNext, onHintsChange, onAnsweredChange, onTryAgain }: Props) {
   const [input, setInput] = useState("");
   const [selected, setSelected] = useState<number | null>(null);
+  const [picked, setPicked] = useState<number[]>([]);
+  // Ordering questions: the student's current arrangement, as indices into choices.
+  const [arrangement, setArrangement] = useState<number[]>(() => (question.choices ?? []).map((_, i) => i));
   const [tries, setTries] = useState(0);
   const [hintsShown, setHintsShown] = useState(0);
   const [result, setResult] = useState<{ correct: boolean; feedback?: string } | null>(null);
   const [finished, setFinished] = useState(false);
 
-  const isChoice = question.answer.kind === "choice";
+  const kind = question.answer.kind;
+
+  function rawAnswer(): string {
+    if (kind === "choice") return selected === null ? "" : String(selected);
+    if (kind === "multi") return picked.join(",");
+    if (kind === "order") return arrangement.join(",");
+    return input;
+  }
+
+  function move(position: number, by: -1 | 1) {
+    setArrangement((a) => {
+      const next = [...a];
+      [next[position], next[position + by]] = [next[position + by], next[position]];
+      return next;
+    });
+  }
 
   function submit(e?: React.FormEvent) {
     e?.preventDefault();
     if (finished) return;
-    const raw = isChoice ? (selected === null ? "" : String(selected)) : input;
+    const raw = rawAnswer();
     const check = checkAnswer(question.answer, raw);
     if (check.unreadable) return setResult(check);
 
@@ -43,7 +63,7 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
       setFinished(true);
       onAnsweredChange?.(true);
       onDone({ correct: check.correct, hintsUsed: hintsShown, firstTry: nextTries === 1 });
-    }
+    } else onTryAgain?.();
   }
 
   function showHint() {
@@ -63,7 +83,7 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
       <div className="question">{question.prompt}</div>
 
       <form onSubmit={submit}>
-        {isChoice ? (
+        {kind === "choice" && (
           <div className="choices" role="radiogroup">
             {question.choices!.map((c, i) => {
               const state = finished
@@ -90,11 +110,68 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
               );
             })}
           </div>
-        ) : (
+        )}
+        {kind === "multi" && (
+          <div className="choices" role="group" aria-label="Choose all that apply">
+            {question.choices!.map((c, i) => {
+              const on = picked.includes(i);
+              const right = (question.answer as { indices: number[] }).indices.includes(i);
+              const state = finished ? (right ? "right" : on ? "wrong" : "") : on ? "selected" : "";
+              return (
+                <button
+                  type="button"
+                  key={c}
+                  role="checkbox"
+                  aria-checked={on}
+                  className={`choice ${state}`}
+                  disabled={finished}
+                  onClick={() => setPicked((p) => (on ? p.filter((x) => x !== i) : [...p, i]))}
+                >
+                  <span aria-hidden="true">{on ? "☑" : "☐"}</span> {c}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {kind === "order" && (
+          <ol className="ordering" aria-label="Put these in order">
+            {arrangement.map((choiceIndex, position) => (
+              <li
+                key={choiceIndex}
+                className={`choice ${finished ? (choiceIndex === (question.answer as { order: number[] }).order[position] ? "right" : "wrong") : ""}`}
+              >
+                <span>{question.choices![choiceIndex]}</span>
+                {!finished && (
+                  <span className="order-buttons">
+                    <button
+                      type="button"
+                      className="btn secondary small"
+                      disabled={position === 0}
+                      onClick={() => move(position, -1)}
+                      aria-label={`Move ${question.choices![choiceIndex]} up`}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="btn secondary small"
+                      disabled={position === arrangement.length - 1}
+                      onClick={() => move(position, 1)}
+                      aria-label={`Move ${question.choices![choiceIndex]} down`}
+                    >
+                      ↓
+                    </button>
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+        {kind !== "choice" && kind !== "multi" && kind !== "order" && (
           <div className="answer-row">
             <input
               type="text"
-              inputMode="decimal"
+              inputMode={kind === "text" ? "text" : "decimal"}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={finished}

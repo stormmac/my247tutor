@@ -1,21 +1,30 @@
 import Link from "next/link";
+import { Suni } from "@/components/Suni";
 
 export default function Home() {
   return (
     <div className="stack">
-      <section className="hero">
-        <h1>A patient tutor for every NSW student, any time.</h1>
-        <p>
-          Maths and English practice for Years 3 to 6, built on the NSW syllabus. my247tutor finds what your child is ready to learn, guides
-          them with hints instead of answers, and shows you progress against NESA outcomes.
-        </p>
-        <div className="row">
-          <Link href="/learn" className="btn">
-            Start learning
-          </Link>
-          <Link href="/parent" className="btn secondary">
-            Parent dashboard
-          </Link>
+      <section className="hero hero-with-suni">
+        <div>
+          <h1>A patient tutor for every NSW student, any time.</h1>
+          <p>
+            Maths and English practice for Years 3 to 6, built on the NSW syllabus. my247tutor finds what your child is ready to learn,
+            guides them with hints instead of answers, and shows you progress against NESA outcomes.
+          </p>
+          <div className="row">
+            <Link href="/learn" className="btn">
+              Start learning
+            </Link>
+            <Link href="/parent" className="btn secondary">
+              Parent dashboard
+            </Link>
+          </div>
+        </div>
+        <div className="stack" style={{ alignItems: "center", gap: 4 }}>
+          <Suni size={200} wave />
+          <p className="small muted" style={{ margin: 0 }}>
+            Meet Suni, your robot bee tutor.
+          </p>
         </div>
       </section>
 

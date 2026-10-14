@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { TutorChat } from "@/components/TutorChat";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useSuniFocus } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { getOutcome } from "@/lib/curriculum/outcomes";
 import { SKILLS } from "@/lib/curriculum/skills";
@@ -13,13 +14,35 @@ import type { WritingFeedback } from "@/lib/tutor/claude";
 const LEVEL_LABEL = { beginning: "Beginning", developing: "Developing", secure: "Secure" } as const;
 
 export default function WritingPage() {
+  return (
+    <Suspense>
+      <Writing />
+    </Suspense>
+  );
+}
+
+function Writing() {
   const { profile, setProfile, loaded } = useProfile();
-  const [skillId, setSkillId] = useState<string | null>(null);
+  // A task chosen from the topic tree arrives as ?skill=…
+  const requested = useSearchParams().get("skill");
+  const [skillId, setSkillId] = useState<string | null>(() =>
+    SKILLS.some((s) => s.id === requested && s.practice === "writing") ? requested : null,
+  );
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<WritingFeedback | null>(null);
   const [wellbeing, setWellbeing] = useState<string | null>(null);
+  useSuniFocus(
+    profile && skillId
+      ? {
+          greeting: `Need ideas or stuck on a sentence, ${profile.name}? Ask me. I won't write it for you, but I'll help you get going.`,
+          context: { studentName: profile.name, yearLevel: profile.yearLevel, skillId, writingTask: WRITING_TASKS[skillId][0].prompt },
+          onWellbeingConcern: (message) =>
+            setProfile((p) => ({ ...p, wellbeingFlags: [...p.wellbeingFlags, { at: Date.now(), message }] })),
+        }
+      : null,
+  );
 
   if (!loaded) return null;
   if (!profile) {
@@ -173,13 +196,6 @@ export default function WritingPage() {
             </div>
           )}
         </div>
-        <TutorChat
-          greeting={`Need ideas or stuck on a sentence, ${profile.name}? Ask me. I won't write it for you, but I'll help you get going.`}
-          context={{ studentName: profile.name, yearLevel: profile.yearLevel, skillId, writingTask: task.prompt }}
-          onWellbeingConcern={(message) =>
-            setProfile((p) => ({ ...p, wellbeingFlags: [...p.wellbeingFlags, { at: Date.now(), message }] }))
-          }
-        />
       </div>
       <button
         className="btn secondary small"
