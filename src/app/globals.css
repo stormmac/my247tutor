@@ -1008,3 +1008,36 @@ ul.tight {
   padding: 16px;
   background: color-mix(in srgb, var(--bg, #faf7f0) 92%, transparent);
 }
+
+/* Suni's voice: the on/off switch in the chat header and the say-it-again button on each reply. */
+.suni-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.suni-voice-toggle,
+.msg-say {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+}
+.suni-voice-toggle {
+  padding: 6px;
+  border-radius: 999px;
+}
+.suni-voice-toggle[aria-pressed="false"] {
+  opacity: 0.6;
+}
+.msg-say {
+  vertical-align: middle;
+  margin-left: 6px;
+  padding: 2px;
+  opacity: 0.55;
+}
+.msg-say:hover,
+.suni-voice-toggle:hover {
+  opacity: 1;
+}
