@@ -18,6 +18,9 @@ const ACCOUNT_PUBLIC = [
   "/api/auth/signup",
   "/api/auth/signout",
   "/api/auth/me",
+  // The one-time link a new account gets by email to set its password.
+  "/set-password",
+  "/api/auth/set-password",
   // Stripe calls this; it proves itself with a signature instead.
   "/api/billing/webhook",
 ];

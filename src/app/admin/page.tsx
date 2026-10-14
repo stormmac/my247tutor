@@ -50,6 +50,8 @@ function Accounts() {
   const [users, setUsers] = useState<Row[] | null>(null);
   const [me, setMe] = useState<string | null>(null);
   const [billing, setBilling] = useState(false);
+  const [emailOn, setEmailOn] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -57,11 +59,12 @@ function Accounts() {
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/users");
-    const body = (await res.json().catch(() => ({}))) as { users?: Row[]; me?: string; billing?: boolean; error?: string };
+    const body = (await res.json().catch(() => ({}))) as { users?: Row[]; me?: string; billing?: boolean; email?: boolean; error?: string };
     if (!res.ok) return setError(body.error ?? "Couldn't load accounts.");
     setUsers(body.users ?? []);
     setMe(body.me ?? null);
     setBilling(Boolean(body.billing));
+    setEmailOn(Boolean(body.email));
   }, []);
 
   useEffect(() => {
@@ -81,11 +84,36 @@ function Accounts() {
   }
 
   async function reset(user: Row) {
+    setInviteLink(null);
     if (!confirm(`Reset ${user.email}'s password? They'll be signed out everywhere.`)) return;
     setError(null);
     const res = await fetch(`/api/admin/users/${user.id}/reset-password`, { method: "POST" });
     const body = (await res.json().catch(() => ({}))) as { password?: string; error?: string };
     if (res.ok) setNotice(`New temporary password for ${user.email}: ${body.password}. Pass it on privately; it won't be shown again.`);
+    else setError(body.error ?? "That didn't work.");
+  }
+
+  /** Shows what happened to an invite: emailed, or a link to pass on when email isn't working. */
+  function invited(r: Invite) {
+    setError(null);
+    if (r.emailed) {
+      setInviteLink(null);
+      setNotice(`Invite emailed to ${r.email}. They'll get a link to set their password.`);
+    } else {
+      setNotice(
+        r.emailError
+          ? `The email to ${r.email} didn't send (${r.emailError}). Send them this link to set their password instead. It works once, for 7 days.`
+          : `Email isn't set up yet, so send ${r.email} this link to set their password. It works once, for 7 days.`,
+      );
+      setInviteLink(r.link);
+    }
+  }
+
+  async function resend(user: Row) {
+    setNotice(null);
+    const res = await fetch(`/api/admin/users/${user.id}/invite`, { method: "POST" });
+    const body = (await res.json().catch(() => ({}))) as Invite & { error?: string };
+    if (res.ok) invited(body);
     else setError(body.error ?? "That didn't work.");
   }
 
@@ -126,19 +154,25 @@ function Accounts() {
       {adding && (
         <AddAccount
           onCancel={() => setAdding(false)}
-          onAdded={(email, password) => {
+          emailOn={emailOn}
+          onAdded={(r) => {
             setAdding(false);
-            setError(null);
-            setNotice(
-              `Account added for ${email}. Their temporary password is ${password}. Pass it on privately; it won't be shown again.`,
-            );
+            invited(r);
             void load();
           }}
         />
       )}
       {notice && (
-        <div className="feedback good" role="status">
+        <div className={`feedback ${inviteLink ? "warn" : "good"}`} role="status">
           {notice}
+          {inviteLink && (
+            <div className="row" style={{ marginTop: 8, flexWrap: "nowrap" }}>
+              <input readOnly value={inviteLink} aria-label="Set-password link" onFocus={(e) => e.target.select()} />
+              <button className="btn secondary small" onClick={() => void navigator.clipboard?.writeText(inviteLink)}>
+                Copy
+              </button>
+            </div>
+          )}
         </div>
       )}
       {error && (
@@ -173,6 +207,7 @@ function Accounts() {
                       </span>
                     )}
                     <div className="small muted">{u.email}</div>
+                    {!u.lastLoginAt && !self && <div className="small muted">Hasn&apos;t set a password yet</div>}
                   </td>
                   <td>
                     <select
@@ -220,6 +255,11 @@ function Accounts() {
                         <button className="btn secondary small" onClick={() => void reset(u)}>
                           Reset password
                         </button>
+                        {!u.lastLoginAt && (
+                          <button className="btn secondary small" onClick={() => void resend(u)}>
+                            Send invite again
+                          </button>
+                        )}
                         {u.plan !== "staff" && (
                           <button className="btn secondary small" onClick={() => void change(u, { freeAccess: !u.freeAccess })}>
                             {u.freeAccess ? "End free access" : "Give free access"}
@@ -239,8 +279,15 @@ function Accounts() {
   );
 }
 
-/** An admin adds a parent, teacher or admin account. The new account gets a temporary password. */
-function AddAccount({ onAdded, onCancel }: { onAdded: (email: string, password: string) => void; onCancel: () => void }) {
+interface Invite {
+  email: string;
+  link: string;
+  emailed: boolean;
+  emailError?: string;
+}
+
+/** An admin adds a parent, teacher or admin account. Its owner is emailed a link to set their password. */
+function AddAccount({ onAdded, onCancel, emailOn }: { onAdded: (invite: Invite) => void; onCancel: () => void; emailOn: boolean }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("parent");
@@ -257,9 +304,10 @@ function AddAccount({ onAdded, onCancel }: { onAdded: (email: string, password: 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, role, freeAccess: role === "parent" ? freeAccess : false }),
     });
-    const body = (await res.json().catch(() => ({}))) as { user?: { email: string }; password?: string; error?: string };
+    const body = (await res.json().catch(() => ({}))) as Partial<Invite> & { user?: { email: string }; error?: string };
     setBusy(false);
-    if (res.ok && body.user && body.password) onAdded(body.user.email, body.password);
+    if (res.ok && body.user && body.link)
+      onAdded({ email: body.user.email, link: body.link, emailed: Boolean(body.emailed), emailError: body.emailError });
     else setError(body.error ?? "That didn't work.");
   }
 
@@ -294,7 +342,9 @@ function AddAccount({ onAdded, onCancel }: { onAdded: (email: string, password: 
       </div>
       <p className="small muted" style={{ margin: 0 }}>
         {role === "parent" && !freeAccess ? "They get the usual free trial, then are asked to add a payment method. " : ""}
-        You'll get a temporary password to pass on. They can change it after signing in.
+        {emailOn
+          ? "We'll email them to say they have access, with a link to set their password."
+          : "Email isn't set up yet, so you'll get a link to send them for setting their password."}
       </p>
       {error && (
         <div className="feedback bad" role="alert">

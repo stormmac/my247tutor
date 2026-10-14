@@ -1,10 +1,10 @@
 import "server-only";
-import { randomInt } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { NextRequest } from "next/server";
 import { ready } from "./db";
 import { isAdminEmail, isLockedOut, LOCKOUT_MINUTES, temporaryPassword, type Role } from "./rules";
-import { SESSION_COOKIE, TRIAL_MINUTES, verifySession } from "./session";
+import { SESSION_COOKIE, verifySession } from "./session";
 
 const BCRYPT_COST = 12;
 /** Compared against when the email is unknown, so a wrong email takes as long as a wrong password. */
@@ -139,7 +139,7 @@ export async function listUsers(): Promise<(User & { learners: number })[]> {
   return rows.map((r) => ({ ...toUser(r), learners: Number(r.learners) }));
 }
 
-async function audit(actorId: string, action: string, targetId: string, detail: object) {
+export async function audit(actorId: string, action: string, targetId: string, detail: object) {
   await (
     await ready()
   ).query(`INSERT INTO audit_log (actor_id, action, target_id, detail) VALUES ($1, $2, $3, $4)`, [
@@ -173,32 +173,26 @@ export async function updateUser(
 }
 
 /**
- * An admin adds an account. It gets a temporary password to pass on, and a parent without free
- * access gets the usual free trial before they need to pay.
+ * An admin adds an account. It has no usable password until its owner sets one from the
+ * emailed link. A parent without free access gets the usual free trial from when they set it.
  */
 export async function addUser(
   actor: User,
   details: { name: string; email: string; role: Role; freeAccess: boolean },
-): Promise<{ user: User; password: string } | { error: string }> {
-  const password = temporaryPassword(randomInt);
+): Promise<{ user: User } | { error: string }> {
+  // A random password nobody knows, so the account can't be signed into until its owner sets one.
+  const unusable = await bcrypt.hash(randomBytes(32).toString("hex"), BCRYPT_COST);
   const { rows } = await (
     await ready()
   ).query(
-    `INSERT INTO users (email, display_name, role, password_hash, free_access, trial_ends_at) VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO users (email, display_name, role, password_hash, free_access) VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (email) DO NOTHING RETURNING ${USER_COLUMNS}`,
-    [
-      details.email,
-      details.name,
-      details.role,
-      await bcrypt.hash(password, BCRYPT_COST),
-      details.freeAccess,
-      new Date(Date.now() + TRIAL_MINUTES * 60_000),
-    ],
+    [details.email, details.name, details.role, unusable, details.freeAccess],
   );
   if (!rows[0]) return { error: "There's already an account with that email." };
   const user = toUser(rows[0]);
   await audit(actor.id, "add_user", user.id, { role: details.role, freeAccess: details.freeAccess });
-  return { user, password };
+  return { user };
 }
 
 /** Sets a new temporary password and signs the user out everywhere. Returns the password to pass on. */
