@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { usePraise } from "@/components/usePraise";
 import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components/QuestionView";
 import { questionFocus, useSuniFocus, useSuniSay } from "@/components/SuniCompanion";
 import type { useProfile } from "@/components/useProfile";
@@ -43,6 +44,7 @@ export function FocusedPractice({
   );
   const state = skillState(profile, key);
   const say = useSuniSay();
+  const praise = usePraise();
   useSuniFocus(
     questionFocus({
       profile,
@@ -65,7 +67,8 @@ export function FocusedPractice({
     if (!wasMastered && skillState(updated, key).mastered) {
       setJustMastered(true);
       say(`Buzz-tastic! You've mastered ${subtopic.title.charAt(0).toLowerCase() + subtopic.title.slice(1)}!`);
-    } else if (!o.correct) say("That one was tricky. Tap me and we can go through it together.");
+    } else if (o.correct) say(praise(o, profile.name));
+    else say("That one was tricky. Tap me and we can go through it together.");
   }
 
   function next() {

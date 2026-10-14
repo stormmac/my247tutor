@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { usePraise } from "@/components/usePraise";
 import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components/QuestionView";
 import { questionFocus, useSuniFocus, useSuniSay } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
@@ -193,6 +194,7 @@ function Practice({
 
   const question = useMemo(() => (current ? generateQuestion(current.skill.id, seed) : null), [current, seed]);
   const say = useSuniSay();
+  const praise = usePraise();
   useSuniFocus(
     current && question
       ? questionFocus({
@@ -234,7 +236,8 @@ function Practice({
     if (!wasMastered && skillState(updated, skill.id).mastered) {
       setJustMastered(skill.title);
       say(`Buzz-tastic! You've mastered ${skill.title.charAt(0).toLowerCase() + skill.title.slice(1)}!`);
-    } else if (!o.correct) say("That one was tricky. Tap me and we can go through it together.");
+    } else if (o.correct) say(praise(o, profile.name));
+    else say("That one was tricky. Tap me and we can go through it together.");
   }
 
   function next() {
