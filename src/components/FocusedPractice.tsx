@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { QuestionView, type QuestionOutcome } from "@/components/QuestionView";
+import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components/QuestionView";
 import { questionFocus, useSuniFocus, useSuniSay } from "@/components/SuniCompanion";
 import type { useProfile } from "@/components/useProfile";
 import { practiceOrder, progressKey, toPracticeQuestion } from "@/lib/content/practice";
@@ -59,7 +59,7 @@ export function FocusedPractice({
   function onDone(o: QuestionOutcome) {
     const wasMastered = skillState(profile, key).mastered;
     // As in adaptive practice, only a first-try answer counts towards mastery.
-    const updated = recordAttempt(profile, key, o.correct && o.firstTry, o.hintsUsed);
+    const updated = recordAttempt(profile, key, o.correct && o.firstTry, o.hintsUsed, Date.now(), attemptDetails(question, o));
     setProfile(updated);
     setSession((s) => ({ done: s.done + 1, correct: s.correct + (o.correct ? 1 : 0) }));
     if (!wasMastered && skillState(updated, key).mastered) {

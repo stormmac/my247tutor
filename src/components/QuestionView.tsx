@@ -1,10 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { checkAnswer, type Question } from "@/lib/practice";
+import { useRef, useState } from "react";
+import { answerText, checkAnswer, type Question } from "@/lib/practice";
+import type { AttemptDetails } from "@/lib/learner/model";
 import { Picture } from "./Picture";
 
-export type QuestionOutcome = { correct: boolean; hintsUsed: number; firstTry: boolean };
+export type QuestionOutcome = {
+  correct: boolean;
+  hintsUsed: number;
+  firstTry: boolean;
+  /** What the student answered first, as words a parent can read. */
+  answer: string;
+  /** The right answer, in the same form. */
+  rightAnswer: string;
+};
+
+/** What to keep in the learner's history about a finished question, for the parents page. */
+export function attemptDetails(question: Question, o: QuestionOutcome): AttemptDetails {
+  return {
+    question: question.prompt.replace("___", "_____"),
+    answer: o.answer,
+    rightAnswer: o.rightAnswer,
+    secondTry: o.correct && !o.firstTry,
+  };
+}
 
 interface Props {
   question: Question;
@@ -31,6 +50,7 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
   const [hintsShown, setHintsShown] = useState(0);
   const [result, setResult] = useState<{ correct: boolean; feedback?: string } | null>(null);
   const [finished, setFinished] = useState(false);
+  const firstAnswer = useRef("");
 
   const kind = question.answer.kind;
   const typed = kind !== "choice" && kind !== "multi" && kind !== "order";
@@ -43,6 +63,15 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
     if (kind === "multi") return picked.join(",");
     if (kind === "order") return arrangement.join(",");
     return input;
+  }
+
+  /** The student's answer as text: the choice they picked, or what they typed. */
+  function answerWords(): string {
+    const choices = question.choices ?? [];
+    if (kind === "choice") return selected === null ? "" : (choices[selected] ?? "");
+    if (kind === "multi") return picked.map((i) => choices[i]).join(", ");
+    if (kind === "order") return arrangement.map((i) => choices[i]).join(" → ");
+    return input.trim();
   }
 
   function move(position: number, by: -1 | 1) {
@@ -61,13 +90,20 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
     if (check.unreadable) return setResult(check);
 
     const nextTries = tries + 1;
+    if (nextTries === 1) firstAnswer.current = answerWords();
     setTries(nextTries);
     setResult(check);
     const done = check.correct || placement || nextTries >= MAX_TRIES;
     if (done) {
       setFinished(true);
       onAnsweredChange?.(true);
-      onDone({ correct: check.correct, hintsUsed: hintsShown, firstTry: nextTries === 1 });
+      onDone({
+        correct: check.correct,
+        hintsUsed: hintsShown,
+        firstTry: nextTries === 1,
+        answer: firstAnswer.current,
+        rightAnswer: answerText(question.answer, question.choices),
+      });
     } else onTryAgain?.();
   }
 

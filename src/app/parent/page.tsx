@@ -9,7 +9,8 @@ import { getOutcome } from "@/lib/curriculum/outcomes";
 import { getSkill, skillsFor } from "@/lib/curriculum/skills";
 import type { Skill, Subject } from "@/lib/curriculum/types";
 import { SUBTOPICS } from "@/lib/content/tree";
-import { recentAccuracy, skillState, type LearnerProfile } from "@/lib/learner/model";
+import { recentAccuracy, skillState, type AttemptRecord, type LearnerProfile } from "@/lib/learner/model";
+import { attemptResult, attemptTopic, resultsByTopic, type AttemptResult, type AttemptTopic } from "@/lib/learner/results";
 import { COMPETENCY_LABELS, competency, recommendedPlan, subjectLevel, type Competency, type Standing } from "@/lib/learner/report";
 
 export default function ParentPage() {
@@ -17,8 +18,9 @@ export default function ParentPage() {
   const account = useAccount();
   const [unlocked, setUnlocked] = useState(false);
 
-  if (!loaded) return null;
-  if (!unlocked) return <ParentGate onPass={() => setUnlocked(true)} />;
+  if (!loaded || !account.loaded) return null;
+  // Signed-in parents have already proved who they are; the check is only for guests on a shared browser.
+  if (!unlocked && (!account.user || account.user.role === "student")) return <ParentGate onPass={() => setUnlocked(true)} />;
   if (!profile) {
     return (
       <div className="card narrow">
@@ -87,6 +89,9 @@ export default function ParentPage() {
           <div style={{ fontSize: 32, fontWeight: 800 }}>{profile.writing.length}</div>
         </div>
       </div>
+
+      <RecentQuestions profile={profile} />
+      <TopicResults profile={profile} />
 
       <SubjectReport profile={profile} subject="maths" title="Mathematics" />
       <SubjectReport profile={profile} subject="english" title="English" />
@@ -294,6 +299,124 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
             * Outcome code still being confirmed against the NESA syllabus.
           </p>
         )}
+      </div>
+    </div>
+  );
+}
+
+const RESULT: Record<AttemptResult, { label: string; pill: string }> = {
+  "first try": { label: "Right first try", pill: "good" },
+  "with hints": { label: "Right, with hints", pill: "good" },
+  "second try": { label: "Right on second try", pill: "warn" },
+  "not right": { label: "Not right", pill: "bad" },
+};
+
+function TopicName({ topic }: { topic: AttemptTopic }) {
+  return (
+    <>
+      {topic.title}
+      <div className="muted small">{[topic.subject, topic.year].filter(Boolean).join(", ")}</div>
+    </>
+  );
+}
+
+const when = (at: number) => new Date(at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+
+/** Every question the child answered, newest first: what was asked, what they answered and how it went. */
+function RecentQuestions({ profile }: { profile: LearnerProfile }) {
+  const [shown, setShown] = useState(15);
+  const recent: AttemptRecord[] = profile.history.slice().reverse();
+  return (
+    <div className="card">
+      <h2>Questions {profile.name} has answered</h2>
+      {recent.length === 0 ? (
+        <p className="muted">No questions yet. Results show here as soon as {profile.name} starts practising.</p>
+      ) : (
+        <>
+          <div className="table-scroll">
+            <table className="results-table">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Topic</th>
+                  <th>Question</th>
+                  <th>{profile.name}'s answer</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.slice(0, shown).map((h, i) => {
+                  const result = RESULT[attemptResult(h)];
+                  return (
+                    <tr key={`${h.at}-${i}`}>
+                      <td className="small">{when(h.at)}</td>
+                      <td>
+                        <TopicName topic={attemptTopic(h.skillId)} />
+                      </td>
+                      <td data-label="Question">{h.question ?? <span className="muted small">Not saved for older questions</span>}</td>
+                      <td data-label="Answer">
+                        {h.answer ?? "–"}
+                        {h.rightAnswer && <div className="muted small">Right answer: {h.rightAnswer}</div>}
+                      </td>
+                      <td>
+                        <span className={`pill ${result.pill}`}>{result.label}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {recent.length > shown && (
+            <button className="btn secondary small no-print" style={{ marginTop: 12 }} onClick={() => setShown((n) => n + 30)}>
+              Show more ({recent.length - shown} older)
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** How the child is going in each topic they've practised. */
+function TopicResults({ profile }: { profile: LearnerProfile }) {
+  const results = resultsByTopic(profile.history);
+  if (results.length === 0) return null;
+  return (
+    <div className="card">
+      <h2>Results by topic</h2>
+      <div className="table-scroll">
+        <table className="results-table">
+          <thead>
+            <tr>
+              <th>Topic</th>
+              <th>Questions</th>
+              <th>Right first try</th>
+              <th>Last practised</th>
+            </tr>
+          </thead>
+          <tbody>
+            {results.map((r) => {
+              const pct = Math.round((r.rightFirstTry / r.answered) * 100);
+              return (
+                <tr key={r.key}>
+                  <td>
+                    <TopicName topic={r.topic} />
+                  </td>
+                  <td data-label="Questions">{r.answered}</td>
+                  <td data-label="Right first try">
+                    <span className={`pill ${pct >= 80 ? "good" : pct >= 50 ? "warn" : "bad"}`}>
+                      {r.rightFirstTry} of {r.answered} ({pct}%)
+                    </span>
+                  </td>
+                  <td className="small" data-label="Last practised">
+                    {new Date(r.lastAt).toLocaleDateString("en-AU")}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

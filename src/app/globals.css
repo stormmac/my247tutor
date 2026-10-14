@@ -779,6 +779,32 @@ main {
   }
 }
 
+/* Parents page results: on a phone each row becomes a small card. */
+@media (max-width: 600px) {
+  .results-table thead {
+    display: none;
+  }
+  .results-table,
+  .results-table tbody,
+  .results-table tr,
+  .results-table td {
+    display: block;
+  }
+  .results-table tr {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .results-table td {
+    padding: 2px 0;
+    border: 0;
+  }
+  .results-table td[data-label]::before {
+    content: attr(data-label) ": ";
+    color: var(--muted);
+    font-size: 0.85em;
+  }
+}
+
 @media print {
   .topbar,
   .suni-companion,

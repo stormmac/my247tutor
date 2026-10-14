@@ -21,9 +21,20 @@ export interface SkillState {
 export interface AttemptRecord {
   skillId: string;
   at: number;
+  /** Right on the first try. */
   correct: boolean;
   hintsUsed: number;
+  /** What was asked and what the student answered, for the parents page. Kept for recent attempts only. */
+  question?: string;
+  answer?: string;
+  /** The right answer, kept when the student didn't get it first try. */
+  rightAnswer?: string;
+  /** Right on the second try. */
+  secondTry?: boolean;
 }
+
+/** Question and answer text a parent can read back. */
+export type AttemptDetails = Pick<AttemptRecord, "question" | "answer" | "rightAnswer" | "secondTry">;
 
 export interface WellbeingFlag {
   at: number;
@@ -56,6 +67,10 @@ export const STREAK_FOR_MASTERY = 3;
 const LEARNING_RATE = 0.3;
 const DAY = 24 * 60 * 60 * 1000;
 const MAX_HISTORY = 1000;
+/** How many recent attempts keep their question and answer text, so the saved profile stays small. */
+export const MAX_DETAILED_HISTORY = 300;
+const clip = (text: string | undefined, max: number) =>
+  text === undefined ? undefined : text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
 export function newProfile(name: string, yearLevel: YearLevel, now = Date.now()): LearnerProfile {
   return { version: 1, name, yearLevel, createdAt: now, skills: {}, placementDone: {}, history: [], wellbeingFlags: [], writing: [] };
@@ -75,6 +90,7 @@ export function recordAttempt(
   correct: boolean,
   hintsUsed: number,
   now = Date.now(),
+  details: AttemptDetails = {},
 ): LearnerProfile {
   const prev = skillState(profile, skillId);
   const target = correct ? (hintsUsed === 0 ? 1 : Math.max(0.5, 0.85 - 0.15 * hintsUsed)) : 0;
@@ -95,7 +111,19 @@ export function recordAttempt(
     next = { ...next, reviewIntervalDays: interval, nextReview: now + interval * DAY };
   }
 
-  const history = [...profile.history, { skillId, at: now, correct, hintsUsed }].slice(-MAX_HISTORY);
+  const record: AttemptRecord = { skillId, at: now, correct, hintsUsed };
+  if (details.question) record.question = clip(details.question, 200);
+  if (details.answer !== undefined) record.answer = clip(details.answer, 80);
+  if (!correct && details.rightAnswer) record.rightAnswer = clip(details.rightAnswer, 80);
+  if (!correct && details.secondTry) record.secondTry = true;
+  // Only the most recent attempts keep their text; older ones keep just the result.
+  const history = [...profile.history, record]
+    .slice(-MAX_HISTORY)
+    .map((h, i, all) =>
+      i < all.length - MAX_DETAILED_HISTORY && h.question !== undefined
+        ? { skillId: h.skillId, at: h.at, correct: h.correct, hintsUsed: h.hintsUsed }
+        : h,
+    );
   return { ...profile, skills: { ...profile.skills, [skillId]: next }, history };
 }
 
