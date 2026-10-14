@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { signOut, useAccount } from "@/components/useAccount";
 
-/** The Parents link in the top bar. A child signed in on their own doesn't get it. */
+/** The Parents link in the top bar, or a tutoring centre's own pages. A child signed in on their own gets neither. */
 export function ParentsLink() {
   const { user } = useAccount();
   if (user?.child) return null;
+  if (user?.role === "centre") return <Link href="/centre">Centre</Link>;
+  if (user?.role === "teacher") return <Link href="/classes">Classes</Link>;
   return <Link href="/parent">Parents</Link>;
 }
 
@@ -27,7 +29,7 @@ export function AccountMenu() {
   return (
     <>
       {user.trialEndsAt && !user.child && <TrialTimer endsAt={user.trialEndsAt} account />}
-      {billing && user.role === "parent" && <Link href="/billing">Billing</Link>}
+      {billing && (user.role === "parent" || user.role === "centre") && <Link href="/billing">Billing</Link>}
       {user.role === "admin" && <Link href="/admin">Admin</Link>}
       <button
         type="button"

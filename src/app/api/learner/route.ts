@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
   const result = await requireUser(request);
   if ("response" in result) return result.response;
   const { user } = result;
-  if (user.role === "student" && !(user.parentId && user.learnerId)) return Response.json({ profiles: [], profile: null });
+  // A centre's students are managed on the centre page, never synced as a family's children.
+  if (user.role === "centre" || (user.role === "student" && !(user.parentId && user.learnerId)))
+    return Response.json({ profiles: [], profile: null });
   const profiles = user.role === "student" ? await getLearnerProfiles(user.parentId!, user.learnerId!) : await getLearnerProfiles(user.id);
   return Response.json({ profiles, profile: profiles[0] ?? null });
 }
@@ -41,6 +43,7 @@ export async function PUT(request: NextRequest) {
   if (!parsed.success) return Response.json({ error: "That doesn't look like a learner profile." }, { status: 400 });
   const data = parsed.data;
 
+  if (user.role === "centre") return Response.json({ ok: true });
   if (user.role === "student") {
     // A child can only save their own progress, never add or remove children.
     const own = "changed" in data ? data.changed : "profile" in data ? data.profile : data.profiles[0];

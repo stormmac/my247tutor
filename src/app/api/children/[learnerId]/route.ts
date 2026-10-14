@@ -13,6 +13,8 @@ async function parentAndChild(
   const result = await requireUser(request);
   if ("response" in result) return result;
   if (result.user.role === "student") return { response: Response.json({ error: "Ask your grown-up to do this." }, { status: 403 }) };
+  if (result.user.role === "centre")
+    return { response: Response.json({ error: "Manage your students' sign-ins from the Centre page." }, { status: 403 }) };
   const { learnerId } = await params;
   if (!z.uuid().safeParse(learnerId).success) return { response: Response.json({ error: "No such child." }, { status: 404 }) };
   return { parent: result.user, learnerId };

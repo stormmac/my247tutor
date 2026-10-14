@@ -45,7 +45,8 @@ function SetPassword() {
     }).catch(() => null);
     const body = (await res?.json().catch(() => ({}))) as { role?: string; error?: string } | undefined;
     // A full page load so every part of the page sees the new session.
-    if (res?.ok) return window.location.assign(body?.role === "admin" ? "/admin" : "/learn");
+    const home: Record<string, string> = { admin: "/admin", centre: "/centre", teacher: "/classes" };
+    if (res?.ok) return window.location.assign(home[body?.role ?? ""] ?? "/learn");
     setError(body?.error ?? "Couldn't connect. Try again.");
     setBusy(false);
   }

@@ -15,6 +15,8 @@ interface Row {
   createdAt: string;
   lastLoginAt: string | null;
   learners: number;
+  /** For a teacher at a tutoring centre: the centre. */
+  centreName: string | null;
   freeAccess: boolean;
   plan: Plan;
   paidUntil: number | null;
@@ -216,6 +218,7 @@ function Accounts() {
                       </span>
                     )}
                     <div className="small muted">{u.email}</div>
+                    {u.centreName && <div className="small muted">Teacher at {u.centreName}</div>}
                     {!u.lastLoginAt && !self && <div className="small muted">Hasn&apos;t set a password yet</div>}
                   </td>
                   <td>
@@ -227,7 +230,7 @@ function Accounts() {
                       style={{ width: "auto" }}
                     >
                       <option value="parent">Parent</option>
-                      <option value="teacher">Teacher</option>
+                      <option value="centre">Tutoring centre</option> <option value="teacher">Teacher</option>
                       <option value="admin">Admin</option>
                     </select>
                   </td>
@@ -300,7 +303,7 @@ interface Invite {
   emailError?: string;
 }
 
-/** An admin adds a parent, teacher or admin account. Its owner is emailed a link to set their password. */
+/** An admin adds a parent, tutoring centre, teacher or admin account. Its owner is emailed a link to set their password. */
 function AddAccount({ onAdded, onCancel, emailOn }: { onAdded: (invite: Invite) => void; onCancel: () => void; emailOn: boolean }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -316,7 +319,7 @@ function AddAccount({ onAdded, onCancel, emailOn }: { onAdded: (invite: Invite) 
     const res = await fetch("/api/admin/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, role, freeAccess: role === "parent" ? freeAccess : false }),
+      body: JSON.stringify({ name, email, role, freeAccess: role === "parent" || role === "centre" ? freeAccess : false }),
     });
     const body = (await res.json().catch(() => ({}))) as Partial<Invite> & { user?: { email: string }; error?: string };
     setBusy(false);
@@ -343,11 +346,11 @@ function AddAccount({ onAdded, onCancel, emailOn }: { onAdded: (invite: Invite) 
           Role
           <select value={role} onChange={(e) => setRole(e.target.value as Role)} style={{ width: "auto" }}>
             <option value="parent">Parent</option>
-            <option value="teacher">Teacher</option>
+            <option value="centre">Tutoring centre</option> <option value="teacher">Teacher</option>
             <option value="admin">Admin</option>
           </select>
         </label>
-        {role === "parent" && (
+        {(role === "parent" || role === "centre") && (
           <label className="row" style={{ fontWeight: 400, margin: 0 }}>
             <input type="checkbox" checked={freeAccess} onChange={(e) => setFreeAccess(e.target.checked)} style={{ width: "auto" }} />
             Free access (never asked to pay)
@@ -355,7 +358,10 @@ function AddAccount({ onAdded, onCancel, emailOn }: { onAdded: (invite: Invite) 
         )}
       </div>
       <p className="small muted" style={{ margin: 0 }}>
-        {role === "parent" && !freeAccess ? "They get the usual free trial, then are asked to add a payment method. " : ""}
+        {role === "centre" ? "Put the centre's name as the name. They'll add their own teachers, classes and students. " : ""}
+        {(role === "parent" || role === "centre") && !freeAccess
+          ? "They get the usual free trial, then are asked to add a payment method. "
+          : ""}
         {emailOn
           ? "We'll email them to say they have access, with a link to set their password."
           : "Email isn't set up yet, so you'll get a link to send them for setting their password."}

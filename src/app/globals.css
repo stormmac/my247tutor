@@ -1091,3 +1091,26 @@ ul.tight {
   gap: 12px;
   flex-wrap: wrap;
 }
+
+.class-card {
+  color: inherit;
+  text-decoration: none;
+}
+.class-card:hover {
+  border-color: var(--brand);
+}
+.class-table tr.selected td {
+  background: var(--brand-tint);
+}
+.class-picker {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+.class-picker legend {
+  font-weight: 600;
+  padding: 0 4px;
+}

@@ -24,8 +24,18 @@ const ACCOUNT_PUBLIC = [
   // Stripe calls this; it proves itself with a signature instead.
   "/api/billing/webhook",
 ];
-/** A child signed in on their own uses the learning pages; these belong to their parent. */
-const PARENT_ONLY = ["/parent", "/billing", "/api/billing", "/api/children"];
+/** A child signed in on their own uses the learning pages; these belong to their parent, centre or teacher. */
+const PARENT_ONLY = [
+  "/parent",
+  "/billing",
+  "/api/billing",
+  "/api/children",
+  "/centre",
+  "/api/centre",
+  "/classes",
+  "/api/classes",
+  "/api/students",
+];
 
 function isUnder(pathname: string, prefixes: string[]): boolean {
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));

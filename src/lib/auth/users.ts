@@ -37,13 +37,15 @@ export interface User {
   parentId: string | null;
   /** For a child: the learner profile they use. */
   learnerId: string | null;
+  /** For a teacher at a tutoring centre: the centre's account. */
+  centreId: string | null;
 }
 
-const USER_COLUMNS = `id, email, display_name, role, is_active, session_version, created_at, last_login_at, free_access, trial_ends_at, stripe_customer_id, subscription_status, paid_until, username, parent_id, learner_id`;
+export const USER_COLUMNS = `id, email, display_name, role, is_active, session_version, created_at, last_login_at, free_access, trial_ends_at, stripe_customer_id, subscription_status, paid_until, username, parent_id, learner_id, centre_id`;
 
 const ms = (value: unknown) => (value ? new Date(value as string).getTime() : null);
 
-function toUser(row: Record<string, unknown>): User {
+export function toUser(row: Record<string, unknown>): User {
   return {
     id: row.id as string,
     email: row.email as string,
@@ -61,6 +63,7 @@ function toUser(row: Record<string, unknown>): User {
     username: (row.username as string | null) ?? null,
     parentId: (row.parent_id as string | null) ?? null,
     learnerId: (row.learner_id as string | null) ?? null,
+    centreId: (row.centre_id as string | null) ?? null,
   };
 }
 
@@ -69,6 +72,11 @@ function toUser(row: Record<string, unknown>): User {
  * Everything else about the child's sign-in is their own.
  */
 async function withParentPlan(user: User): Promise<User> {
+  // A centre's teacher can only get in while the centre's account is on.
+  if (user.role === "teacher" && user.centreId) {
+    const centre = await getUser(user.centreId);
+    return { ...user, isActive: user.isActive && Boolean(centre?.isActive) };
+  }
   if (user.role !== "student" || !user.parentId) return user;
   const parent = await getUser(user.parentId);
   if (!parent) return { ...user, isActive: false };
@@ -160,19 +168,19 @@ export async function requireUser(request: NextRequest, role?: Role): Promise<{ 
   return { user };
 }
 
-export async function listUsers(): Promise<(User & { learners: number })[]> {
+export async function listUsers(): Promise<(User & { learners: number; centreName: string | null })[]> {
   const { rows } = await (
     await ready()
   ).query(
     `SELECT ${USER_COLUMNS.split(", ")
       .map((c) => `u.${c}`)
-      .join(", ")}, COUNT(l.id) AS learners
-     FROM users u LEFT JOIN learners l ON l.parent_id = u.id
+      .join(", ")}, COUNT(l.id) AS learners, c.display_name AS centre_name
+     FROM users u LEFT JOIN learners l ON l.parent_id = u.id LEFT JOIN users c ON c.id = u.centre_id
      -- Children's sign-ins are managed by their parents, and counted with the parent's learners.
      WHERE u.learner_id IS NULL
-     GROUP BY u.id ORDER BY u.created_at DESC LIMIT 500`,
+     GROUP BY u.id, c.display_name ORDER BY u.created_at DESC LIMIT 500`,
   );
-  return rows.map((r) => ({ ...toUser(r), learners: Number(r.learners) }));
+  return rows.map((r) => ({ ...toUser(r), learners: Number(r.learners), centreName: (r.centre_name as string | null) ?? null }));
 }
 
 /** A child's sign-in, as their parent sees it. */

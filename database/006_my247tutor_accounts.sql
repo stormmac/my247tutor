@@ -15,9 +15,9 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- my247tutor adds parents to myteacher's admin, teacher and student roles.
+-- my247tutor adds parents and tutoring centres to myteacher's admin, teacher and student roles.
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
-ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'teacher', 'student', 'parent'));
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'teacher', 'student', 'parent', 'centre'));
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
