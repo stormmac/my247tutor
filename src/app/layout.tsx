@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccountMenu, ParentsLink } from "@/components/AccountMenu";
+import { ActingBanner } from "@/components/ActingBanner";
 import { ChildSwitcher } from "@/components/ChildSwitcher";
 import { PaymentGate } from "@/components/PaymentGate";
 import { ProfileSync } from "@/components/ProfileSync";
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en-AU">
       <body>
         <SuniProvider>
+          <ActingBanner />
           <div className="topbar">
             <div className="container">
               <Link href="/" className="logo">

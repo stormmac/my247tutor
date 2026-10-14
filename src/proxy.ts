@@ -86,6 +86,9 @@ export async function proxy(request: NextRequest) {
       return denied(request, 401, "Please sign in.", "/start");
     }
     if (adminOnly && session.role !== "admin") return denied(request, 403, "You don't have access to this.", "/");
+    // While an admin is logged in as someone, they can look and help but not change the account's payment or password.
+    if (session.actorId && request.method !== "GET" && (isUnder(pathname, ["/api/billing"]) || pathname === "/api/auth/password"))
+      return denied(request, 403, "That can't be changed while you're logged in as someone else.", "/");
     if (session.role === "student" && isUnder(pathname, PARENT_ONLY))
       return denied(request, 403, "Ask your grown-up to do this.", "/learn");
   }
