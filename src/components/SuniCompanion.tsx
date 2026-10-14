@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Suni } from "@/components/Suni";
 import { useProfile } from "@/components/useProfile";
+import { useSuniVoice } from "@/components/useSuniVoice";
 import { useTutorChat } from "@/components/useTutorChat";
 import { TUTOR_NAME } from "@/lib/tutor/persona";
 import type { TutorContext } from "@/lib/tutor/prompt";
@@ -84,6 +85,22 @@ export function SuniCompanion() {
     focus?.onWellbeingConcern ??
     ((message: string) => setProfile((p) => ({ ...p, wellbeingFlags: [...p.wellbeingFlags, { at: Date.now(), message }] })));
   const { messages, busy, send } = useTutorChat(context, greeting, onWellbeing);
+  const voice = useSuniVoice();
+
+  // Suni reads each reply aloud once it has finished arriving.
+  const wasBusy = useRef(false);
+  useEffect(() => {
+    if (wasBusy.current && !busy) {
+      const last = messages[messages.length - 1];
+      if (last?.role === "assistant" && last.content) voice.say(last.content);
+    }
+    wasBusy.current = busy;
+  }, [busy, messages, voice]);
+
+  // Speech bubbles are said aloud too (browsers only allow it once the page has been tapped).
+  useEffect(() => {
+    if (bubble && !open) voice.say(bubble);
+  }, [bubble]);
 
   // Say hello once, shortly after arriving.
   useEffect(() => {
@@ -114,7 +131,15 @@ export function SuniCompanion() {
 
   function toggle() {
     setBubble(null);
+    if (open) voice.stop();
+    // Opening the chat says the greeting, or whatever Suni said last.
+    else voice.say(messages.filter((m) => m.role === "assistant" && m.content).at(-1)?.content ?? greeting);
     setOpen((o) => !o);
+  }
+
+  function close() {
+    voice.stop();
+    setOpen(false);
   }
 
   function submit(e: React.FormEvent) {
@@ -131,14 +156,33 @@ export function SuniCompanion() {
         <div className="suni-chat" role="dialog" aria-label={`Chat with ${TUTOR_NAME}`}>
           <div className="suni-chat-header">
             <strong>{TUTOR_NAME}</strong>
-            <button type="button" className="suni-close" onClick={() => setOpen(false)} aria-label={`Close chat with ${TUTOR_NAME}`}>
-              ×
-            </button>
+            <span className="suni-header-buttons">
+              {voice.supported && (
+                <button
+                  type="button"
+                  className="suni-voice-toggle"
+                  onClick={() => voice.setOn(!voice.on)}
+                  aria-pressed={voice.on}
+                  aria-label={voice.on ? `Turn ${TUTOR_NAME}'s voice off` : `Turn ${TUTOR_NAME}'s voice on`}
+                  title={voice.on ? "Voice on" : "Voice off"}
+                >
+                  <SpeakerIcon on={voice.on} />
+                </button>
+              )}
+              <button type="button" className="suni-close" onClick={close} aria-label={`Close chat with ${TUTOR_NAME}`}>
+                ×
+              </button>
+            </span>
           </div>
           <div className="messages" ref={scroller} aria-live="polite">
             {messages.map((m, i) => (
               <div key={i} className={`msg ${m.role}`}>
                 {m.content || (busy && i === messages.length - 1 ? "…" : "")}
+                {voice.supported && m.role === "assistant" && m.content && !(busy && i === messages.length - 1) && (
+                  <button type="button" className="msg-say" onClick={() => voice.say(m.content, true)} aria-label="Say it again">
+                    <SpeakerIcon on />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -179,6 +223,32 @@ export function SuniCompanion() {
         <Suni size={open ? 72 : 92} wave={!!bubble && !open} />
       </button>
     </div>
+  );
+}
+
+function SpeakerIcon({ on }: { on: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+      {on ? (
+        <>
+          <path d="M16.5 8.5a5 5 0 0 1 0 7" />
+          <path d="M19 6a8.5 8.5 0 0 1 0 12" />
+        </>
+      ) : (
+        <path d="M17 9l5 6M22 9l-5 6" />
+      )}
+    </svg>
   );
 }
 
