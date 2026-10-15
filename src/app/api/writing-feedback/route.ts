@@ -11,7 +11,7 @@ import { markWriting, tutorConfigured } from "@/lib/tutor/claude";
 const RequestSchema = z.object({
   skillId: z.string(),
   taskIndex: z.number().int().min(0),
-  yearLevel: z.number().int().min(3).max(6),
+  yearLevel: z.number().int().min(1).max(6),
   text: z.string().min(1).max(8000),
 });
 

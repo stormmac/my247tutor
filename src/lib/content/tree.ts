@@ -1,5 +1,5 @@
 import { getSkill } from "../curriculum/skills";
-import type { Subject as SubjectKey, YearLevel as YearNumber } from "../curriculum/types";
+import { YEARS, type Subject as SubjectKey, type YearLevel as YearNumber } from "../curriculum/types";
 import * as Y3 from "./bank/maths-year3";
 import * as Y4A from "./bank/maths-year4a";
 import * as Y4B from "./bank/maths-year4b";
@@ -68,7 +68,7 @@ export function yearLevelId(year: YearNumber): string {
   return YEAR_LEVELS.find((y) => y.sort_order === year)!.id;
 }
 
-// ---------- my247tutor content: NSW Maths and English, Years 3–6 ----------
+// ---------- my247tutor content: NSW Maths and English, Years 1–6 ----------
 
 /*
  * Ids are written by hand so they never change when content is added or reordered:
@@ -1438,9 +1438,9 @@ export function questionsOf(subtopicId: string): ContentQuestion[] {
   return QUESTIONS.filter((q) => q.subtopic_id === subtopicId);
 }
 
-/** Years (3–6) that have content for a subject. */
+/** Years that have content for a subject. */
 export function yearsWithContent(subject: SubjectKey): YearNumber[] {
-  return ([3, 4, 5, 6] as YearNumber[]).filter((y) => topicsFor(subject, y).length > 0);
+  return YEARS.filter((y) => topicsFor(subject, y).length > 0);
 }
 
 export function subtopicPath(subtopicId: string): SubtopicPath | null {

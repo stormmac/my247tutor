@@ -9,7 +9,7 @@ import { SuniCompanion, SuniProvider } from "@/components/SuniCompanion";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "my247tutor: NSW Maths and English tutor for Years 3 to 6",
+  title: "my247tutor: NSW Maths and English tutor for Years 1 to 6",
   description: "A patient AI tutor that follows the NSW syllabus, any time of day.",
 };
 

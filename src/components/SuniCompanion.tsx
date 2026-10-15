@@ -9,6 +9,7 @@ import { useSuniVoice } from "@/components/useSuniVoice";
 import { useTutorChat } from "@/components/useTutorChat";
 import { TUTOR_NAME } from "@/lib/tutor/persona";
 import type { TutorContext } from "@/lib/tutor/prompt";
+import type { YearLevel } from "@/lib/curriculum/types";
 
 /** What a page tells Suni about the work on screen, so Suni can help with it. */
 export interface SuniFocus {
@@ -329,7 +330,7 @@ function SpeakerIcon({ on }: { on: boolean }) {
 
 /** Builds what Suni needs to know about a practice question on screen. */
 export function questionFocus(args: {
-  profile: { name: string; yearLevel: 3 | 4 | 5 | 6 };
+  profile: { name: string; yearLevel: YearLevel };
   setProfile: ReturnType<typeof useProfile>["setProfile"];
   progressKey: string;
   title: string;
