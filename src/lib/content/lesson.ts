@@ -1,6 +1,13 @@
 import { getSkill } from "../curriculum/skills";
 import type { Subject, YearLevel } from "../curriculum/types";
-import { ACTIVITY_QUESTIONS, REVIEW_QUESTIONS, weekOf, type LessonPart, type WeeklyLesson } from "../learner/lesson";
+import {
+  ACTIVITY_QUESTIONS,
+  REVIEW_QUESTIONS,
+  SKILL_BUILDER_QUESTIONS,
+  weekOf,
+  type LessonPart,
+  type WeeklyLesson,
+} from "../learner/lesson";
 import { skillState, type LearnerProfile } from "../learner/model";
 import { Rng } from "../practice/rng";
 import { progressKey } from "./practice";
@@ -104,6 +111,22 @@ export function buildLesson(profile: LearnerProfile, subject: Subject, now = Dat
     })),
   ];
   return { week, parts: parts.filter((p) => p.questionIds.length) };
+}
+
+/**
+ * Skill builder questions for a missed question: others from its subtopic, closest in difficulty
+ * first, leaving out the ones in this week's lesson so none is seen early.
+ */
+export function skillBuilder(missed: ContentQuestion, lessonIds: string[], rng: Rng): string[] {
+  const skip = new Set([missed.id, ...lessonIds]);
+  const pool = questionsOf(missed.subtopic_id).filter((q) => !skip.has(q.id));
+  const distance = (q: ContentQuestion) => Math.abs(rank(q) - rank(missed));
+  const byLevel = DIFFICULTIES.map((_, gap) => rng.shuffle(pool.filter((q) => distance(q) === gap)));
+  return byLevel
+    .flat()
+    .slice(0, SKILL_BUILDER_QUESTIONS)
+    .sort((a, b) => rank(a) - rank(b))
+    .map((q) => q.id);
 }
 
 function hash(text: string): number {

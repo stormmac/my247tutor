@@ -11,6 +11,25 @@ import type { LearnerProfile } from "./model";
 
 export const REVIEW_QUESTIONS = 20;
 export const ACTIVITY_QUESTIONS = 10;
+/** Goes a child gets at each lesson question. */
+export const LESSON_TRIES = 3;
+/** Extra questions of the same kind after a question is missed on every go. */
+export const SKILL_BUILDER_QUESTIONS = 5;
+
+/** The go a question was answered right on (1 to LESSON_TRIES), or 0 when it wasn't. */
+export type LessonResult = number;
+/** How a result is shown: green first go, yellow a later go, red not right. */
+export type ResultColour = "good" | "warn" | "bad";
+
+/** Lessons saved before there were three goes stored true (right first go) or false. */
+export function resultTries(result: LessonResult | boolean): LessonResult {
+  return result === true ? 1 : result === false ? 0 : result;
+}
+
+export function resultColour(result: LessonResult | boolean): ResultColour {
+  const tries = resultTries(result);
+  return tries === 1 ? "good" : tries > 1 ? "warn" : "bad";
+}
 
 export interface LessonPart {
   kind: "review" | "activity";
@@ -21,8 +40,8 @@ export interface LessonPart {
   /** Set for an activity: the subtopic it practises. */
   subtopicId?: string;
   questionIds: string[];
-  /** One entry per answered question: right first time or not. */
-  results: boolean[];
+  /** One entry per answered question, in order (see LessonResult). */
+  results: (LessonResult | boolean)[];
 }
 
 export interface WeeklyLesson {
@@ -70,12 +89,12 @@ export function recordLessonAnswer(
   subject: Subject,
   part: number,
   index: number,
-  correct: boolean,
+  result: LessonResult,
 ): LearnerProfile {
   const lesson = profile.lessons?.[subject];
   const target = lesson?.parts[part];
   if (!lesson || !target || index > target.results.length || index >= target.questionIds.length) return profile;
-  const results = [...target.results.slice(0, index), correct, ...target.results.slice(index + 1)];
+  const results = [...target.results.slice(0, index), result, ...target.results.slice(index + 1)];
   const parts = lesson.parts.map((p, i) => (i === part ? { ...p, results } : p));
   return saveLesson(profile, subject, { ...lesson, parts });
 }
