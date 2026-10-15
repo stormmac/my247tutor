@@ -5,7 +5,7 @@ import { PasswordSchema } from "@/lib/auth/rules";
 import { accountsEnabled, sessionCookie } from "@/lib/auth/session";
 
 const Token = z.string().min(20).max(100);
-const GONE = "This link has already been used or has run out. Ask my247tutor to send a new one.";
+const GONE = 'This link has already been used or has run out. You can get a new one with "Forgot password?" on the log in page.';
 
 /** Whose account a set-password link is for, so the page can greet them. */
 export async function GET(request: NextRequest) {

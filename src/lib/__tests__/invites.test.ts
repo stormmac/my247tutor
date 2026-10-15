@@ -1,8 +1,26 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { INVITE_DAYS, inviteEmail } from "../auth/inviteEmail";
+import { INVITE_DAYS, inviteEmail, RESET_HOURS, resetEmail } from "../auth/inviteEmail";
 import { INVITE_SQL } from "../auth/inviteSchema";
+
+describe("password reset email", () => {
+  const link = "https://my247tutor.com/set-password?token=abc&reset=1";
+  const email = resetEmail({ name: "Pat", email: "pat@example.com" }, link);
+
+  it("links to choosing a new password, and says it's safe to ignore", () => {
+    expect(email.subject).toBe("Reset your my247tutor password");
+    for (const body of [email.text, email.html]) {
+      expect(body).toContain("Pat");
+      expect(body).toContain(`${RESET_HOURS} hour`);
+      expect(body).toContain("pat@example.com");
+      expect(body).toMatch(/didn't ask for this, you can ignore this email/);
+    }
+    expect(email.text).toContain(link);
+    expect(email.html).toContain(link.replace("&", "&amp;"));
+    expect(email.html).toContain(">Choose a new password</a>");
+  });
+});
 
 describe("welcome email", () => {
   const link = "https://my247tutor.com/set-password?token=abc";

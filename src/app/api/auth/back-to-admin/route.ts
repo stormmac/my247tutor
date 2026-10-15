@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     ["admin", "teacher", "centre"].includes(admin.role) &&
     admin.sessionVersion === session.version,
   );
-  const response = Response.json(ok ? { ok: true, role: admin!.role } : { error: "Please sign in again." }, { status: ok ? 200 : 401 });
+  const response = Response.json(ok ? { ok: true, role: admin!.role } : { error: "Please log in again." }, { status: ok ? 200 : 401 });
   response.headers.append("Set-Cookie", clearedAdminReturnCookie());
   response.headers.append("Set-Cookie", ok ? restoredSessionCookie(kept!) : clearedSessionCookie());
   return response;

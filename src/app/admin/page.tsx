@@ -87,7 +87,7 @@ function Accounts() {
 
   async function reset(user: Row) {
     setInviteLink(null);
-    if (!confirm(`Reset ${user.email}'s password? They'll be signed out everywhere.`)) return;
+    if (!confirm(`Reset ${user.email}'s password? They'll be logged out everywhere.`)) return;
     setError(null);
     const res = await fetch(`/api/admin/users/${user.id}/reset-password`, { method: "POST" });
     const body = (await res.json().catch(() => ({}))) as { password?: string; error?: string };

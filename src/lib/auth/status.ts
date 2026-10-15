@@ -71,7 +71,7 @@ export async function setupStatus(): Promise<SetupCheck[]> {
     {
       label: "An admin account exists",
       ok: adminAccount,
-      fix: "Once everything above is ticked, sign up with your admin email.",
+      fix: "Once everything above is ticked, sign up with your admin email at /signup.",
     },
   ];
 }

@@ -57,6 +57,12 @@ export function useAccount(): AccountState {
   return state;
 }
 
+/** Where each kind of account lands after logging in: its own home page. */
+export function homeFor(role: string | undefined): string {
+  const home: Record<string, string> = { admin: "/admin", student: "/learn", teacher: "/classes", centre: "/centre" };
+  return home[role ?? ""] ?? "/parent";
+}
+
 /** An admin logs in as another account from Admin, then lands where that account would. */
 export async function logInAs(userId: string): Promise<string | null> {
   const res = await fetch(`/api/admin/users/${userId}/log-in-as`, { method: "POST" }).catch(() => null);
@@ -67,8 +73,7 @@ export async function logInAs(userId: string): Promise<string | null> {
     localStorage.clear();
     sessionStorage.removeItem(RETURN_KEY);
   } catch {}
-  const home: Record<string, string> = { student: "/learn", teacher: "/classes", centre: "/centre" };
-  window.location.assign(home[body?.role ?? ""] ?? "/parent");
+  window.location.assign(homeFor(body?.role));
   return null;
 }
 
@@ -99,14 +104,15 @@ export async function backToAdmin() {
     back = sessionStorage.getItem(RETURN_KEY) ?? back;
     sessionStorage.removeItem(RETURN_KEY);
   } catch {}
-  window.location.assign(res?.ok ? back : "/signin");
+  window.location.assign(res?.ok ? back : "/login");
 }
 
-export async function signOut() {
+/** Logs out, then goes to `to` (the home page unless asked). */
+export async function signOut(to = "/") {
   await fetch("/api/auth/signout", { method: "POST" }).catch(() => undefined);
   // The next person on this device shouldn't see this child's progress.
   try {
     localStorage.clear();
   } catch {}
-  window.location.assign("/");
+  window.location.assign(to);
 }

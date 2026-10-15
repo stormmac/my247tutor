@@ -111,7 +111,7 @@ export function screenForPath(pathname: string): string {
   return "A my247tutor page.";
 }
 
-const HIDDEN_ON = ["/parent", "/login"];
+const HIDDEN_ON = ["/parent", "/login", "/signup", "/forgot-password", "/set-password", "/private"];
 
 /** Suni flies over every page. Tap Suni to chat. */
 export function SuniCompanion() {
@@ -184,6 +184,17 @@ export function SuniCompanion() {
     if (open) field.current?.focus();
   }, [open]);
 
+  // Hold the microphone to talk: the words fill the message box as they speak, and letting go sends them.
+  const speech = useSpeechInput({
+    onWords: setInput,
+    onDone: (text) => {
+      if (!text) return;
+      setInput("");
+      void send(text);
+    },
+  });
+
+  // After every hook, so moving between pages where Suni is hidden and shown keeps the same hooks.
   if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null;
 
   function toggle() {
@@ -198,16 +209,6 @@ export function SuniCompanion() {
     voice.stop();
     setOpen(false);
   }
-
-  // Hold the microphone to talk: the words fill the message box as they speak, and letting go sends them.
-  const speech = useSpeechInput({
-    onWords: setInput,
-    onDone: (text) => {
-      if (!text) return;
-      setInput("");
-      void send(text);
-    },
-  });
 
   function startTalking(e: React.PointerEvent | React.KeyboardEvent) {
     if ("repeat" in e && e.repeat) return;

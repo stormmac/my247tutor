@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { PasswordField } from "@/components/PasswordField";
+import { homeFor } from "@/components/useAccount";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/rules";
 
 export default function SetPasswordPage() {
@@ -15,7 +17,10 @@ export default function SetPasswordPage() {
 
 /** Where the link in a new account's welcome email lands: choose a password, then straight in. */
 function SetPassword() {
-  const token = useSearchParams().get("token") ?? "";
+  const params = useSearchParams();
+  const token = params.get("token") ?? "";
+  // From "Forgot password?", rather than a new account's welcome email.
+  const reset = params.get("reset") === "1";
   const [who, setWho] = useState<{ name: string; email: string } | null>(null);
   const [gone, setGone] = useState<string | null>(null);
   const [password, setPassword] = useState("");
@@ -45,8 +50,7 @@ function SetPassword() {
     }).catch(() => null);
     const body = (await res?.json().catch(() => ({}))) as { role?: string; error?: string } | undefined;
     // A full page load so every part of the page sees the new session.
-    const home: Record<string, string> = { admin: "/admin", centre: "/centre", teacher: "/classes" };
-    if (res?.ok) return window.location.assign(home[body?.role ?? ""] ?? "/learn");
+    if (res?.ok) return window.location.assign(homeFor(body?.role));
     setError(body?.error ?? "Couldn't connect. Try again.");
     setBusy(false);
   }
@@ -58,8 +62,11 @@ function SetPassword() {
         <p className="muted" style={{ margin: 0 }}>
           {gone}
         </p>
-        <Link className="btn secondary" href="/signin">
-          Sign in instead
+        <Link className="btn" href="/forgot-password">
+          Get a new link
+        </Link>
+        <Link className="btn secondary" href="/login">
+          Log in
         </Link>
       </div>
     );
@@ -67,43 +74,36 @@ function SetPassword() {
 
   return (
     <form className="card narrow stack" style={{ margin: "40px auto" }} onSubmit={submit}>
-      <h1>Welcome, {who.name}</h1>
+      <h1>{reset ? "Choose a new password" : `Welcome, ${who.name}`}</h1>
       <p className="muted" style={{ margin: 0 }}>
-        Choose a password for your my247tutor account. You&apos;ll sign in with <strong>{who.email}</strong> and this password.
+        {reset ? "Choose a new password for your my247tutor account." : "Choose a password for your my247tutor account."} You&apos;ll log in
+        with <strong>{who.email}</strong> and this password.
       </p>
       <input type="email" value={who.email} autoComplete="username" readOnly hidden />
-      <div>
-        <label htmlFor="password">New password</label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          required
-        />
-        <div className="small muted">At least {MIN_PASSWORD_LENGTH} characters.</div>
-      </div>
-      <div>
-        <label htmlFor="again">Type it again</label>
-        <input
-          id="again"
-          type="password"
-          value={again}
-          onChange={(e) => setAgain(e.target.value)}
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          required
-        />
-      </div>
+      <PasswordField
+        id="password"
+        label="New password"
+        value={password}
+        onChange={setPassword}
+        autoComplete="new-password"
+        minLength={MIN_PASSWORD_LENGTH}
+        hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+      />
+      <PasswordField
+        id="again"
+        label="Type it again"
+        value={again}
+        onChange={setAgain}
+        autoComplete="new-password"
+        minLength={MIN_PASSWORD_LENGTH}
+      />
       {error && (
         <div className="feedback bad" role="alert">
           {error}
         </div>
       )}
       <button className="btn" disabled={busy}>
-        {busy ? "Just a moment…" : "Set password and continue"}
+        {busy ? "Just a moment…" : reset ? "Save password and log in" : "Set password and continue"}
       </button>
     </form>
   );
