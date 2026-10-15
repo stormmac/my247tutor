@@ -61,7 +61,7 @@ export function AccountMenu() {
   const firstName = user.name.split(/\s+/)[0] || user.name;
   return (
     <>
-      {user.trialEndsAt && !user.child && <TrialTimer endsAt={user.trialEndsAt} account />}
+      {user.trialEndsAt && !user.child && !user.actingAdmin && <TrialTimer endsAt={user.trialEndsAt} account />}
       <details className="account-menu" ref={menu}>
         <summary aria-label={`Account menu for ${user.name}`}>
           <span className="avatar" aria-hidden="true">
