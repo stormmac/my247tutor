@@ -1,5 +1,11 @@
 import { getSkill } from "../curriculum/skills";
 import { YEARS, type Subject as SubjectKey, type YearLevel as YearNumber } from "../curriculum/types";
+import * as Y1A from "./bank/maths-year1a";
+import * as Y1B from "./bank/maths-year1b";
+import * as Y2A from "./bank/maths-year2a";
+import * as Y2B from "./bank/maths-year2b";
+import * as E1 from "./bank/english-year1";
+import * as E2 from "./bank/english-year2";
 import * as Y3 from "./bank/maths-year3";
 import * as Y4A from "./bank/maths-year4a";
 import * as Y4B from "./bank/maths-year4b";
@@ -130,6 +136,535 @@ const COMPARING_DECIMALS: SubtopicSpec = {
 };
 
 const TOPIC_SPECS: TopicSpec[] = [
+  // ---------- Mathematics, Year 1: 30 questions for each Stage 1 standard ----------
+  {
+    n: 101,
+    subject: "maths",
+    year: 1,
+    title: "Numbers and place value",
+    description: "Reading, writing, ordering and partitioning numbers.",
+    subtopics: [
+      {
+        n: 10101,
+        title: "Reading and ordering numbers",
+        description: "Reads, writes and orders numbers using place value.",
+        outcome: "MA1-RWN-01",
+        questions: [...Y1A.PLACE_VALUE, ...Y1A.PLACE_VALUE_2],
+      },
+      {
+        n: 10102,
+        title: "Partitioning numbers",
+        description: "Breaks numbers into tens and ones (and hundreds) in different ways.",
+        outcome: "MA1-RWN-02",
+        questions: [...Y1A.PARTITION, ...Y1A.PARTITION_2],
+      },
+    ],
+  },
+  {
+    n: 102,
+    subject: "maths",
+    year: 1,
+    title: "Addition and subtraction",
+    description: "Number bonds, adding and taking away.",
+    subtopics: [
+      {
+        n: 10201,
+        title: "Adding and subtracting",
+        description: "Uses number bonds and the link between adding and subtracting.",
+        outcome: "MA1-CSQ-01",
+        questions: [...Y1A.ADD_SUB, ...Y1A.ADD_SUB_2],
+      },
+    ],
+  },
+  {
+    n: 103,
+    subject: "maths",
+    year: 1,
+    title: "Groups and sharing",
+    description: "Equal groups, skip counting and sharing.",
+    subtopics: [
+      {
+        n: 10301,
+        title: "Equal groups and sharing",
+        description: "Uses equal groups to multiply and shares to divide.",
+        outcome: "MA1-FG-01",
+        questions: [...Y1A.GROUPS, ...Y1A.GROUPS_2],
+      },
+    ],
+  },
+  {
+    n: 104,
+    subject: "maths",
+    year: 1,
+    title: "Fractions",
+    description: "Equal parts of a whole.",
+    subtopics: [
+      {
+        n: 10401,
+        title: "Halves, quarters and eighths",
+        description: "Makes and names equal parts of shapes, lengths and groups.",
+        outcome: "MA1-GM-03",
+        questions: [...Y1A.FRACTIONS, ...Y1A.FRACTIONS_2],
+      },
+    ],
+  },
+  {
+    n: 105,
+    subject: "maths",
+    year: 1,
+    title: "Measurement",
+    description: "Length, area, capacity and mass.",
+    subtopics: [
+      {
+        n: 10501,
+        title: "Length",
+        description: "Measures, compares and estimates lengths.",
+        outcome: "MA1-GM-02",
+        questions: [...Y1B.LENGTH, ...Y1B.LENGTH_2],
+      },
+      {
+        n: 10502,
+        title: "Area",
+        description: "Measures and compares areas with units in rows and columns.",
+        outcome: "MA1-2DS-02",
+        questions: [...Y1B.AREA, ...Y1B.AREA_2],
+      },
+      {
+        n: 10503,
+        title: "Capacity and volume",
+        description: "Measures and compares how much things hold.",
+        outcome: "MA1-3DS-02",
+        questions: [...Y1B.CAPACITY, ...Y1B.CAPACITY_2],
+      },
+      {
+        n: 10504,
+        title: "Mass",
+        description: "Compares how heavy things are.",
+        outcome: "MA1-NSM-01",
+        questions: [...Y1B.MASS, ...Y1B.MASS_2],
+      },
+    ],
+  },
+  {
+    n: 106,
+    subject: "maths",
+    year: 1,
+    title: "Time",
+    description: "Days, months, durations and clocks.",
+    subtopics: [
+      {
+        n: 10601,
+        title: "Time",
+        description: "Compares how long things take and reads clocks.",
+        outcome: "MA1-NSM-02",
+        questions: [...Y1B.TIME, ...Y1B.TIME_2],
+      },
+    ],
+  },
+  {
+    n: 107,
+    subject: "maths",
+    year: 1,
+    title: "Shapes and position",
+    description: "2D shapes, 3D objects and where things are.",
+    subtopics: [
+      {
+        n: 10701,
+        title: "2D shapes",
+        description: "Recognises and describes flat shapes.",
+        outcome: "MA1-2DS-01",
+        questions: [...Y1B.SHAPES_2D, ...Y1B.SHAPES_2D_2],
+      },
+      {
+        n: 10702,
+        title: "3D objects",
+        description: "Recognises and describes solid objects.",
+        outcome: "MA1-3DS-01",
+        questions: [...Y1B.OBJECTS_3D, ...Y1B.OBJECTS_3D_2],
+      },
+      {
+        n: 10703,
+        title: "Position",
+        description: "Describes where things are and how to get there.",
+        outcome: "MA1-GM-01",
+        questions: [...Y1B.POSITION, ...Y1B.POSITION_2],
+      },
+    ],
+  },
+  {
+    n: 108,
+    subject: "maths",
+    year: 1,
+    title: "Data and chance",
+    description: "Collecting data, reading graphs and chance.",
+    subtopics: [
+      {
+        n: 10801,
+        title: "Collecting and showing data",
+        description: "Gathers data and shows it in lists, tables and picture graphs.",
+        outcome: "MA1-DATA-01",
+        questions: [...Y1A.DATA_SHOW, ...Y1A.DATA_SHOW_2],
+      },
+      {
+        n: 10802,
+        title: "Reading data",
+        description: "Reads data displays and says what they show.",
+        outcome: "MA1-DATA-02",
+        questions: [...Y1A.DATA_READ, ...Y1A.DATA_READ_2],
+      },
+      {
+        n: 10803,
+        title: "Chance",
+        description: "Talks about whether everyday events will happen.",
+        outcome: "MA1-CHAN-01",
+        questions: [...Y1A.CHANCE, ...Y1A.CHANCE_2],
+      },
+    ],
+  },
+  // ---------- English, Year 1: 30 questions for each Stage 1 standard ----------
+  {
+    n: 111,
+    subject: "english",
+    year: 1,
+    title: "Phonics and spelling",
+    description: "Sounds, letters and spelling.",
+    subtopics: [
+      {
+        n: 11101,
+        title: "Sounds and letters",
+        description: "Uses letter sounds to read and spell words.",
+        outcome: "EN1-PHOKW-01",
+        questions: [...E1.PHONICS, ...E1.PHONICS_2],
+      },
+      {
+        n: 11102,
+        title: "Spelling",
+        description: "Spells words using sounds, patterns and word parts.",
+        outcome: "EN1-SPELL-01",
+        questions: [...E1.SPELLING, ...E1.SPELLING_2],
+      },
+    ],
+  },
+  {
+    n: 112,
+    subject: "english",
+    year: 1,
+    title: "Vocabulary",
+    description: "Word meanings.",
+    subtopics: [
+      {
+        n: 11201,
+        title: "Word meanings",
+        description: "Learns and uses new words.",
+        outcome: "EN1-VOCAB-01",
+        questions: [...E1.VOCAB, ...E1.VOCAB_2],
+      },
+    ],
+  },
+  {
+    n: 113,
+    subject: "english",
+    year: 1,
+    title: "Reading",
+    description: "Understanding what you read.",
+    subtopics: [
+      {
+        n: 11301,
+        title: "Understanding what you read",
+        description: "Reads short texts and answers questions about them.",
+        outcome: "EN1-RECOM-01",
+        questions: [...E1.READING, ...E1.READING_2],
+      },
+      {
+        n: 11302,
+        title: "Stories and poems",
+        description: "Talks about characters, settings, events and rhyme.",
+        outcome: "EN1-UARL-01",
+        questions: [...E1.LITERATURE, ...E1.LITERATURE_2],
+      },
+    ],
+  },
+  {
+    n: 114,
+    subject: "english",
+    year: 1,
+    title: "Writing sentences",
+    description: "Writing clear sentences.",
+    subtopics: [
+      {
+        n: 11401,
+        title: "Sentences and punctuation",
+        description: "Writes sentences with capital letters, full stops and joining words.",
+        outcome: "EN1-CWT-01",
+        questions: [...E1.SENTENCES, ...E1.SENTENCES_2],
+      },
+    ],
+  },
+  // ---------- Mathematics, Year 2: 30 questions for each Stage 1 standard ----------
+  {
+    n: 201,
+    subject: "maths",
+    year: 2,
+    title: "Numbers and place value",
+    description: "Reading, writing, ordering and partitioning numbers.",
+    subtopics: [
+      {
+        n: 20101,
+        title: "Reading and ordering numbers",
+        description: "Reads, writes and orders numbers using place value.",
+        outcome: "MA1-RWN-01",
+        questions: [...Y2A.PLACE_VALUE, ...Y2A.PLACE_VALUE_2],
+      },
+      {
+        n: 20102,
+        title: "Partitioning numbers",
+        description: "Breaks numbers into tens and ones (and hundreds) in different ways.",
+        outcome: "MA1-RWN-02",
+        questions: [...Y2A.PARTITION, ...Y2A.PARTITION_2],
+      },
+    ],
+  },
+  {
+    n: 202,
+    subject: "maths",
+    year: 2,
+    title: "Addition and subtraction",
+    description: "Number bonds, adding and taking away.",
+    subtopics: [
+      {
+        n: 20201,
+        title: "Adding and subtracting",
+        description: "Uses number bonds and the link between adding and subtracting.",
+        outcome: "MA1-CSQ-01",
+        questions: [...Y2A.ADD_SUB, ...Y2A.ADD_SUB_2],
+      },
+    ],
+  },
+  {
+    n: 203,
+    subject: "maths",
+    year: 2,
+    title: "Groups and sharing",
+    description: "Equal groups, skip counting and sharing.",
+    subtopics: [
+      {
+        n: 20301,
+        title: "Equal groups and sharing",
+        description: "Uses equal groups to multiply and shares to divide.",
+        outcome: "MA1-FG-01",
+        questions: [...Y2A.GROUPS, ...Y2A.GROUPS_2],
+      },
+    ],
+  },
+  {
+    n: 204,
+    subject: "maths",
+    year: 2,
+    title: "Fractions",
+    description: "Equal parts of a whole.",
+    subtopics: [
+      {
+        n: 20401,
+        title: "Halves, quarters and eighths",
+        description: "Makes and names equal parts of shapes, lengths and groups.",
+        outcome: "MA1-GM-03",
+        questions: [...Y2A.FRACTIONS, ...Y2A.FRACTIONS_2],
+      },
+    ],
+  },
+  {
+    n: 205,
+    subject: "maths",
+    year: 2,
+    title: "Measurement",
+    description: "Length, area, capacity and mass.",
+    subtopics: [
+      {
+        n: 20501,
+        title: "Length",
+        description: "Measures, compares and estimates lengths.",
+        outcome: "MA1-GM-02",
+        questions: [...Y2B.LENGTH, ...Y2B.LENGTH_2],
+      },
+      {
+        n: 20502,
+        title: "Area",
+        description: "Measures and compares areas with units in rows and columns.",
+        outcome: "MA1-2DS-02",
+        questions: [...Y2B.AREA, ...Y2B.AREA_2],
+      },
+      {
+        n: 20503,
+        title: "Capacity and volume",
+        description: "Measures and compares how much things hold.",
+        outcome: "MA1-3DS-02",
+        questions: [...Y2B.CAPACITY, ...Y2B.CAPACITY_2],
+      },
+      {
+        n: 20504,
+        title: "Mass",
+        description: "Compares how heavy things are.",
+        outcome: "MA1-NSM-01",
+        questions: [...Y2B.MASS, ...Y2B.MASS_2],
+      },
+    ],
+  },
+  {
+    n: 206,
+    subject: "maths",
+    year: 2,
+    title: "Time",
+    description: "Days, months, durations and clocks.",
+    subtopics: [
+      {
+        n: 20601,
+        title: "Time",
+        description: "Compares how long things take and reads clocks.",
+        outcome: "MA1-NSM-02",
+        questions: [...Y2B.TIME, ...Y2B.TIME_2],
+      },
+    ],
+  },
+  {
+    n: 207,
+    subject: "maths",
+    year: 2,
+    title: "Shapes and position",
+    description: "2D shapes, 3D objects and where things are.",
+    subtopics: [
+      {
+        n: 20701,
+        title: "2D shapes",
+        description: "Recognises and describes flat shapes.",
+        outcome: "MA1-2DS-01",
+        questions: [...Y2B.SHAPES_2D, ...Y2B.SHAPES_2D_2],
+      },
+      {
+        n: 20702,
+        title: "3D objects",
+        description: "Recognises and describes solid objects.",
+        outcome: "MA1-3DS-01",
+        questions: [...Y2B.OBJECTS_3D, ...Y2B.OBJECTS_3D_2],
+      },
+      {
+        n: 20703,
+        title: "Position",
+        description: "Describes where things are and how to get there.",
+        outcome: "MA1-GM-01",
+        questions: [...Y2B.POSITION, ...Y2B.POSITION_2],
+      },
+    ],
+  },
+  {
+    n: 208,
+    subject: "maths",
+    year: 2,
+    title: "Data and chance",
+    description: "Collecting data, reading graphs and chance.",
+    subtopics: [
+      {
+        n: 20801,
+        title: "Collecting and showing data",
+        description: "Gathers data and shows it in lists, tables and picture graphs.",
+        outcome: "MA1-DATA-01",
+        questions: [...Y2A.DATA_SHOW, ...Y2A.DATA_SHOW_2],
+      },
+      {
+        n: 20802,
+        title: "Reading data",
+        description: "Reads data displays and says what they show.",
+        outcome: "MA1-DATA-02",
+        questions: [...Y2A.DATA_READ, ...Y2A.DATA_READ_2],
+      },
+      {
+        n: 20803,
+        title: "Chance",
+        description: "Talks about whether everyday events will happen.",
+        outcome: "MA1-CHAN-01",
+        questions: [...Y2A.CHANCE, ...Y2A.CHANCE_2],
+      },
+    ],
+  },
+  // ---------- English, Year 2: 30 questions for each Stage 1 standard ----------
+  {
+    n: 211,
+    subject: "english",
+    year: 2,
+    title: "Phonics and spelling",
+    description: "Sounds, letters and spelling.",
+    subtopics: [
+      {
+        n: 21101,
+        title: "Sounds and letters",
+        description: "Uses letter sounds to read and spell words.",
+        outcome: "EN1-PHOKW-01",
+        questions: [...E2.PHONICS, ...E2.PHONICS_2],
+      },
+      {
+        n: 21102,
+        title: "Spelling",
+        description: "Spells words using sounds, patterns and word parts.",
+        outcome: "EN1-SPELL-01",
+        questions: [...E2.SPELLING, ...E2.SPELLING_2],
+      },
+    ],
+  },
+  {
+    n: 212,
+    subject: "english",
+    year: 2,
+    title: "Vocabulary",
+    description: "Word meanings.",
+    subtopics: [
+      {
+        n: 21201,
+        title: "Word meanings",
+        description: "Learns and uses new words.",
+        outcome: "EN1-VOCAB-01",
+        questions: [...E2.VOCAB, ...E2.VOCAB_2],
+      },
+    ],
+  },
+  {
+    n: 213,
+    subject: "english",
+    year: 2,
+    title: "Reading",
+    description: "Understanding what you read.",
+    subtopics: [
+      {
+        n: 21301,
+        title: "Understanding what you read",
+        description: "Reads short texts and answers questions about them.",
+        outcome: "EN1-RECOM-01",
+        questions: [...E2.READING, ...E2.READING_2],
+      },
+      {
+        n: 21302,
+        title: "Stories and poems",
+        description: "Talks about characters, settings, events and rhyme.",
+        outcome: "EN1-UARL-01",
+        questions: [...E2.LITERATURE, ...E2.LITERATURE_2],
+      },
+    ],
+  },
+  {
+    n: 214,
+    subject: "english",
+    year: 2,
+    title: "Writing sentences",
+    description: "Writing clear sentences.",
+    subtopics: [
+      {
+        n: 21401,
+        title: "Sentences and punctuation",
+        description: "Writes sentences with capital letters, full stops and joining words.",
+        outcome: "EN1-CWT-01",
+        questions: [...E2.SENTENCES, ...E2.SENTENCES_2],
+      },
+    ],
+  },
+
   // ---------- Mathematics, Year 3: 15 questions for each Stage 2 standard (see bank/maths-year3.ts) ----------
   {
     n: 301,
