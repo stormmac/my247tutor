@@ -1702,3 +1702,20 @@ ul.tight {
 .q-key .bad::before {
   background: var(--bad);
 }
+
+/* Suni chat records, for grown-ups */
+.suni-log {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  gap: 8px;
+}
+.suni-log-item {
+  border-left: 3px solid var(--border);
+  padding: 4px 0 4px 10px;
+}
+.suni-log-item.flagged {
+  border-left-color: var(--bad);
+  background: var(--bad-tint);
+  border-radius: 0 8px 8px 0;
+  padding-right: 8px;
+}

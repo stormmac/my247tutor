@@ -35,6 +35,7 @@ const PARENT_ONLY = [
   "/classes",
   "/api/classes",
   "/api/students",
+  "/api/suni",
 ];
 
 function isUnder(pathname: string, prefixes: string[]): boolean {

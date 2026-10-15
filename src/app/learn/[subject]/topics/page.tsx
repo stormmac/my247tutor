@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { useSuniScreen } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { progressKey } from "@/lib/content/practice";
 import {
@@ -34,6 +35,19 @@ function Topics() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { profile, loaded } = useProfile();
+  const shownYear = (Number(searchParams.get("year")) || profile?.yearLevel || 3) as YearLevel;
+  useSuniScreen(
+    subject === "maths" || subject === "english"
+      ? {
+          screen: `Browsing Year ${shownYear} ${subject === "maths" ? "maths" : "English"} topics to pick one to practise: ${topicsFor(
+            subject,
+            shownYear,
+          )
+            .map((t) => t.title)
+            .join(", ")}.`,
+        }
+      : null,
+  );
 
   if (subject !== "maths" && subject !== "english") return <p>Unknown subject.</p>;
   if (!loaded) return null;

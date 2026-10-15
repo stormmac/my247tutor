@@ -19,9 +19,24 @@ export interface SuniFocus {
   onWellbeingConcern: (studentMessage: string) => void;
 }
 
+/**
+ * What's on screen when there's no practice question: a reading lesson step, the lesson plan, a
+ * check, the times tables game. Suni talks about this.
+ */
+export interface SuniScreen {
+  /** Plain words for the model, such as "Learn to Read lesson, step 3 of 12: find the word cat". */
+  screen: string;
+  /** A check, test or timed game: Suni encourages but gives no hints or answers. */
+  noHelp?: boolean;
+  /** What Suni says when the chat opens. */
+  greeting?: string;
+}
+
 interface SuniApi {
   focus: SuniFocus | null;
   setFocus: (focus: SuniFocus | null) => void;
+  screen: SuniScreen | null;
+  setScreen: (screen: SuniScreen | null) => void;
   /** Suni pops up a speech bubble with this message. */
   say: (message: string) => void;
   bubble: string | null;
@@ -34,13 +49,16 @@ const SuniContext = createContext<SuniApi | null>(null);
 
 export function SuniProvider({ children }: { children: React.ReactNode }) {
   const [focus, setFocus] = useState<SuniFocus | null>(null);
+  const [screen, setScreen] = useState<SuniScreen | null>(null);
   const [bubble, setBubble] = useState<string | null>(null);
   const [said, setSaid] = useState(0);
   const say = useCallback((message: string) => {
     setBubble(message);
     setSaid((n) => n + 1);
   }, []);
-  return <SuniContext.Provider value={{ focus, setFocus, say, bubble, setBubble, said }}>{children}</SuniContext.Provider>;
+  return (
+    <SuniContext.Provider value={{ focus, setFocus, screen, setScreen, say, bubble, setBubble, said }}>{children}</SuniContext.Provider>
+  );
 }
 
 function useSuniApi(): SuniApi {
@@ -70,29 +88,60 @@ export function useSuniFocus(focus: SuniFocus | null) {
   useEffect(() => () => setFocus(null), [setFocus]);
 }
 
+/** Tells Suni what's on screen, for pages without a practice question (see SuniScreen). */
+export function useSuniScreen(screen: SuniScreen | null) {
+  const { setScreen } = useSuniApi();
+  const key = screen ? JSON.stringify(screen) : "";
+  useEffect(() => {
+    setScreen(key ? (JSON.parse(key) as SuniScreen) : null);
+  }, [key, setScreen]);
+  useEffect(() => () => setScreen(null), [setScreen]);
+}
+
+/** What's on pages that don't say for themselves. */
+export function screenForPath(pathname: string): string {
+  if (pathname === "/") return "The my247tutor home page.";
+  if (pathname === "/learn") return "The Learn page, choosing what to do: Maths, English, Learn to Read, writing or the times tables game.";
+  if (pathname.startsWith("/read")) return "The Learn to Read page, choosing a sounds lesson, sight words or Sound It Out.";
+  if (pathname.startsWith("/tables")) return "The times tables game, choosing which tables to play.";
+  if (pathname.startsWith("/learn/writing")) return "The writing page.";
+  if (pathname.startsWith("/learn/")) return `The ${pathname.split("/")[2] === "english" ? "English" : "maths"} learning page.`;
+  if (pathname.startsWith("/classes") || pathname.startsWith("/centre")) return "A teacher's classes page.";
+  if (pathname.startsWith("/admin")) return "The admin pages.";
+  return "A my247tutor page.";
+}
+
 const HIDDEN_ON = ["/parent", "/login"];
 
 /** Suni flies over every page. Tap Suni to chat. */
 export function SuniCompanion() {
   const pathname = usePathname();
-  const { focus, bubble, setBubble, said } = useSuniApi();
+  const { focus, screen, bubble, setBubble, said } = useSuniApi();
   const { profile, setProfile, loaded } = useProfile();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement>(null);
 
-  const context: TutorContext | null =
+  // A practice question says the most; otherwise the page's own description, otherwise one from its address.
+  const onScreen: SuniScreen = screen ?? { screen: screenForPath(pathname) };
+  const base: TutorContext | null =
     focus?.context ?? (profile ? { studentName: profile.name, yearLevel: profile.yearLevel, skillId: "general" } : null);
+  const context: TutorContext | null = base && {
+    ...base,
+    screen: base.screen ?? onScreen.screen,
+    ...((base.noHelp ?? onScreen.noHelp) ? { noHelp: true } : {}),
+  };
   const greeting =
     focus?.greeting ??
+    (profile && screen?.greeting) ??
     (profile
       ? `Hi ${profile.name}! I'm ${TUTOR_NAME}. Ask me anything about maths or English, or pick something to practise and I'll help you with it.`
       : `Hi! I'm ${TUTOR_NAME}, your robot bee tutor. Press Start learning and I'll help you along the way.`);
   const onWellbeing =
     focus?.onWellbeingConcern ??
     ((message: string) => setProfile((p) => ({ ...p, wellbeingFlags: [...p.wellbeingFlags, { at: Date.now(), message }] })));
-  const { messages, busy, send } = useTutorChat(context, greeting, onWellbeing);
+  const { messages, busy, send } = useTutorChat(context, greeting, onWellbeing, profile?.id);
   const voice = useSuniVoice();
 
   // Suni reads each reply aloud once it has finished arriving.
@@ -338,6 +387,8 @@ export function questionFocus(args: {
   correctAnswer: string;
   answered: boolean;
   hintsShown: number;
+  /** Where the question sits, such as "Weekly lesson, part 2 (Fractions), question 3 of 10". */
+  screen?: string;
 }): SuniFocus {
   const { profile, setProfile, question } = args;
   return {
@@ -346,6 +397,7 @@ export function questionFocus(args: {
       studentName: profile.name,
       yearLevel: profile.yearLevel,
       skillId: args.progressKey,
+      ...(args.screen ? { screen: args.screen } : {}),
       question: {
         prompt: question.prompt + (question.choices ? ` Options: ${question.choices.join(" / ")}` : ""),
         correctAnswer: args.correctAnswer.slice(0, 200),

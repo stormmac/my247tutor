@@ -30,6 +30,7 @@ import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
 import { describeTables, SPEEDS, tablesOf, trickyFacts } from "@/lib/tables/game";
 import { UNITS } from "@/lib/phonics/sequence";
 import { COMPETENCY_LABELS, competency, recommendedPlan, subjectLevel, type Competency, type Standing } from "@/lib/learner/report";
+import { SuniChatsReport } from "@/components/SuniChats";
 
 /**
  * A learner's progress report: this week's practice, the starting assessments, recent questions,
@@ -73,6 +74,8 @@ export function ProgressReport({
           )}
         </div>
       )}
+
+      <SuniChatsReport learnerId={profile.id} name={profile.name} />
 
       <div className="grid grid-3">
         <div className="card">

@@ -55,6 +55,7 @@ export function FocusedPractice({
       correctAnswer: answerText(question.answer, question.choices),
       answered,
       hintsShown,
+      screen: `Practising ${subtopic.title}, picked from the topic list.${position < order.length ? ` Question ${position + 1} of ${order.length}.` : ""}`,
     }),
   );
 

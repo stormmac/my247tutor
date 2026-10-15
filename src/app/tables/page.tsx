@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Suni } from "@/components/Suni";
+import { useSuniScreen } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import {
   answerOf,
@@ -31,6 +32,15 @@ export default function TablesPage() {
   const { profile, setProfile, loaded } = useProfile();
   const [playing, setPlaying] = useState<{ tables: number[]; speed: Speed } | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  useSuniScreen(
+    result
+      ? {
+          screen: `The times tables game, finished: ${result.game.right} right out of ${result.game.asked}.${
+            result.game.missed.length ? ` Facts they missed: ${result.game.missed.slice(0, 12).join(", ")}.` : ""
+          }`,
+        }
+      : null,
+  );
   const [round, setRound] = useState(0);
 
   if (!loaded) return null;
@@ -230,6 +240,10 @@ function Game({ tables, speed, onFinish }: { tables: number[]; speed: Speed; onF
   const score = useRef({ right: 0, asked: 0, missed: [] as string[] });
   const [right, setRight] = useState(0);
   const endsAt = useRef(0);
+  useSuniScreen({
+    screen: `The times tables game: answering as many as they can in 2 minutes from the ${tables.join(", ")} times tables. On screen: ${factOf(question)} = ?`,
+    noHelp: true,
+  });
   const done = useRef(false);
   const pause = useRef<ReturnType<typeof setTimeout> | null>(null);
 
