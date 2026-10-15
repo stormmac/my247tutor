@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PasswordField } from "@/components/PasswordField";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/rules";
 
 export function ChangePassword() {
@@ -28,32 +29,23 @@ export function ChangePassword() {
 
   return (
     <form className="stack" onSubmit={submit} style={{ maxWidth: 360 }}>
-      <h3 style={{ margin: 0 }}>Change password</h3>
-      <div>
-        <label htmlFor="current-password">Current password</label>
-        <input
-          id="current-password"
-          type="password"
-          value={current}
-          onChange={(e) => setCurrent(e.target.value)}
-          autoComplete="current-password"
-          required
-        />
-      </div>
-      <div>
-        <label htmlFor="new-password">New password</label>
-        <input
-          id="new-password"
-          type="password"
-          value={next}
-          onChange={(e) => setNext(e.target.value)}
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          required
-        />
-      </div>
-      {message && <div className={`feedback ${message.good ? "good" : "bad"}`}>{message.text}</div>}
-      <button className="btn secondary small" disabled={busy}>
+      <h2 style={{ margin: 0 }}>Change password</h2>
+      <PasswordField id="current-password" label="Current password" value={current} onChange={setCurrent} autoComplete="current-password" />
+      <PasswordField
+        id="new-password"
+        label="New password"
+        value={next}
+        onChange={setNext}
+        autoComplete="new-password"
+        minLength={MIN_PASSWORD_LENGTH}
+        hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+      />
+      {message && (
+        <div className={`feedback ${message.good ? "good" : "bad"}`} role="status">
+          {message.text}
+        </div>
+      )}
+      <button className="btn" disabled={busy}>
         Change password
       </button>
     </form>

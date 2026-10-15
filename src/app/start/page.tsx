@@ -6,7 +6,7 @@ import { safeNextPath } from "@/lib/auth/rules";
 import { accountsEnabled, SESSION_COOKIE, TRIAL_COOKIE, verifySession, verifyTrial } from "@/lib/auth/session";
 import { billingEnabled } from "@/lib/billing/stripe";
 
-/** Where Start learning lands without an account: try it free for an hour, or sign up or in. */
+/** Where Start learning lands without an account: try it free for an hour, or sign up or log in. */
 export default async function StartPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const next = safeNextPath((await searchParams).next ?? "/learn");
   if (!accountsEnabled()) redirect(next);
@@ -32,7 +32,7 @@ export default async function StartPage({ searchParams }: { searchParams: Promis
         {billingEnabled() ? "Create an account" : "Create a free account"}
       </Link>
       <p className="small muted" style={{ margin: 0 }}>
-        Already have an account? <Link href={`/signin${query}`}>Sign in</Link>
+        Already have an account? <Link href={`/login${query}`}>Log in</Link>
       </p>
     </div>
   );

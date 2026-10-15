@@ -24,13 +24,17 @@ export const PasswordSchema = z
   .min(MIN_PASSWORD_LENGTH, `Use at least ${MIN_PASSWORD_LENGTH} characters.`)
   .max(200, "That password is too long.");
 
+/** Who can sign up on their own: a parent or carer, or a tutoring centre. Teachers and children are added by them. */
+export const SIGN_UP_ROLES = ["parent", "centre"] as const;
+
 export const SignUpSchema = z.object({
   name: z.string().trim().min(1, "Enter your name.").max(100),
   email: EmailSchema,
   password: PasswordSchema,
+  role: z.enum(SIGN_UP_ROLES).default("parent"),
 });
 
-/** Parents sign in with their email; children with the username their parent gave them. */
+/** Parents, centres and teachers log in with their email; children with the username they were given. */
 export const SignInSchema = z.object({ email: z.string().trim().toLowerCase().min(1).max(255), password: z.string().min(1).max(200) });
 
 /** A child's sign-in name: easy to type, and never an email, so the two can't be confused. */

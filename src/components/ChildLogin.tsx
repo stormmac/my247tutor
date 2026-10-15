@@ -78,9 +78,9 @@ export function ChildLogin({ learnerId, name }: { learnerId: string; name: strin
     if (!ok) return;
     const done =
       editing === "new"
-        ? `Done. ${name} can now sign in with the username "${username.trim().toLowerCase()}" and the password you chose.`
+        ? `Done. ${name} can now log in with the username "${username.trim().toLowerCase()}" and the password you chose.`
         : editing === "password"
-          ? `Password changed. ${name} will need the new one next time they sign in.`
+          ? `Password changed. ${name} will need the new one next time they log in.`
           : `Username changed to "${username.trim().toLowerCase()}".`;
     setEditing(null);
     setPassword("");
@@ -105,13 +105,13 @@ export function ChildLogin({ learnerId, name }: { learnerId: string; name: strin
         <p className="muted" style={{ margin: 0 }}>
           {name} signs in with the username <strong>{login.username}</strong>.{" "}
           {login.lastLoginAt
-            ? `Last signed in ${new Date(login.lastLoginAt).toLocaleDateString("en-AU", { day: "numeric", month: "long" })}.`
-            : "They haven't signed in yet."}{" "}
+            ? `Last logged in ${new Date(login.lastLoginAt).toLocaleDateString("en-AU", { day: "numeric", month: "long" })}.`
+            : "They haven't logged in yet."}{" "}
           They only see their learning pages, not this page or billing.
         </p>
       ) : (
         <p className="muted" style={{ margin: 0 }}>
-          Give {name} a username and password so they can sign in on their own device. Their progress stays on your account, and they only
+          Give {name} a username and password so they can log in on their own device. Their progress stays on your account, and they only
           see their learning pages, not this page or billing.
         </p>
       )}

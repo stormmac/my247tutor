@@ -48,7 +48,7 @@ function BillingView() {
       : fetch("/api/billing");
     request
       .then(async (r) => {
-        if (r.status === 401) return window.location.assign("/signin?next=/billing");
+        if (r.status === 401) return window.location.assign("/login?next=/billing");
         if (!r.ok) throw new Error();
         const b = (await r.json()) as Billing;
         setBilling(b);

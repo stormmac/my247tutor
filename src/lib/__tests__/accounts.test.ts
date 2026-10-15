@@ -39,7 +39,12 @@ describe("sessions", () => {
 describe("account rules", () => {
   it("validates sign-up details and normalises the email", () => {
     const ok = SignUpSchema.safeParse({ name: " Storm ", email: " Storm@Example.COM ", password: "long enough pw" });
-    expect(ok.success && ok.data).toEqual({ name: "Storm", email: "storm@example.com", password: "long enough pw" });
+    expect(ok.success && ok.data).toEqual({ name: "Storm", email: "storm@example.com", password: "long enough pw", role: "parent" });
+    // Tutoring centres can sign up themselves; nobody can sign up as an admin or teacher.
+    const centre = SignUpSchema.safeParse({ name: "Bright Minds", email: "a@b.com", password: "long enough pw", role: "centre" });
+    expect(centre.success && centre.data.role).toBe("centre");
+    for (const role of ["admin", "teacher", "student"])
+      expect(SignUpSchema.safeParse({ name: "S", email: "s@example.com", password: "long enough pw", role }).success).toBe(false);
     expect(SignUpSchema.safeParse({ name: "S", email: "not-an-email", password: "long enough pw" }).success).toBe(false);
     expect(SignUpSchema.safeParse({ name: "S", email: "s@example.com", password: "short" }).success).toBe(false);
     expect(SignUpSchema.safeParse({ name: "", email: "s@example.com", password: "long enough pw" }).success).toBe(false);

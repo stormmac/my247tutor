@@ -97,10 +97,16 @@ export async function getUser(id: string): Promise<User | null> {
 
 export type SignUpResult = { user: User } | { error: string };
 
-/** A parent signing up. Their free trial ends at `trialEndsAt` (milliseconds). */
-export async function createUser(name: string, email: string, password: string, trialEndsAt: number): Promise<SignUpResult> {
+/** A parent or tutoring centre signing up. Their free trial ends at `trialEndsAt` (milliseconds). */
+export async function createUser(
+  name: string,
+  email: string,
+  password: string,
+  trialEndsAt: number,
+  signUpAs: "parent" | "centre" = "parent",
+): Promise<SignUpResult> {
   const hash = await bcrypt.hash(password, BCRYPT_COST);
-  const role: Role = isAdminEmail(email) ? "admin" : "parent";
+  const role: Role = isAdminEmail(email) ? "admin" : signUpAs;
   const { rows } = await (
     await ready()
   ).query(
@@ -108,7 +114,7 @@ export async function createUser(name: string, email: string, password: string, 
      ON CONFLICT (email) DO NOTHING RETURNING ${USER_COLUMNS}`,
     [email, name, role, hash, new Date(trialEndsAt)],
   );
-  return rows[0] ? { user: toUser(rows[0]) } : { error: "There's already an account with that email. Try signing in." };
+  return rows[0] ? { user: toUser(rows[0]) } : { error: "There's already an account with that email. Try logging in." };
 }
 
 export type SignInResult = { user: User } | { error: string; status: number };
@@ -135,7 +141,7 @@ export async function signIn(email: string, password: string, ip: string): Promi
   const row = rows[0];
   const ok = await bcrypt.compare(password, (row?.password_hash as string | null) ?? dummy());
   await (await ready()).query(`INSERT INTO login_attempts (email, ip, success) VALUES ($1, $2, $3)`, [email, ip, ok && !!row]);
-  if (!ok || !row) return { error: "That email (or username) and password don't match.", status: 401 };
+  if (!ok || !row) return { error: "That email (or username) and password don't match. Check them and try again.", status: 401 };
   const account = await withParentPlan(toUser(row));
   if (!account.isActive) {
     const who = account.role === "student" ? "Ask your grown-up to check their account." : "Please contact my247tutor.";
@@ -162,7 +168,7 @@ export async function requireUser(request: NextRequest, role?: Role): Promise<{ 
   const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
   const user = session ? await getUser(session.userId) : null;
   if (!session || !user || !user.isActive || user.sessionVersion !== session.version) {
-    return { response: Response.json({ error: "Please sign in." }, { status: 401 }) };
+    return { response: Response.json({ error: "Please log in." }, { status: 401 }) };
   }
   if (role && user.role !== role) return { response: Response.json({ error: "You don't have access to this." }, { status: 403 }) };
   return { user };

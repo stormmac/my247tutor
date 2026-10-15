@@ -1,50 +1,94 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { signOut, useAccount } from "@/components/useAccount";
 
 /** The Parents link in the top bar, or a tutoring centre's own pages. A child signed in on their own gets neither. */
 export function ParentsLink() {
-  const { user } = useAccount();
+  const { user, loaded, enabled } = useAccount();
+  // Logged out, Log in and Sign up say where parents go.
+  if (loaded && enabled && !user) return null;
   if (user?.child) return null;
   if (user?.role === "centre") return <Link href="/centre">Centre</Link>;
   if (user?.role === "teacher") return <Link href="/classes">Classes</Link>;
   return <Link href="/parent">Parents</Link>;
 }
 
-/** Sign in (with any free-trial time left), or the signed-in parent's Admin and Sign out, in the top bar. */
+const ROLE_NAMES: Record<string, string> = {
+  admin: "Admin",
+  parent: "Parent",
+  centre: "Tutoring centre",
+  teacher: "Teacher",
+  student: "Student",
+};
+
+/**
+ * The right-hand end of the top bar. Logged out: Log in and Sign up (with any free-trial time left).
+ * Logged in: the person's name, opening a menu with who they are, their account and Log out.
+ */
 export function AccountMenu() {
   const { loaded, enabled, billing, user, trialEndsAt } = useAccount();
+  const menu = useRef<HTMLDetailsElement>(null);
+  const pathname = usePathname();
+
+  // The menu closes when the page changes or on a click anywhere else.
+  useEffect(() => {
+    if (menu.current) menu.current.open = false;
+  }, [pathname]);
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (menu.current?.open && !menu.current.contains(e.target as Node)) menu.current.open = false;
+    };
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
+
   if (!loaded || !enabled) return null;
   if (!user)
     return (
       <>
         {trialEndsAt !== null && trialEndsAt > Date.now() && <TrialTimer endsAt={trialEndsAt} />}
-        <Link href="/signin" className="nav-signin">
-          Sign in
+        <Link href="/login" className="nav-signin">
+          Log in
+        </Link>
+        <Link href="/signup" className="btn small nav-signup">
+          Sign up
         </Link>
       </>
     );
+  const firstName = user.name.split(/\s+/)[0] || user.name;
   return (
     <>
       {user.trialEndsAt && !user.child && <TrialTimer endsAt={user.trialEndsAt} account />}
-      {billing && (user.role === "parent" || user.role === "centre") && <Link href="/billing">Billing</Link>}
-      {user.role === "admin" && <Link href="/admin">Admin</Link>}
-      <button
-        type="button"
-        className="link-button"
-        onClick={() => void signOut()}
-        title={user.child ? `Signed in as ${user.name} (${user.email})` : `Signed in as ${user.email}`}
-      >
-        Sign out
-      </button>
+      <details className="account-menu" ref={menu}>
+        <summary aria-label={`Account menu for ${user.name}`}>
+          <span className="avatar" aria-hidden="true">
+            {firstName.charAt(0).toUpperCase()}
+          </span>
+          <span className="account-name">{firstName}</span>
+        </summary>
+        <div className="account-menu-list">
+          <div className="account-who">
+            <strong>{user.name}</strong>
+            <span className="small muted">{user.email}</span>
+            <span className="small muted">{ROLE_NAMES[user.role] ?? user.role}</span>
+          </div>
+          <Link href="/account">My account</Link>
+          {billing && (user.role === "parent" || user.role === "centre") && <Link href="/billing">Billing</Link>}
+          {user.role === "admin" && <Link href="/admin">Admin</Link>}
+          <button type="button" className="link-button" onClick={() => void signOut()}>
+            Log out
+          </button>
+        </div>
+      </details>
     </>
   );
 }
 
 /** Pages a visitor can stay on after the free hour. */
-const OPEN_PAGES = ["/", "/start", "/signin", "/signup", "/billing"];
+const OPEN_PAGES = ["/", "/start", "/login", "/signup", "/forgot-password", "/billing"];
 
 /**
  * Minutes left of the free hour. When it runs out a visitor goes on to sign-up (progress so far

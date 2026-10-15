@@ -3,13 +3,19 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { useAccount } from "@/components/useAccount";
+import { PasswordField } from "@/components/PasswordField";
+import { homeFor, signOut, useAccount } from "@/components/useAccount";
 import { MIN_PASSWORD_LENGTH, safeNextPath } from "@/lib/auth/rules";
 
-/** The sign-in and sign-up forms, which differ only in a name field and where they post. */
-export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
+type SignUpAs = "parent" | "centre";
+
+/** The log in and sign up forms. One log in form for everyone: email for grown-ups, username for students. */
+export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const params = useSearchParams();
-  const next = safeNextPath(params.get("next") ?? "/parent");
+  // Only a page the person was sent away from; otherwise each account goes to its own home page.
+  const asked = params.get("next");
+  const next = asked ? safeNextPath(asked) : null;
+  const [signUpAs, setSignUpAs] = useState<SignUpAs>(params.get("as") === "centre" ? "centre" : "parent");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,17 +29,15 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/auth/${mode}`, {
+      const res = await fetch(`/api/auth/${signup ? "signup" : "signin"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(signup ? { name, email, password } : { email, password }),
+        body: JSON.stringify(signup ? { name, email, password, role: signUpAs } : { email, password }),
       });
       if (res.ok) {
         const { user } = (await res.json().catch(() => ({}))) as { user?: { role?: string } };
-        // A full page load so every part of the page sees the new session. Children go to their learning
-        // pages, and tutoring centres and their teachers to theirs, instead of the parents page.
-        const home: Record<string, string> = { student: "/learn", centre: "/centre", teacher: "/classes" };
-        window.location.assign(next.startsWith("/parent") ? (home[user?.role ?? ""] ?? next) : next);
+        // A full page load so every part of the page sees the new session.
+        window.location.assign(next ?? homeFor(user?.role));
         return;
       }
       setError(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Something went wrong.");
@@ -43,14 +47,31 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
     setBusy(false);
   }
 
-  const otherHref = `/${signup ? "signin" : "signup"}${params.get("next") ? `?next=${encodeURIComponent(next)}` : ""}`;
+  const keepNext = asked ? `?next=${encodeURIComponent(asked)}` : "";
+
+  // Already logged in: say who as, rather than showing a form that would quietly switch accounts.
+  if (account.user)
+    return (
+      <div className="card narrow stack" style={{ margin: "40px auto" }}>
+        <h1>You&apos;re logged in</h1>
+        <p className="muted" style={{ margin: 0 }}>
+          You&apos;re logged in as <strong>{account.user.name}</strong> ({account.user.email}).
+        </p>
+        <Link className="btn" href={next ?? homeFor(account.user.role)}>
+          Continue
+        </Link>
+        <button type="button" className="btn secondary" onClick={() => void signOut(signup ? "/signup" : "/login")}>
+          Log out and use a different account
+        </button>
+      </div>
+    );
 
   return (
     <form className="card narrow stack" style={{ margin: "40px auto" }} onSubmit={submit}>
-      <h1>{signup ? "Create a parent account" : "Sign in"}</h1>
+      <h1>{signup ? "Create your account" : "Log in"}</h1>
       {account.loaded && !account.enabled && (
         <div className="feedback warn">
-          Logins aren't switched on for this site yet. <Link href="/admin">See what's left to set up</Link>.
+          Logins aren&apos;t switched on for this site yet. <Link href="/admin">See what&apos;s left to set up</Link>.
         </div>
       )}
       {signup && params.get("trial") === "over" && (
@@ -58,15 +79,40 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
           Your free hour is up. Create {account.billing ? "an account" : "a free account"} to keep going. Everything done so far is kept.
         </div>
       )}
-      <p className="muted" style={{ margin: 0 }}>
-        {signup
-          ? "Your child's progress is saved to your account, so you can see it on any device."
-          : "Parents sign in with their email. Children sign in with the username their parent set up for them."}
-      </p>
+      {signup ? (
+        <fieldset className="stack" style={{ border: 0, padding: 0, margin: 0, gap: 8 }}>
+          <legend style={{ fontWeight: 600, marginBottom: 8, padding: 0 }}>I&apos;m signing up as</legend>
+          <div className="account-type">
+            {(
+              [
+                ["parent", "A parent or carer", "For my own children"],
+                ["centre", "A tutoring centre", "For our teachers, classes and students"],
+              ] as const
+            ).map(([value, title, detail]) => (
+              <label key={value} className={signUpAs === value ? "selected" : ""}>
+                <input type="radio" name="as" value={value} checked={signUpAs === value} onChange={() => setSignUpAs(value)} />
+                <strong>{title}</strong>
+                <span className="small muted">{detail}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : (
+        <p className="muted" style={{ margin: 0 }}>
+          Parents, tutoring centres and teachers: use your email. Students: use the username you were given.
+        </p>
+      )}
       {signup && (
         <div>
-          <label htmlFor="name">Your name</label>
-          <input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" maxLength={100} required />
+          <label htmlFor="name">{signUpAs === "centre" ? "Centre name" : "Your name"}</label>
+          <input
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete={signUpAs === "centre" ? "organization" : "name"}
+            maxLength={100}
+            required
+          />
         </div>
       )}
       <div>
@@ -82,31 +128,33 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
           required
         />
       </div>
-      <div>
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete={signup ? "new-password" : "current-password"}
-          minLength={signup ? MIN_PASSWORD_LENGTH : undefined}
-          required
-        />
-        {signup && <div className="small muted">At least {MIN_PASSWORD_LENGTH} characters.</div>}
-      </div>
+      <PasswordField
+        id="password"
+        label="Password"
+        value={password}
+        onChange={setPassword}
+        autoComplete={signup ? "new-password" : "current-password"}
+        minLength={signup ? MIN_PASSWORD_LENGTH : undefined}
+        hint={signup ? `At least ${MIN_PASSWORD_LENGTH} characters.` : undefined}
+        extra={
+          !signup && (
+            <Link href="/forgot-password" className="small">
+              Forgot password?
+            </Link>
+          )
+        }
+      />
       {error && (
         <div className="feedback bad" role="alert">
           {error}
         </div>
       )}
       <button className="btn" disabled={busy}>
-        {busy ? "Just a moment…" : signup ? "Create account" : "Sign in"}
+        {busy ? "Just a moment…" : signup ? "Create account" : "Log in"}
       </button>
-      <p className="small muted" style={{ margin: 0 }}>
+      <p className="small muted" style={{ margin: 0, textAlign: "center" }}>
         {signup ? "Already have an account? " : "New to my247tutor? "}
-        <Link href={otherHref}>{signup ? "Sign in" : "Create an account"}</Link>
-        {!signup && " Forgotten your password? Contact my247tutor and we'll reset it."}
+        <Link href={`/${signup ? "login" : "signup"}${keepNext}`}>{signup ? "Log in" : "Sign up"}</Link>
       </p>
     </form>
   );

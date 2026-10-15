@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ChangePassword } from "@/components/ChangePassword";
 import { useAccount } from "@/components/useAccount";
 import { ChildLogin } from "@/components/ChildLogin";
 import { ChildTabs } from "@/components/ChildSwitcher";
@@ -55,7 +54,7 @@ export default function ParentPage() {
         <h2>Settings</h2>
         <p className="muted small">
           {account.user
-            ? `Signed in as ${account.user.email}. ${profile.name}'s progress is saved to your account.`
+            ? `Logged in as ${account.user.email}. ${profile.name}'s progress is saved to your account.`
             : "Progress is saved in this browser only."}
         </p>
         <div className="row">
@@ -98,9 +97,9 @@ export default function ParentPage() {
           </button>
         </div>
         {account.user && (
-          <div style={{ marginTop: 20 }}>
-            <ChangePassword />
-          </div>
+          <p className="small muted" style={{ marginBottom: 0 }}>
+            To change your password or details, go to <Link href="/account">My account</Link>.
+          </p>
         )}
       </div>
     </div>

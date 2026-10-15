@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
   // The free trial carries on from this browser's free hour, if it had one.
   const trialEnd = newAccountTrialEnd(await verifyTrial(request.cookies.get(TRIAL_COOKIE)?.value), TRIAL_MINUTES);
-  const result = await createUser(parsed.data.name, parsed.data.email, parsed.data.password, trialEnd);
+  const result = await createUser(parsed.data.name, parsed.data.email, parsed.data.password, trialEnd, parsed.data.role);
   if ("error" in result) return Response.json({ error: result.error }, { status: 409 });
 
   const { user } = result;

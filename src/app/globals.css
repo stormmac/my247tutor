@@ -138,8 +138,8 @@ p {
     font-size: 0.9rem;
     flex-wrap: wrap;
   }
-  /* The trial pill already leads to sign-up and sign-in. */
-  .nav .trial-pill ~ .nav-signin {
+  /* The trial pill already leads to sign up, and Log in is beside it. */
+  .nav .trial-pill ~ .nav-signup {
     display: none;
   }
 }
@@ -1718,4 +1718,156 @@ ul.tight {
   background: var(--bad-tint);
   border-radius: 0 8px 8px 0;
   padding-right: 8px;
+}
+
+/* A password box with its Show button inside the right-hand end. */
+.password-field {
+  position: relative;
+}
+.password-field input {
+  padding-right: 64px;
+}
+.password-field .link-button {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  text-decoration: underline;
+}
+
+/* Sign up: parent or tutoring centre, as two big choices. */
+.account-type {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.account-type label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 400;
+}
+.account-type label.selected {
+  border-color: var(--brand);
+  background: var(--brand-tint);
+}
+.account-type input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.account-type label:has(input:focus-visible) {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+@media (max-width: 420px) {
+  .account-type {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Sign up, in the top bar. */
+.nav a.nav-signup {
+  color: #fff;
+  padding: 6px 14px;
+}
+.nav a.nav-signup:hover {
+  color: #fff;
+}
+
+/* The logged-in person's menu in the top bar. */
+.account-menu {
+  position: relative;
+}
+.account-menu summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 2px 10px 2px 2px;
+  border: 1px solid var(--border);
+}
+.account-menu summary::-webkit-details-marker {
+  display: none;
+}
+.account-menu summary::after {
+  content: "▾";
+  font-size: 0.8em;
+  color: var(--muted);
+}
+.account-menu .avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.account-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 50;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+  white-space: normal;
+}
+.account-menu-list > a,
+.account-menu-list > .link-button {
+  display: block;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--text);
+  width: 100%;
+  font-size: 0.95rem;
+}
+.account-menu-list > a:hover,
+.account-menu-list > .link-button:hover {
+  background: var(--surface-2, var(--brand-tint));
+}
+.account-who {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 420px) {
+  .account-menu .account-name {
+    display: none;
+  }
+}
+
+/* Label and value pairs, such as on My account. */
+.details-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+}
+.details-list dt {
+  color: var(--muted);
+}
+.details-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }

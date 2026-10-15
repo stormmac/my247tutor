@@ -4,21 +4,24 @@ import { accountsEnabled, SESSION_COOKIE, TRIAL_COOKIE, verifySession, verifyTri
 import { AUTH_COOKIE, authToken, safeEqual, sitePassword } from "@/lib/auth/sitePassword";
 
 /** Open to everyone, even with the site password or accounts switched on. */
-const SITE_PASSWORD_PUBLIC = ["/login", "/api/login", "/api/billing/webhook"];
-/** Need no account: the home page, the trial choice, signing in and up, and the site-password page. */
+const SITE_PASSWORD_PUBLIC = ["/private", "/api/login", "/api/billing/webhook"];
+/** Need no account: the home page, the trial choice, logging in and signing up, and the site-password page. */
 const ACCOUNT_PUBLIC = [
   "/",
   "/start",
   "/api/auth/trial",
+  "/login",
   "/signin",
   "/signup",
-  "/login",
+  "/forgot-password",
+  "/api/auth/forgot-password",
+  "/private",
   "/api/login",
   "/api/auth/signin",
   "/api/auth/signup",
   "/api/auth/signout",
   "/api/auth/me",
-  // The one-time link a new account gets by email to set its password.
+  // The one-time link a new account, or a forgotten password, gets by email to set a password.
   "/set-password",
   "/api/auth/set-password",
   // Stripe calls this; it proves itself with a signature instead.
@@ -37,6 +40,9 @@ const PARENT_ONLY = [
   "/api/students",
   "/api/suni",
 ];
+
+/** Pages for an account holder, not for trying the site: signed out, these go to log in, not the free trial. */
+const ACCOUNT_PAGES = ["/parent", "/billing", "/centre", "/classes", "/account"];
 
 function isUnder(pathname: string, prefixes: string[]): boolean {
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -80,7 +86,7 @@ export async function proxy(request: NextRequest) {
   const password = sitePassword();
   if (password && !SITE_PASSWORD_PUBLIC.includes(pathname)) {
     const cookie = request.cookies.get(AUTH_COOKIE)?.value ?? "";
-    if (!safeEqual(cookie, await authToken(password))) return denied(request, 401, "Password required", "/login");
+    if (!safeEqual(cookie, await authToken(password))) return denied(request, 401, "Password required", "/private");
   }
 
   // 2. Accounts, when a database and AUTH_SECRET are set. Route handlers check the database again.
@@ -88,13 +94,13 @@ export async function proxy(request: NextRequest) {
     const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
     const adminOnly = pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin/");
     if (!session) {
-      if (adminOnly) return denied(request, 401, "Please sign in.", "/signin");
+      if (adminOnly || isUnder(pathname, ACCOUNT_PAGES)) return denied(request, 401, "Please log in.", "/login");
       // Without an account, a free trial lets a visitor try the site first.
       const access = guestAccess(await verifyTrial(request.cookies.get(TRIAL_COOKIE)?.value));
       if (access === "allow") return securityHeaders(NextResponse.next());
       if (access === "trial-over")
         return denied(request, 401, "Your free hour is up. Please create an account.", "/signup", { trial: "over" });
-      return denied(request, 401, "Please sign in.", "/start");
+      return denied(request, 401, "Please log in.", "/start");
     }
     if (adminOnly && session.role !== "admin") return denied(request, 403, "You don't have access to this.", "/");
     // While an admin is logged in as someone, they can look and help but not change the account's payment or password.

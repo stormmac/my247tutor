@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ChangePassword } from "@/components/ChangePassword";
 import { WeekCalendar } from "@/components/WeekCalendar";
 import { CLASS_SUBJECTS as SUBJECTS, describeTime, formatDuration, WEEKDAYS, type ClassTime } from "@/lib/auth/rules";
 import { YEARS } from "@/lib/curriculum/types";
@@ -156,11 +155,6 @@ export default function CentrePage() {
       <Classes centre={centre} run={run} />
       <Students centre={centre} run={run} />
       <Teachers centre={centre} run={run} onInvited={invited} />
-
-      <div className="card">
-        <h2>Your password</h2>
-        <ChangePassword />
-      </div>
     </div>
   );
 }
@@ -484,7 +478,7 @@ function Students({ centre, run }: { centre: Centre; run: Run }) {
           onSave={async (s) => {
             const ok = await run(
               send("/api/centre/students", "POST", s),
-              `Added ${s.name}. They sign in with the username ${s.username} and the password you set.`,
+              `Added ${s.name}. They log in with the username ${s.username} and the password you set.`,
             );
             if (ok) setEditing(null);
           }}
@@ -492,7 +486,7 @@ function Students({ centre, run }: { centre: Centre; run: Run }) {
       )}
       {centre.students.length === 0 ? (
         <p className="muted" style={{ margin: 0 }}>
-          No students yet. Each student gets a username and password to sign in with, and their own progress.
+          No students yet. Each student gets a username and password to log in with, and their own progress.
         </p>
       ) : (
         <div className="table-scroll">
