@@ -12,8 +12,16 @@ export type { ChatMessage };
  * Safety notices from the server appear as their own messages, and a wellbeing concern
  * is passed to onWellbeingConcern so the parent dashboard can show it.
  */
-export function useTutorChat(context: TutorContext | null, greeting: string, onWellbeingConcern: (studentMessage: string) => void) {
+export function useTutorChat(
+  context: TutorContext | null,
+  greeting: string,
+  onWellbeingConcern: (studentMessage: string) => void,
+  /** The child's profile id, so the chat is kept with them for their grown-ups. */
+  learnerId?: string,
+) {
   const [messages, setMessages] = useState<ChatMessage[]>([{ role: "assistant", content: greeting }]);
+  // Each conversation is kept as one, so grown-ups can read it back in order.
+  const [conversationId, setConversationId] = useState(newConversationId);
   const [busy, setBusy] = useState(false);
 
   // A new topic (or a new learner) starts a fresh conversation.
@@ -22,6 +30,7 @@ export function useTutorChat(context: TutorContext | null, greeting: string, onW
   if (conversationKey !== currentKey) {
     setCurrentKey(conversationKey);
     setMessages([{ role: "assistant", content: greeting }]);
+    setConversationId(newConversationId());
   }
 
   async function send(text: string) {
@@ -47,7 +56,7 @@ export function useTutorChat(context: TutorContext | null, greeting: string, onW
       const res = await fetch("/api/tutor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ context, messages: turns }),
+        body: JSON.stringify({ context, messages: turns, conversationId, ...(learnerId ? { learnerId } : {}) }),
       });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
 
@@ -80,4 +89,8 @@ export function useTutorChat(context: TutorContext | null, greeting: string, onW
   }
 
   return { messages, busy, send };
+}
+
+function newConversationId(): string {
+  return globalThis.crypto.randomUUID();
 }

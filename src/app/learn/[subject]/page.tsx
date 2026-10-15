@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { usePraise } from "@/components/usePraise";
 import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components/QuestionView";
-import { questionFocus, useSuniFocus, useSuniSay } from "@/components/SuniCompanion";
+import { questionFocus, useSuniFocus, useSuniSay, useSuniScreen } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { WeeklyLesson } from "@/components/WeeklyLesson";
 import { getOutcome } from "@/lib/curriculum/outcomes";
@@ -145,6 +145,12 @@ function Assessment({
   const [seed, setSeed] = useState(randomSeed);
   const practice = useMemo(() => (question ? toPracticeQuestion(question, seed) : null), [question, seed]);
   const title = subject === "maths" ? "Maths" : "English";
+  useSuniScreen({
+    screen: started
+      ? `The ${title} starting check, question ${state.answers.length + 1}. It finds where they should start, so there are no hints.`
+      : `The start of the ${title} starting check.`,
+    noHelp: started,
+  });
 
   if (!started)
     return (
@@ -220,6 +226,7 @@ function Practice({
           correctAnswer: answerText(question.answer, question.choices),
           answered,
           hintsShown,
+          screen: `Free ${subject === "maths" ? "maths" : "English"} practice: ${current.skill.title}.`,
         })
       : null,
   );

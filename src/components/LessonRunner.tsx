@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ReadAloud } from "@/components/ReadAloud";
 import { Suni } from "@/components/Suni";
+import { useSuniScreen } from "@/components/SuniCompanion";
 import { useSuniVoice } from "@/components/useSuniVoice";
 import { PASS_MARK, type LessonStep } from "@/lib/phonics/progress";
 import { soundFor, type Sound } from "@/lib/phonics/sequence";
@@ -35,6 +36,29 @@ function instruction(step: LessonStep): [string, boolean] {
       return [step.sentence.replace("___", step.word), true];
     case "read":
       return ["Now read this sentence out loud.", false];
+  }
+}
+
+/** What's on screen at a step, for Suni. The answer is included so Suni can guide without telling it. */
+export function describeStep(step: LessonStep, answered: boolean): string {
+  const reveal = answered
+    ? "They have answered, so you can talk about it."
+    : "They haven't answered yet: help them sound it out, don't tell them.";
+  switch (step.kind) {
+    case "meet":
+      return `Meeting new sounds: ${step.sounds.map((s) => `"${s.grapheme}" as in ${s.example}`).join(", ")}.`;
+    case "meetWords":
+      return `Meeting new sight words: ${step.words.join(", ")}.`;
+    case "find":
+      return `Finding how the sound "${step.sound.grapheme}" (as in ${step.sound.example}) is written, from: ${step.options.join(", ")}. ${reveal}`;
+    case "picture":
+      return `Sounding out the word "${step.word.word}" (${step.parts.join("-")}) and picking its picture. ${reveal}`;
+    case "listen":
+      return `Suni said the word "${step.word.word}"; they pick it from: ${step.options.join(", ")}. ${reveal}`;
+    case "gap":
+      return `Filling the gap in "${step.sentence}" from: ${step.options.join(", ")}. The missing word is "${step.word}". ${reveal}`;
+    case "read":
+      return `Reading this sentence out loud: "${step.sentence}".`;
   }
 }
 
@@ -70,6 +94,13 @@ export function LessonRunner({
   const [result, setResult] = useState<LessonResult | null>(null);
   const step = steps[index];
   const total = steps.filter((s) => s.kind !== "meet" && s.kind !== "meetWords" && s.kind !== "read").length;
+  useSuniScreen(
+    step && !result
+      ? { screen: `Learn to Read: ${title}, step ${index + 1} of ${steps.length}. ${describeStep(step, picked !== null)}` }
+      : result
+        ? { screen: `Learn to Read: ${title}, finished with ${result.right} of ${result.total} right.` }
+        : null,
+  );
 
   useEffect(() => {
     if (!step || result) return;

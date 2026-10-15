@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AdminTabs } from "@/components/AdminTabs";
 import { SetupStatus } from "@/components/SetupStatus";
+import { SuniChatList, type SuniChat } from "@/components/SuniChats";
 import { useAccount } from "@/components/useAccount";
 import { speak } from "@/lib/tutor/speech";
 import { DEFAULT_PRAISE, MAX_PRAISE_LENGTH } from "@/lib/tutor/praise";
@@ -25,7 +26,73 @@ export default function SuniAdminPage() {
       </div>
     );
   }
-  return <PraiseList />;
+  return (
+    <div className="stack">
+      <PraiseList />
+      <ChatLog />
+    </div>
+  );
+}
+
+/** Every conversation students have had with Suni, flagged ones first to check. */
+function ChatLog() {
+  const [flaggedOnly, setFlaggedOnly] = useState(true);
+  const [chats, setChats] = useState<SuniChat[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    const res = await fetch(`/api/admin/suni/chats?flagged=${flaggedOnly ? 1 : 0}`);
+    const body = (await res.json().catch(() => ({}))) as { chats?: SuniChat[]; error?: string };
+    if (!res.ok) return setError(body.error ?? "Couldn't load Suni's conversations.");
+    setChats(body.chats ?? []);
+  }, [flaggedOnly]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return (
+    <div className="stack">
+      <div>
+        <h2 style={{ marginBottom: 4 }}>Conversations with Suni</h2>
+        <p className="muted" style={{ margin: 0 }}>
+          Every question students ask Suni is kept here with Suni&apos;s reply. Suni flags questions that aren&apos;t appropriate, signs a
+          student may be upset, and personal details (which are hidden before saving). Flag anything else that needs a closer look.
+        </p>
+      </div>
+      <div className="row" role="group" aria-label="Which conversations">
+        <button className={`btn small ${flaggedOnly ? "" : "secondary"}`} aria-pressed={flaggedOnly} onClick={() => setFlaggedOnly(true)}>
+          Flagged
+        </button>
+        <button className={`btn small ${flaggedOnly ? "secondary" : ""}`} aria-pressed={!flaggedOnly} onClick={() => setFlaggedOnly(false)}>
+          All
+        </button>
+      </div>
+      {error && (
+        <div className="feedback bad" role="alert">
+          {error}
+        </div>
+      )}
+      <div className="card">
+        {chats ? (
+          <SuniChatList
+            chats={chats}
+            showStudent
+            empty={flaggedOnly ? "Nothing flagged." : undefined}
+            onChange={(chat) =>
+              setChats(
+                (all) =>
+                  all && (flaggedOnly && !chat.flag ? all.filter((c) => c.id !== chat.id) : all.map((c) => (c.id === chat.id ? chat : c))),
+              )
+            }
+          />
+        ) : (
+          !error && <p className="muted">Loading conversations…</p>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function PraiseList() {

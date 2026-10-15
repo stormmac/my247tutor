@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePraise } from "@/components/usePraise";
 import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components/QuestionView";
-import { questionFocus, useSuniFocus, useSuniSay } from "@/components/SuniCompanion";
+import { questionFocus, useSuniFocus, useSuniSay, useSuniScreen } from "@/components/SuniCompanion";
 import type { useProfile } from "@/components/useProfile";
 import { buildLesson, skillBuilder } from "@/lib/content/lesson";
 import { progressKey, toPracticeQuestion } from "@/lib/content/practice";
@@ -90,6 +90,16 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
     if (!lesson) setProfile((p) => (currentLesson(p, subject) ? p : saveLesson(p, subject, buildLesson(p, subject))));
   }, [lesson, subject, setProfile]);
 
+  useSuniScreen(
+    lesson && running === null
+      ? {
+          screen: `This week's ${subject === "maths" ? "maths" : "English"} lesson plan. Parts: ${lesson.parts
+            .map((p, i) => `${i + 1}. ${p.title} (${p.results.length} of ${p.questionIds.length} done)`)
+            .join("; ")}. They can do the parts in any order.`,
+          greeting: `Hi ${profile.name}! This is your lesson for the week. Pick any part to start, and tap me if you get stuck.`,
+        }
+      : null,
+  );
   if (!lesson) return null;
   if (running !== null)
     return (
@@ -209,6 +219,9 @@ function LessonPartView({
           correctAnswer: answerText(question.answer, question.choices),
           answered,
           hintsShown,
+          screen: builder
+            ? `Weekly lesson, part ${part + 1} (${lessonPart.title}): a skill builder after they missed question ${index + 1}. Builder question ${builder.position + 1} of ${builder.ids.length}.`
+            : `Weekly lesson, part ${part + 1} (${lessonPart.title}), question ${index + 1} of ${total}. Up to ${LESSON_TRIES} goes each.`,
         })
       : null,
   );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FocusedPractice } from "@/components/FocusedPractice";
+import { useSuniScreen } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { subtopicPath } from "@/lib/content/tree";
 import { getSkill } from "@/lib/curriculum/skills";
@@ -12,6 +13,12 @@ export default function SubtopicPage() {
   const { subject, subtopicId } = useParams<{ subject: string; subtopicId: string }>();
   const { profile, setProfile, loaded } = useProfile();
   const path = subtopicPath(subtopicId);
+  const writingSkill = path?.subtopic.skill_id ? getSkill(path.subtopic.skill_id) : null;
+  useSuniScreen(
+    writingSkill?.practice === "writing"
+      ? { screen: `A writing topic, ${path!.subtopic.title}. The task: ${WRITING_TASKS[writingSkill.id][0].prompt}` }
+      : null,
+  );
 
   if (!path || path.subjectKey !== subject) return <p>We couldn't find that topic.</p>;
   if (!loaded) return null;

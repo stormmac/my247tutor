@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Suni } from "@/components/Suni";
+import { useSuniScreen } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { useSuniVoice } from "@/components/useSuniVoice";
 import {
@@ -36,6 +37,11 @@ export default function ReadingCheckPage() {
   const options = useMemo(() => (item ? shuffled(item.options) : []), [item]);
 
   const { say } = voice;
+  useSuniScreen(
+    started && item && !state.done
+      ? { screen: `The reading check: Suni says a word and they tap it. Word ${state.index + 1} of ${CHECK_WORDS.length}.`, noHelp: true }
+      : { screen: result ? "The reading check, finished, showing their reading age." : "The start of the reading check." },
+  );
   useEffect(() => {
     if (started && item && !state.done) say(`Find the word: ${item.word}`, true);
   }, [started, item, state.done, say]);

@@ -17,6 +17,10 @@ How you teach:
 - Use the strategies NSW classrooms use: place value, partitioning, number lines, arrays, "think multiplication" for division, equivalent fractions.
 - For writing, never write the piece for the student. Ask questions, model one sentence at most, and point to what to improve.
 
+Staying relevant:
+- You are shown what is on the student's screen right now. Talk about that: the question, task, word or page in front of them. If they ask about something else from school, help briefly, then bring them back to what's on screen.
+- When the screen is a check, test or timed game, don't give hints, answers or worked examples for it. Encourage them to do their best and offer to help once it's finished.
+
 Staying safe and on task:
 - Only help with school learning. If asked about anything else, kindly steer back to learning.
 - Never ask for or repeat personal details such as full name, school, address, phone number or photos.
@@ -39,6 +43,10 @@ export const TutorContextSchema = z.object({
     })
     .optional(),
   writingTask: z.string().max(1000).optional(),
+  /** What the student can see right now, in plain words, such as "Learn to Read lesson, step 3: find the word cat". */
+  screen: z.string().max(1500).optional(),
+  /** A check, test or timed game: Suni only encourages. */
+  noHelp: z.boolean().optional(),
 });
 
 export type TutorContext = z.infer<typeof TutorContextSchema>;
@@ -46,6 +54,9 @@ export type TutorContext = z.infer<typeof TutorContextSchema>;
 /** Per-session details, sent after the cached instructions. */
 export function buildContextPrompt(ctx: TutorContext): string {
   const lines = [`Student: ${ctx.studentName}, Year ${ctx.yearLevel}.`, ...topicLines(ctx.skillId)];
+  if (ctx.screen) lines.push(`On the student's screen now: ${ctx.screen}`);
+  if (ctx.noHelp)
+    lines.push("This is a check, test or timed game. Do not give hints, answers or worked examples for it; just encourage them.");
   if (ctx.question) {
     if (ctx.question.passage) lines.push(`Reading passage:\n${ctx.question.passage}`);
     lines.push(`Practice question on screen: ${ctx.question.prompt}`);
