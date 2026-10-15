@@ -7,7 +7,8 @@ import { ClassLearnPicker } from "@/components/ClassLearnPicker";
 import { Suni } from "@/components/Suni";
 import { useAccount } from "@/components/useAccount";
 import { switchChild, useChildren, useProfile } from "@/components/useProfile";
-import { MAX_CHILDREN, newProfile, pickNextSkill, skillState, type LearnerProfile } from "@/lib/learner/model";
+import { currentLesson, lessonProgress } from "@/lib/learner/lesson";
+import { MAX_CHILDREN, newProfile, skillState, type LearnerProfile } from "@/lib/learner/model";
 import { skillsFor } from "@/lib/curriculum/skills";
 import { YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
 import { currentSightLevel, currentUnit, readingOf, sightLevelsDone, unitsDone } from "@/lib/phonics/progress";
@@ -149,12 +150,11 @@ function TablesCard({ profile }: { profile: LearnerProfile }) {
 }
 
 function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
-  // Years 1 and 2 practise from their year's topics; the starting check and skills begin at Year 3.
+  // Years 1 and 2 have no starting check or skill map; their lesson comes from the topic tree.
   if (profile.yearLevel < 3) return <TopicsCard profile={profile} subject={subject} title={title} />;
   const skills = skillsFor(subject).filter((s) => s.practice !== "writing");
   const mastered = skills.filter((s) => skillState(profile, s.id).mastered).length;
   const placed = profile.placementDone[subject];
-  const next = placed ? pickNextSkill(profile, subject) : null;
   return (
     <div className="card stack">
       <div className="row spread">
@@ -167,16 +167,17 @@ function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; sub
         <div style={{ width: `${(mastered / skills.length) * 100}%` }} />
       </div>
       <p className="muted" style={{ margin: 0 }}>
-        {placed
-          ? next
-            ? `Next up: ${next.skill.title}`
-            : "You've mastered everything here!"
-          : "Start with a short check. It begins easy and gets harder, so we know where to begin."}
+        {placed ? lessonLine(profile, subject) : "Start with a short check. It begins easy and gets harder, so we know where to begin."}
       </p>
       <div className="row">
         <Link href={`/learn/${subject}`} className="btn">
-          {placed ? "Practise" : "Start the check"}
+          {placed ? "This week's lesson" : "Start the check"}
         </Link>
+        {placed && (
+          <Link href={`/learn/${subject}?mode=practice`} className="btn secondary">
+            Free practice
+          </Link>
+        )}
         <Link href={`/learn/${subject}/topics`} className="btn secondary">
           Browse topics
         </Link>
@@ -185,16 +186,28 @@ function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; sub
   );
 }
 
-/** A Year 1 or 2 learner's subject: their year's topics, each with its own questions. */
+/** Where the child is up to in this week's lesson. */
+function lessonLine(profile: LearnerProfile, subject: Subject): string {
+  const lesson = currentLesson(profile, subject);
+  if (!lesson) return "Your new lesson for this week is ready.";
+  const { done, total } = lessonProgress(lesson);
+  if (done >= total) return "This week's lesson is finished. A new one is ready on Monday.";
+  return done ? `This week's lesson: ${done} of ${total} questions done.` : `This week's lesson is ready: ${total} questions.`;
+}
+
+/** A Year 1 or 2 learner's subject: the weekly lesson, and their year's topics to practise. */
 function TopicsCard({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
   return (
     <div className="card stack">
       <h2 style={{ margin: 0 }}>{title}</h2>
       <p className="muted" style={{ margin: 0 }}>
-        Pick a Year {profile.yearLevel} topic to practise. Each one has 30 questions that start easy and get harder.
+        {lessonLine(profile, subject)}
       </p>
       <div className="row">
-        <Link href={`/learn/${subject}/topics?year=${profile.yearLevel}`} className="btn">
+        <Link href={`/learn/${subject}`} className="btn">
+          This week&apos;s lesson
+        </Link>
+        <Link href={`/learn/${subject}/topics?year=${profile.yearLevel}`} className="btn secondary">
           Choose a topic
         </Link>
       </div>

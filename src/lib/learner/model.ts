@@ -4,6 +4,7 @@ import { yearToStage } from "../curriculum/types";
 import type { AssessmentRecord } from "./assessment";
 import type { ReadingProgress } from "../phonics/progress";
 import type { TablesRecord } from "../tables/game";
+import type { WeeklyLesson } from "./lesson";
 
 export interface SkillState {
   /** Estimated probability the student can do this skill unaided, 0–1. */
@@ -70,6 +71,8 @@ export interface LearnerProfile {
   reading?: ReadingProgress;
   /** Times tables game scores. Missing until the first game. */
   tables?: TablesRecord;
+  /** This week's lesson in each subject. Missing until the first lesson. */
+  lessons?: Partial<Record<Subject, WeeklyLesson>>;
 }
 
 export const MASTERY_THRESHOLD = 0.8;
