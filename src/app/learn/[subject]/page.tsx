@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
 import { usePraise } from "@/components/usePraise";
 import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components/QuestionView";
 import { questionFocus, useSuniFocus, useSuniSay } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
+import { WeeklyLesson } from "@/components/WeeklyLesson";
 import { getOutcome } from "@/lib/curriculum/outcomes";
 import type { Subject, YearLevel } from "@/lib/curriculum/types";
 import { pickNextSkill, recordAttempt, skillState, type LearnerProfile, type NextReason } from "@/lib/learner/model";
@@ -31,7 +32,17 @@ const REASON_LABEL: Record<NextReason, string> = {
 };
 
 export default function SubjectPage() {
+  return (
+    <Suspense>
+      <SubjectLearning />
+    </Suspense>
+  );
+}
+
+function SubjectLearning() {
   const { subject } = useParams<{ subject: string }>();
+  // The weekly lesson is the main path; ?mode=practice is open-ended practice from the skill map.
+  const freePractice = useSearchParams().get("mode") === "practice";
   const { profile, setProfile, loaded } = useProfile();
   const [thanks, setThanks] = useState<AssessmentRecord | null>(null);
 
@@ -47,17 +58,8 @@ export default function SubjectPage() {
       </div>
     );
   }
-  // Years 1 and 2 practise from their year's topics; the starting check begins at Year 3.
-  if (profile.yearLevel < 3) {
-    return (
-      <div className="card narrow stack">
-        <p style={{ margin: 0 }}>Year {profile.yearLevel} practice is by topic. Pick one to start.</p>
-        <Link className="btn" href={`/learn/${subject}/topics?year=${profile.yearLevel}`}>
-          Choose a topic
-        </Link>
-      </div>
-    );
-  }
+  // Years 1 and 2 have no starting check: their lesson starts straight away.
+  if (profile.yearLevel < 3) return <WeeklyLesson subject={subject} profile={profile} setProfile={setProfile} />;
   if (thanks) return <AssessmentThanks name={profile.name} record={thanks} onContinue={() => setThanks(null)} />;
   if (!profile.placementDone[subject]) {
     return (
@@ -73,7 +75,8 @@ export default function SubjectPage() {
       />
     );
   }
-  return <Practice subject={subject} profile={profile} setProfile={setProfile} />;
+  if (freePractice) return <Practice subject={subject} profile={profile} setProfile={setProfile} />;
+  return <WeeklyLesson subject={subject} profile={profile} setProfile={setProfile} />;
 }
 
 /** The starting assessment: random written questions, from very easy two years below up. */
@@ -83,13 +86,13 @@ function AssessmentThanks({ name, record, onContinue }: { name: string; record: 
     <div className="card narrow stack" style={{ margin: "0 auto" }}>
       <h1>All done, {name}!</h1>
       <p style={{ margin: 0 }}>
-        You answered {record.answers.length} questions. Now we know where to start, so your practice will be just right for you.
+        You answered {record.answers.length} questions. Now we know where to start, so your lessons will be just right for you.
       </p>
       <p className="muted" style={{ margin: 0 }}>
         Your grown-up can see how you went on the Parents page.
       </p>
       <button className="btn" onClick={onContinue}>
-        Start practising
+        See this week&apos;s lesson
       </button>
     </div>
   );
