@@ -9,7 +9,7 @@ import { useAccount } from "@/components/useAccount";
 import { switchChild, useChildren, useProfile } from "@/components/useProfile";
 import { MAX_CHILDREN, newProfile, pickNextSkill, skillState, type LearnerProfile } from "@/lib/learner/model";
 import { skillsFor } from "@/lib/curriculum/skills";
-import type { Subject, YearLevel } from "@/lib/curriculum/types";
+import { YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
 import { currentSightLevel, currentUnit, readingOf, sightLevelsDone, unitsDone } from "@/lib/phonics/progress";
 import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
 import { UNITS } from "@/lib/phonics/sequence";
@@ -149,6 +149,8 @@ function TablesCard({ profile }: { profile: LearnerProfile }) {
 }
 
 function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
+  // Years 1 and 2 practise from their year's topics; the starting check and skills begin at Year 3.
+  if (profile.yearLevel < 3) return <TopicsCard profile={profile} subject={subject} title={title} />;
   const skills = skillsFor(subject).filter((s) => s.practice !== "writing");
   const mastered = skills.filter((s) => skillState(profile, s.id).mastered).length;
   const placed = profile.placementDone[subject];
@@ -183,6 +185,23 @@ function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; sub
   );
 }
 
+/** A Year 1 or 2 learner's subject: their year's topics, each with its own questions. */
+function TopicsCard({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
+  return (
+    <div className="card stack">
+      <h2 style={{ margin: 0 }}>{title}</h2>
+      <p className="muted" style={{ margin: 0 }}>
+        Pick a Year {profile.yearLevel} topic to practise. Each one has 30 questions that start easy and get harder.
+      </p>
+      <div className="row">
+        <Link href={`/learn/${subject}/topics?year=${profile.yearLevel}`} className="btn">
+          Choose a topic
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function Setup({ onCreate }: { onCreate: (name: string, year: YearLevel) => void }) {
   const [name, setName] = useState("");
   // No year is picked for them: the starting check is set from it, so a grown-up has to choose.
@@ -209,7 +228,7 @@ function Setup({ onCreate }: { onCreate: (name: string, year: YearLevel) => void
       <fieldset className="year-picker">
         <legend>What year are they in at school now?</legend>
         <div className="tabs">
-          {([3, 4, 5, 6] as const).map((y) => (
+          {YEARS.map((y) => (
             <button
               key={y}
               type="button"

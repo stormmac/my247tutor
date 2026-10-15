@@ -8,7 +8,7 @@ export default function Home() {
         <div>
           <h1>A patient tutor for every NSW student, any time.</h1>
           <p>
-            Maths and English practice for Years 3 to 6, built on the NSW syllabus. my247tutor finds what your child is ready to learn,
+            Maths and English practice for Years 1 to 6, built on the NSW syllabus. my247tutor finds what your child is ready to learn,
             guides them with hints instead of answers, and shows you progress against NESA outcomes.
           </p>
           <div className="row">

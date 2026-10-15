@@ -9,6 +9,7 @@ import { ChildTabs } from "@/components/ChildSwitcher";
 import { ProgressReport } from "@/components/ProgressReport";
 import { removeCurrentChild, useProfile } from "@/components/useProfile";
 import type { LearnerProfile } from "@/lib/learner/model";
+import { YEARS } from "@/lib/curriculum/types";
 
 export default function ParentPage() {
   const { profile, setProfile, loaded } = useProfile();
@@ -80,7 +81,7 @@ export default function ParentPage() {
               style={{ width: "auto" }}
               onChange={(e) => setProfile((p) => ({ ...p, yearLevel: Number(e.target.value) as LearnerProfile["yearLevel"] }))}
             >
-              {[3, 4, 5, 6].map((y) => (
+              {YEARS.map((y) => (
                 <option key={y} value={y}>
                   Year {y}
                 </option>

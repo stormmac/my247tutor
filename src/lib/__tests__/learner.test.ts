@@ -117,7 +117,7 @@ describe("attempt history for the parents page", () => {
       ["ma2-times-tables", 2, 1],
     ]);
     expect(results[0].topic.title).toBe(sub.title);
-    expect(results[0].topic.year).toMatch(/^Year [3-6]$/);
+    expect(results[0].topic.year).toMatch(/^Year [1-6]$/);
     expect(results[1].topic).toMatchObject({ subject: "Maths", year: "" });
   });
 });

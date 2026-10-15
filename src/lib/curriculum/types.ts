@@ -1,9 +1,9 @@
 export type Subject = "maths" | "english";
 
-/** NESA stages covered by the MVP: Stage 2 = Years 3–4, Stage 3 = Years 5–6. */
-export type Stage = 2 | 3;
+/** NESA stages: Stage 1 = Years 1–2, Stage 2 = Years 3–4, Stage 3 = Years 5–6. */
+export type Stage = 1 | 2 | 3;
 
-export type YearLevel = 3 | 4 | 5 | 6;
+export type YearLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface Outcome {
   /** NESA outcome code, e.g. "MA2-AR-01". */
@@ -46,5 +46,8 @@ export interface Skill {
 }
 
 export function yearToStage(year: YearLevel): Stage {
-  return year <= 4 ? 2 : 3;
+  return year <= 2 ? 1 : year <= 4 ? 2 : 3;
 }
+
+/** Every year a learner can be in, youngest first. */
+export const YEARS: YearLevel[] = [1, 2, 3, 4, 5, 6];

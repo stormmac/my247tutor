@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes, randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { PoolClient } from "pg";
+import type { YearLevel } from "@/lib/curriculum/types";
 import { newProfile, type LearnerProfile } from "@/lib/learner/model";
 import { summarise, type StudentSummary } from "@/lib/learner/summary";
 import { newReading, setEnrolled } from "@/lib/phonics/progress";
@@ -231,7 +232,7 @@ const taken = (error: unknown) => (error as { code?: string }).code === "23505";
 /** A centre adds a student: a learner profile, a sign-in with this username and password, and their classes. */
 export async function addStudent(
   centre: User,
-  details: { name: string; yearLevel: 3 | 4 | 5 | 6; username: string; password: string; classIds: string[]; learnToRead?: boolean },
+  details: { name: string; yearLevel: YearLevel; username: string; password: string; classIds: string[]; learnToRead?: boolean },
 ): Promise<{ id: string } | { error: string; status: number }> {
   const hash = await bcrypt.hash(details.password, 12);
   try {
@@ -407,9 +408,7 @@ export interface LearnableStudent {
  * The students on a teacher's Learn picker, class by class: a teacher's own classes, or every class
  * at the centre, plus (for the centre) students not in any class yet.
  */
-export async function learnableStudents(
-  viewer: User,
-): Promise<{
+export async function learnableStudents(viewer: User): Promise<{
   classes: { id: string; name: string; yearLevel: number; students: LearnableStudent[] }[];
   unassigned: LearnableStudent[];
 } | null> {

@@ -9,7 +9,7 @@ export const StoredProfileSchema = z
     version: z.literal(1),
     id: z.uuid().optional(),
     name: z.string().trim().min(1).max(60),
-    yearLevel: z.union([z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
+    yearLevel: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
   })
   .loose();
 

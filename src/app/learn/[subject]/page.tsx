@@ -47,6 +47,17 @@ export default function SubjectPage() {
       </div>
     );
   }
+  // Years 1 and 2 practise from their year's topics; the starting check begins at Year 3.
+  if (profile.yearLevel < 3) {
+    return (
+      <div className="card narrow stack">
+        <p style={{ margin: 0 }}>Year {profile.yearLevel} practice is by topic. Pick one to start.</p>
+        <Link className="btn" href={`/learn/${subject}/topics?year=${profile.yearLevel}`}>
+          Choose a topic
+        </Link>
+      </div>
+    );
+  }
   if (thanks) return <AssessmentThanks name={profile.name} record={thanks} onContinue={() => setThanks(null)} />;
   if (!profile.placementDone[subject]) {
     return (

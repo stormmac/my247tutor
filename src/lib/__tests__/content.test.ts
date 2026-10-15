@@ -56,9 +56,9 @@ describe("content tree", () => {
     for (const s of SUBTOPICS.filter((s) => !s.skill_id)) expect(questionsOf(s.id).length).toBeGreaterThanOrEqual(3);
   });
 
-  it("covers Years 3 to 6 in both subjects", () => {
-    expect(yearsWithContent("maths")).toEqual([3, 4, 5, 6]);
-    expect(yearsWithContent("english")).toEqual([3, 4, 5, 6]);
+  it("covers Years 1 to 6 in both subjects", () => {
+    expect(yearsWithContent("maths")).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(yearsWithContent("english")).toEqual([1, 2, 3, 4, 5, 6]);
     expect(topicsFor("maths", 4).map((t) => t.sort_order)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
@@ -174,22 +174,29 @@ describe("question bank", () => {
   const NOT_QUIZZED = /-(OLC|REFLU|HANDW)-/;
 
   for (const subject of ["maths", "english"] as const)
-    for (const year of [3, 4, 5, 6] as const)
-      it(`gives every Year ${year} ${subject} standard 15 questions, three at each level`, () => {
+    for (const year of [1, 2, 3, 4, 5, 6] as const)
+      it(`gives every Year ${year} ${subject} standard 30 questions, six at each level`, () => {
         const subtopics = topicsFor(subject, year).flatMap((t) => subtopicsOf(t.id));
-        const stage = year <= 4 ? 2 : 3;
+        const stage = year <= 2 ? 1 : year <= 4 ? 2 : 3;
         const outcomes = OUTCOMES.filter((o) => o.subject === subject && o.stage === stage && !NOT_QUIZZED.test(o.code));
-        expect(outcomes.length).toBe({ maths: { 2: 20, 3: 21 }, english: { 2: 7, 3: 6 } }[subject][stage]);
+        expect(outcomes.length).toBe({ maths: { 1: 16, 2: 20, 3: 21 }, english: { 1: 6, 2: 7, 3: 6 } }[subject][stage]);
         for (const outcome of outcomes) {
           const questions = subtopics.filter((s) => s.outcome_code === outcome.code).flatMap((s) => questionsOf(s.id));
-          expect(questions, outcome.code).toHaveLength(15);
+          expect(questions.length, outcome.code).toBeGreaterThanOrEqual(30);
           for (const level of LEVELS)
             expect(
-              questions.filter((q) => q.difficulty === level),
+              questions.filter((q) => q.difficulty === level).length,
               `${outcome.code} ${level}`,
-            ).toHaveLength(3);
+            ).toBeGreaterThanOrEqual(6);
         }
       });
+
+  it("gives every subtopic that is quizzed at least 30 questions", () => {
+    for (const s of SUBTOPICS) {
+      const free = s.skill_id && SKILLS.find((k) => k.id === s.skill_id)?.practice === "writing";
+      if (!free) expect(questionsOf(s.id).length, s.title).toBeGreaterThanOrEqual(30);
+    }
+  });
 
   it("only names standards that exist", () => {
     for (const s of SUBTOPICS) if (s.outcome_code) expect(OUTCOMES.map((o) => o.code)).toContain(s.outcome_code);

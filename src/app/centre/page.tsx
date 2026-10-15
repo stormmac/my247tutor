@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ChangePassword } from "@/components/ChangePassword";
 import { WeekCalendar } from "@/components/WeekCalendar";
 import { CLASS_SUBJECTS as SUBJECTS, describeTime, formatDuration, WEEKDAYS, type ClassTime } from "@/lib/auth/rules";
+import { YEARS } from "@/lib/curriculum/types";
 
 interface Teacher {
   id: string;
@@ -169,7 +170,7 @@ type Run = (work: Promise<{ error: string | null; data: Record<string, unknown> 
 function YearSelect({ id, value, onChange }: { id?: string; value: number; onChange: (year: number) => void }) {
   return (
     <select id={id} value={value} onChange={(e) => onChange(Number(e.target.value))}>
-      {[3, 4, 5, 6].map((y) => (
+      {YEARS.map((y) => (
         <option key={y} value={y}>
           Year {y}
         </option>
