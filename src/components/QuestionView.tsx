@@ -9,6 +9,8 @@ export type QuestionOutcome = {
   correct: boolean;
   hintsUsed: number;
   firstTry: boolean;
+  /** Goes used, counting the last one. */
+  tries: number;
   /** What the student answered first, as words a parent can read. */
   answer: string;
   /** The right answer, in the same form. */
@@ -36,19 +38,34 @@ interface Props {
   onAnsweredChange?: (answered: boolean) => void;
   /** Called after a wrong answer when the student still has another try. */
   onTryAgain?: () => void;
+  /** Goes before the answer is shown. */
+  maxTries?: number;
 }
 
 const MAX_TRIES = 2;
 
-export function QuestionView({ question, placement, onDone, onNext, onHintsChange, onAnsweredChange, onTryAgain }: Props) {
+const goesLeft = (n: number) => (n === 1 ? "Last go!" : `${n} goes left.`);
+
+export function QuestionView({
+  question,
+  placement,
+  onDone,
+  onNext,
+  onHintsChange,
+  onAnsweredChange,
+  onTryAgain,
+  maxTries = MAX_TRIES,
+}: Props) {
   const [input, setInput] = useState("");
   const [selected, setSelected] = useState<number | null>(null);
   const [picked, setPicked] = useState<number[]>([]);
   // Ordering questions: the student's current arrangement, as indices into choices.
   const [arrangement, setArrangement] = useState<number[]>(() => (question.choices ?? []).map((_, i) => i));
   const [tries, setTries] = useState(0);
+  // Multiple choice: options already tried and wrong can't be picked again.
+  const [ruledOut, setRuledOut] = useState<number[]>([]);
   const [hintsShown, setHintsShown] = useState(0);
-  const [result, setResult] = useState<{ correct: boolean; feedback?: string } | null>(null);
+  const [result, setResult] = useState<{ correct: boolean; feedback?: string; unreadable?: boolean } | null>(null);
   const [finished, setFinished] = useState(false);
   const firstAnswer = useRef("");
 
@@ -93,7 +110,7 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
     if (nextTries === 1) firstAnswer.current = answerWords();
     setTries(nextTries);
     setResult(check);
-    const done = check.correct || placement || nextTries >= MAX_TRIES;
+    const done = check.correct || placement || nextTries >= maxTries;
     if (done) {
       setFinished(true);
       onAnsweredChange?.(true);
@@ -101,10 +118,17 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
         correct: check.correct,
         hintsUsed: hintsShown,
         firstTry: nextTries === 1,
+        tries: nextTries,
         answer: firstAnswer.current,
         rightAnswer: answerText(question.answer, question.choices),
       });
-    } else onTryAgain?.();
+    } else {
+      if (kind === "choice" && selected !== null) {
+        setRuledOut((r) => [...r, selected]);
+        setSelected(null);
+      }
+      onTryAgain?.();
+    }
   }
 
   function answerBox(className?: string) {
@@ -157,12 +181,14 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
               const state = finished
                 ? i === (question.answer as { index: number }).index
                   ? "right"
-                  : i === selected
+                  : i === selected || ruledOut.includes(i)
                     ? "wrong"
                     : ""
                 : i === selected
                   ? "selected"
-                  : "";
+                  : ruledOut.includes(i)
+                    ? "wrong"
+                    : "";
               return (
                 <button
                   type="button"
@@ -170,7 +196,7 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
                   role="radio"
                   aria-checked={i === selected}
                   className={`choice ${state}`}
-                  disabled={finished}
+                  disabled={finished || ruledOut.includes(i)}
                   onClick={() => setSelected(i)}
                 >
                   {c}
@@ -271,6 +297,7 @@ export function QuestionView({ question, placement, onDone, onNext, onHintsChang
           ) : (
             <>
               <strong>Not quite.</strong> {result.feedback ?? "Have another go, or ask for a hint."}
+              {maxTries > MAX_TRIES && !result.unreadable && ` ${goesLeft(maxTries - tries)}`}
             </>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLesson, subtopicStrength, weakestSubtopics } from "../content/lesson";
+import { buildLesson, skillBuilder, subtopicStrength, weakestSubtopics } from "../content/lesson";
 import { progressKey } from "../content/practice";
 import { QUESTIONS, subtopicPath } from "../content/tree";
 import { DIFFICULTIES } from "../content/types";
@@ -10,11 +10,14 @@ import {
   lessonProgress,
   nextPart,
   recordLessonAnswer,
+  resultColour,
   REVIEW_QUESTIONS,
   saveLesson,
+  SKILL_BUILDER_QUESTIONS,
   weekOf,
 } from "../learner/lesson";
 import { newProfile, recordAttempt } from "../learner/model";
+import { Rng } from "../practice/rng";
 
 // Wednesday 15 October 2026, midday local time.
 const NOW = new Date(2026, 9, 15, 12).getTime();
@@ -90,19 +93,44 @@ describe("weekly lesson", () => {
     expect(nextPart(lesson)).toBe(0);
     expect(lessonProgress(lesson)).toEqual({ done: 0, total: 40 });
 
-    for (let i = 0; i < REVIEW_QUESTIONS; i++) profile = recordLessonAnswer(profile, "maths", 0, i, i % 2 === 0);
+    for (let i = 0; i < REVIEW_QUESTIONS; i++) profile = recordLessonAnswer(profile, "maths", 0, i, i % 2 === 0 ? 1 : 0);
     lesson = currentLesson(profile, "maths", NOW)!;
     expect(nextPart(lesson)).toBe(1);
     expect(lessonProgress(lesson).done).toBe(20);
     // Saving the same answer again doesn't count it twice, and a question can't be skipped ahead.
-    expect(recordLessonAnswer(profile, "maths", 1, 0, true)).toEqual(
-      recordLessonAnswer(recordLessonAnswer(profile, "maths", 1, 0, true), "maths", 1, 0, true),
+    expect(recordLessonAnswer(profile, "maths", 1, 0, 1)).toEqual(
+      recordLessonAnswer(recordLessonAnswer(profile, "maths", 1, 0, 1), "maths", 1, 0, 1),
     );
-    expect(recordLessonAnswer(profile, "maths", 1, 3, true)).toBe(profile);
-    for (const part of [1, 2]) for (let i = 0; i < ACTIVITY_QUESTIONS; i++) profile = recordLessonAnswer(profile, "maths", part, i, true);
+    expect(recordLessonAnswer(profile, "maths", 1, 3, 1)).toBe(profile);
+    for (const part of [1, 2]) for (let i = 0; i < ACTIVITY_QUESTIONS; i++) profile = recordLessonAnswer(profile, "maths", part, i, 2);
     expect(nextPart(currentLesson(profile, "maths", NOW)!)).toBe(-1);
 
     // Next Monday the old lesson no longer counts.
     expect(currentLesson(profile, "maths", NOW + 7 * 86_400_000)).toBeNull();
+  });
+
+  it("colours questions green first go, yellow a later go, red not right", () => {
+    expect([1, 2, 3, 0].map(resultColour)).toEqual(["good", "warn", "warn", "bad"]);
+    // Lessons saved before three goes stored true or false.
+    expect([true, false].map(resultColour)).toEqual(["good", "bad"]);
+  });
+
+  it("builds a skill builder of 5 questions like the missed one, none from the lesson", () => {
+    for (const year of YEARS) {
+      const lesson = buildLesson(newProfile("Ava", year, NOW), "maths", NOW);
+      const all = lesson.parts.flatMap((p) => p.questionIds);
+      for (const part of lesson.parts) {
+        const missed = question(part.questionIds[part.questionIds.length - 1]);
+        const ids = skillBuilder(missed, all, new Rng(year));
+        expect(ids).toHaveLength(SKILL_BUILDER_QUESTIONS);
+        expect(new Set(ids).size).toBe(ids.length);
+        for (const id of ids) {
+          expect(all).not.toContain(id);
+          expect(question(id).subtopic_id).toBe(missed.subtopic_id);
+        }
+        // Closest in difficulty: no more than one level away when the bank has enough.
+        for (const id of ids) expect(Math.abs(rank(id) - rank(missed.id))).toBeLessThanOrEqual(1);
+      }
+    }
   });
 });

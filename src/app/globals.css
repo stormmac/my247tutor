@@ -1641,3 +1641,64 @@ ul.tight {
   flex-direction: column;
   gap: 2px;
 }
+
+/* Weekly lesson: numbered questions, coloured by how they went */
+.q-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.q-strip li {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 4px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 2px solid transparent;
+}
+.q-strip li.good {
+  background: var(--good);
+  color: #fff;
+}
+.q-strip li.warn {
+  background: var(--accent);
+  color: #1f2a2e;
+}
+.q-strip li.bad {
+  background: var(--bad);
+  color: #fff;
+}
+.q-strip li.current {
+  border-color: var(--text);
+}
+.q-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.q-key span::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+.q-key .good::before {
+  background: var(--good);
+}
+.q-key .warn::before {
+  background: var(--accent);
+}
+.q-key .bad::before {
+  background: var(--bad);
+}
