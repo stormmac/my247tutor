@@ -166,7 +166,9 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
         </div>
       )}
       <div className="row small">
-        <Link href={!hasSkillPath(profile.yearLevel) ? `/learn/${subject}/topics?year=${profile.yearLevel}` : `/learn/${subject}?mode=practice`}>
+        <Link
+          href={!hasSkillPath(profile.yearLevel) ? `/learn/${subject}/topics?year=${profile.yearLevel}` : `/learn/${subject}?mode=practice`}
+        >
           Free practice
         </Link>
         <Link href={`/learn/${subject}/topics`}>Browse topics</Link>

@@ -187,10 +187,7 @@ describe("question bank", () => {
           const questions = subtopics.filter((s) => s.outcome_code === outcome.code).flatMap((s) => questionsOf(s.id));
           expect(questions.length, outcome.code).toBeGreaterThanOrEqual(30);
           for (const level of LEVELS)
-            expect(
-              questions.filter((q) => q.difficulty === level).length,
-              `${outcome.code} ${level}`,
-            ).toBeGreaterThanOrEqual(6);
+            expect(questions.filter((q) => q.difficulty === level).length, `${outcome.code} ${level}`).toBeGreaterThanOrEqual(6);
         }
       });
 

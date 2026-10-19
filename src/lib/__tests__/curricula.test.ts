@@ -389,7 +389,9 @@ describe("Years 7 and 8", () => {
     expect(topicsFor("maths", 7).map((t) => t.title)).toContain("Integers");
     expect(topicsFor("maths", 8, "us").map((t) => t.title)).toEqual(["Expressions and equations", "Functions", "Geometry"]);
     expect(topicsFor("maths", 8, "uk").map((t) => t.title)).toContain("Ratio, proportion and rates of change");
-    const pythagoras = topicsFor("maths", 8, "us").flatMap((t) => subtopicsOf(t.id)).find((s) => s.outcome_code === "8.G.7")!;
+    const pythagoras = topicsFor("maths", 8, "us")
+      .flatMap((t) => subtopicsOf(t.id))
+      .find((s) => s.outcome_code === "8.G.7")!;
     expect(subtopicPath(pythagoras.id, "us")!.year.name).toBe("Grade 8");
     expect(subtopicPath(pythagoras.id, "uk")!.subtopic.outcome_code).toBe("Y8 Geometry and measures");
   });
