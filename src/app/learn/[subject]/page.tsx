@@ -10,7 +10,7 @@ import { useProfile } from "@/components/useProfile";
 import { WeeklyLesson } from "@/components/WeeklyLesson";
 import { type Curriculum, curriculumOf, localise, skillStandard, standardName, subjectName } from "@/lib/curriculum/curricula";
 import { getOutcome } from "@/lib/curriculum/outcomes";
-import type { Subject, YearLevel } from "@/lib/curriculum/types";
+import { hasSkillPath, type Subject, type YearLevel } from "@/lib/curriculum/types";
 import { pickNextSkill, recordAttempt, skillState, type LearnerProfile, type NextReason } from "@/lib/learner/model";
 import {
   applyAssessment,
@@ -59,8 +59,8 @@ function SubjectLearning() {
       </div>
     );
   }
-  // Years 1 and 2 have no starting check: their lesson starts straight away.
-  if (profile.yearLevel < 3) return <WeeklyLesson subject={subject} profile={profile} setProfile={setProfile} />;
+  // Years 1–2 and 7–8 have no starting check: their lesson starts straight away.
+  if (!hasSkillPath(profile.yearLevel)) return <WeeklyLesson subject={subject} profile={profile} setProfile={setProfile} />;
   if (thanks) return <AssessmentThanks name={profile.name} record={thanks} onContinue={() => setThanks(null)} />;
   if (!profile.placementDone[subject]) {
     return (

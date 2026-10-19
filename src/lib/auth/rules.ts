@@ -151,9 +151,12 @@ export const NewTeacherSchema = z.object({
   email: EmailSchema,
 });
 
-const YearSchema = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)], {
-  message: "Choose a year from 1 to 6.",
-});
+const YearSchema = z.union(
+  [z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6), z.literal(7), z.literal(8)],
+  {
+    message: "Choose a year from 1 to 8.",
+  },
+);
 
 export const CLASS_SUBJECTS = { maths: "Maths", english: "English", both: "Maths and English" } as const;
 

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CURRICULUM_SQL, UK_CURRICULUM_SQL } from "../auth/curriculumSchema";
+import { CURRICULUM_SQL, UK_CURRICULUM_SQL, YEARS_SQL } from "../auth/curriculumSchema";
 import { buildLesson } from "../content/lesson";
 import { toPracticeQuestion } from "../content/practice";
 import {
@@ -141,7 +141,7 @@ describe("questions for the US", () => {
 });
 
 describe("the US Common Core tree", () => {
-  it("has Math and English for Grades 1 to 6", () => {
+  it("has Math and English for Grades 1 to 8", () => {
     expect(yearsWithContent("maths", "us")).toEqual(YEARS);
     expect(yearsWithContent("english", "us")).toEqual(YEARS);
     expect(topicsFor("maths", 6, "us").map((t) => t.title)).toEqual([
@@ -158,7 +158,7 @@ describe("the US Common Core tree", () => {
     expect(new Set(used.map((s) => s.id)).size).toBe(used.length);
     for (const s of used) {
       expect(SUBTOPICS.some((n) => n.id === s.id)).toBe(true);
-      expect(s.outcome_code).toMatch(/^(\d\.(NBT|OA|NF|MD|G|RP|NS|EE|SP)\.\d+[a-z]?|(RF|RL|L|W)\.\d\.\d+[a-z]?)$/);
+      expect(s.outcome_code).toMatch(/^(\d\.(NBT|OA|NF|MD|G|RP|NS|EE|SP|F)\.\d+[a-z]?|(RF|RL|L|W)\.\d\.\d+[a-z]?)$/);
       expect(s.title).toBe(toUS(SUBTOPICS.find((n) => n.id === s.id)!.title));
     }
     // NSW lookups are unchanged.
@@ -283,7 +283,7 @@ describe("UK English", () => {
 });
 
 describe("the UK National Curriculum tree", () => {
-  it("has Maths and English for Years 1 to 6, under the National Curriculum headings", () => {
+  it("has Maths and English for Years 1 to 8, under the National Curriculum headings", () => {
     expect(yearsWithContent("maths", "uk")).toEqual(YEARS);
     expect(yearsWithContent("english", "uk")).toEqual(YEARS);
     expect(topicsFor("maths", 6, "uk").map((t) => t.title)).toEqual([
@@ -305,14 +305,14 @@ describe("the UK National Curriculum tree", () => {
     ]);
   });
 
-  it("reuses the NSW subtopics, each once, with UK titles and headings, and no probability", () => {
+  it("reuses the NSW subtopics, each once, with UK titles and headings, and no probability before Year 7", () => {
     const used = UK_TOPICS.flatMap((t) => subtopicsOf(t.id));
     expect(new Set(used.map((s) => s.id)).size).toBe(used.length);
     for (const s of used) {
       const nsw = SUBTOPICS.find((n) => n.id === s.id)!;
-      expect(s.outcome_code).toMatch(/^Y[1-6] [A-Z]/);
+      expect(s.outcome_code).toMatch(/^Y[1-8] [A-Z]/);
       expect(s.title).toBe(toUK(nsw.title));
-      expect(nsw.title).not.toMatch(/chance|probability/i);
+      if (Number(s.outcome_code![1]) <= 6) expect(nsw.title).not.toMatch(/chance|probability/i);
     }
     // The US tree is unchanged by it.
     expect(subtopicsOf(US_TOPICS[0].id)[0].outcome_code).toBe("1.NBT.1");
@@ -380,5 +380,29 @@ describe("curriculum columns", () => {
   it("match the migrations", () => {
     expect(readFileSync(join(__dirname, "../../../database/015_my247tutor_curriculum.sql"), "utf8")).toContain(CURRICULUM_SQL);
     expect(readFileSync(join(__dirname, "../../../database/016_my247tutor_uk_curriculum.sql"), "utf8")).toContain(UK_CURRICULUM_SQL);
+    expect(readFileSync(join(__dirname, "../../../database/017_my247tutor_years_7_8.sql"), "utf8")).toContain(YEARS_SQL);
+  });
+});
+
+describe("Years 7 and 8", () => {
+  it("are in every curriculum, named the local way", () => {
+    expect(topicsFor("maths", 7).map((t) => t.title)).toContain("Integers");
+    expect(topicsFor("maths", 8, "us").map((t) => t.title)).toEqual(["Expressions and equations", "Functions", "Geometry"]);
+    expect(topicsFor("maths", 8, "uk").map((t) => t.title)).toContain("Ratio, proportion and rates of change");
+    const pythagoras = topicsFor("maths", 8, "us")
+      .flatMap((t) => subtopicsOf(t.id))
+      .find((s) => s.outcome_code === "8.G.7")!;
+    expect(subtopicPath(pythagoras.id, "us")!.year.name).toBe("Grade 8");
+    expect(subtopicPath(pythagoras.id, "uk")!.subtopic.outcome_code).toBe("Y8 Geometry and measures");
+  });
+
+  it("give a Year 7 child a weekly lesson from their own topics", () => {
+    for (const curriculum of ["nsw", "us", "uk"] as const) {
+      const child = { ...newProfile("Kai", 7, Date.now(), curriculum), id: "33333333-3333-3333-3333-333333333333" };
+      const lesson = buildLesson(child, "maths");
+      expect(lesson.parts[0].title).toBe(`${yearName(6, curriculum)} review`);
+      const titles = topicsFor("maths", 7, curriculum).map((t) => t.title);
+      for (const part of lesson.parts.slice(1)) expect(titles.some((t) => part.title.startsWith(t))).toBe(true);
+    }
   });
 });

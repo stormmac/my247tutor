@@ -113,8 +113,13 @@ export function ProgressReport({
       <RecentQuestions profile={profile} />
       <TopicResults profile={profile} />
 
-      <SubjectReport profile={profile} subject="maths" title={curriculumOf(profile.curriculum) === "us" ? "Math" : "Mathematics"} />
-      <SubjectReport profile={profile} subject="english" title="English" />
+      {/* The skill map covers Years 1–6; Years 7 and 8 are shown by topic above. */}
+      {profile.yearLevel <= 6 && (
+        <>
+          <SubjectReport profile={profile} subject="maths" title={curriculumOf(profile.curriculum) === "us" ? "Math" : "Mathematics"} />
+          <SubjectReport profile={profile} subject="english" title="English" />
+        </>
+      )}
 
       <p className="muted small">
         Levels and plans are estimates from {profile.name}'s practice in my247tutor, not a school assessment. They get more accurate the

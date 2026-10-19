@@ -11,7 +11,7 @@ import { currentLesson, lessonProgress } from "@/lib/learner/lesson";
 import { MAX_CHILDREN, newProfile, skillState, type LearnerProfile } from "@/lib/learner/model";
 import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, subjectName, yearName, yearWord } from "@/lib/curriculum/curricula";
 import { skillsFor } from "@/lib/curriculum/skills";
-import { YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
+import { hasSkillPath, YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
 import { currentSightLevel, currentUnit, readingOf, sightLevelsDone, unitsDone } from "@/lib/phonics/progress";
 import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
 import { UNITS } from "@/lib/phonics/sequence";
@@ -158,8 +158,8 @@ function TablesCard({ profile }: { profile: LearnerProfile }) {
 }
 
 function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
-  // Years 1 and 2 have no starting check or skill map; their lesson comes from the topic tree.
-  if (profile.yearLevel < 3) return <TopicsCard profile={profile} subject={subject} title={title} />;
+  // Years 1–2 and 7–8 have no starting check or skill map; their lesson comes from the topic tree.
+  if (!hasSkillPath(profile.yearLevel)) return <TopicsCard profile={profile} subject={subject} title={title} />;
   const skills = skillsFor(subject).filter((s) => s.practice !== "writing");
   const mastered = skills.filter((s) => skillState(profile, s.id).mastered).length;
   const placed = profile.placementDone[subject];
@@ -290,7 +290,7 @@ function Setup({
         <p className="muted small" style={{ margin: "8px 0 0" }}>
           {year === null
             ? "Their first check starts two years below this, then moves up to find their level."
-            : year < 3
+            : !hasSkillPath(year)
               ? "They start straight away with a weekly lesson."
               : `Their first check starts at ${yearName(Math.max(3, year - 2), curriculum)} and moves up to find their level.`}
         </p>

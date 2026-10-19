@@ -2,13 +2,14 @@ import type { Subject, YearLevel } from "../curriculum/types";
 import type { TopicSpec } from "./us";
 
 /**
- * England's National Curriculum, Years 1–6, as the UK curriculum. Like the US tree it has no
+ * England's National Curriculum, Years 1–8, as the UK curriculum. Like the US tree it has no
  * questions of its own: each topic is a programme of study heading (such as "Number – place
  * value") holding NSW subtopics, by their number as in tree.ts. curricula.ts turns the text into
  * UK English, with pounds and pence. Each NSW subtopic appears at most once.
  *
  * The National Curriculum has no official codes, so a subtopic's code is its year and heading,
- * such as "Y3 Place value". Chance and probability aren't in the primary curriculum, so they're left out.
+ * such as "Y3 Place value". Chance and probability aren't in the primary curriculum, so they're left out
+ * of Years 1–6. Years 7 and 8 use the Key Stage 3 headings, which cover both years.
  */
 const topic = (subject: Subject, grade: YearLevel, title: string, description: string, subtopics: number[]): TopicSpec => ({
   subject,
@@ -102,6 +103,18 @@ export const UK_TOPIC_SPECS: TopicSpec[] = [
   maths(6, "Position and direction", "Coordinates in all four quadrants.", [60304]),
   maths(6, "Statistics", "Pie charts, line graphs and the mean.", [60601, 60602]),
 
+  maths(7, "Number", "Integers, fractions, decimals, percentages, powers and roots.", [70101, 70201, 70302]),
+  maths(7, "Algebra", "Using letters for numbers, simplifying expressions and solving equations.", [70301, 70401]),
+  maths(7, "Geometry and measures", "Perimeter, area, circles, angles and the properties of shapes.", [70501, 70502, 70601, 70602]),
+  maths(7, "Statistics", "Types of data, and charts, graphs and stem-and-leaf diagrams.", [70701]),
+  maths(7, "Probability", "Sample spaces, probabilities and relative frequency.", [70702]),
+
+  maths(8, "Ratio, proportion and rates of change", "Percentage change, money problems, ratios and rates.", [80101, 80102]),
+  maths(8, "Algebra", "Expanding and factorising, index laws, equations and straight-line graphs.", [80201, 80202, 80203, 80204]),
+  maths(8, "Geometry and measures", "Pythagoras' theorem, circles, volume and congruence.", [80301, 80302, 80303, 80401]),
+  maths(8, "Statistics", "Averages, range, and comparing sets of data.", [80501]),
+  maths(8, "Probability", "Two-step experiments and expected outcomes.", [80502]),
+
   // ---------- English ----------
   english(1, "Word reading", WORD_READING, [11101]),
   english(1, "Comprehension", COMPREHENSION, [11201, 11301, 11302]),
@@ -131,6 +144,13 @@ export const UK_TOPIC_SPECS: TopicSpec[] = [
   english(6, "Comprehension", COMPREHENSION, [61501, 61502, 61503, 61401, 61201]),
   english(6, "Spelling", SPELLING, [61301]),
   english(6, "Composition", COMPOSITION, [61101, 61102, 61103]),
+
+  english(7, "Reading", "Reading closely, and understanding imagery, perspective and context.", [71101, 71102, 71103]),
+  english(7, "Grammar and vocabulary", "Word meanings, grammar and punctuation.", [71201, 71202]),
+  english(7, "Writing", "Spelling, and planning, revising and editing writing.", [71203, 71301]),
+  english(8, "Reading", "Reading closely, and understanding imagery, perspective and context.", [81101, 81102, 81103]),
+  english(8, "Grammar and vocabulary", "Word meanings, grammar and punctuation.", [81201, 81202]),
+  english(8, "Writing", "Spelling, and planning, revising and editing writing.", [81203, 81301]),
 ];
 
 /**
