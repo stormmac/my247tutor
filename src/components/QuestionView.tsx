@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { localiseQuestion } from "@/lib/curriculum/curricula";
 import { answerText, checkAnswer, type Question } from "@/lib/practice";
 import type { AttemptDetails } from "@/lib/learner/model";
 import { Picture } from "./Picture";
+import { useCurriculum } from "./useProfile";
 
 export type QuestionOutcome = {
   correct: boolean;
@@ -47,7 +49,7 @@ const MAX_TRIES = 2;
 const goesLeft = (n: number) => (n === 1 ? "Last go!" : `${n} goes left.`);
 
 export function QuestionView({
-  question,
+  question: asWritten,
   placement,
   onDone,
   onNext,
@@ -56,6 +58,9 @@ export function QuestionView({
   onTryAgain,
   maxTries = MAX_TRIES,
 }: Props) {
+  // A child on the US curriculum sees the question, and is marked, in US English.
+  const curriculum = useCurriculum();
+  const question = useMemo(() => localiseQuestion(asWritten, curriculum), [asWritten, curriculum]);
   const [input, setInput] = useState("");
   const [selected, setSelected] = useState<number | null>(null);
   const [picked, setPicked] = useState<number[]>([]);

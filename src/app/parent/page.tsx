@@ -8,6 +8,7 @@ import { ChildTabs } from "@/components/ChildSwitcher";
 import { ProgressReport } from "@/components/ProgressReport";
 import { removeCurrentChild, useProfile } from "@/components/useProfile";
 import type { LearnerProfile } from "@/lib/learner/model";
+import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, yearName } from "@/lib/curriculum/curricula";
 import { YEARS } from "@/lib/curriculum/types";
 
 export default function ParentPage() {
@@ -31,6 +32,7 @@ export default function ParentPage() {
     );
   }
 
+  const curriculum = curriculumOf(profile.curriculum);
   return (
     <div className="stack">
       <ChildTabs />
@@ -38,7 +40,9 @@ export default function ParentPage() {
         <div>
           <h1>{profile.name}'s progress</h1>
           <p className="muted" style={{ margin: 0 }}>
-            Year {profile.yearLevel}. Shown against the NSW (NESA) syllabus outcomes, as of {new Date().toLocaleDateString("en-AU")}.
+            {yearName(profile.yearLevel, curriculum)}. Shown against the{" "}
+            {curriculum === "us" ? "US Common Core standards" : "NSW (NESA) syllabus outcomes"}, as of{" "}
+            {new Date().toLocaleDateString(curriculum === "us" ? "en-US" : "en-AU")}.
           </p>
         </div>
         <button className="btn secondary small no-print" onClick={() => window.print()}>
@@ -82,11 +86,32 @@ export default function ParentPage() {
             >
               {YEARS.map((y) => (
                 <option key={y} value={y}>
-                  Year {y}
+                  {yearName(y, curriculum)}
                 </option>
               ))}
             </select>
           </label>
+          {account.user ? (
+            <span className="small">
+              Curriculum: <strong>{CURRICULUM_NAMES[curriculum]}</strong>
+            </span>
+          ) : (
+            // Without an account there's no Admin to set it, so the grown-up chooses here.
+            <label className="row" style={{ fontWeight: 400, margin: 0 }}>
+              Curriculum
+              <select
+                value={curriculum}
+                style={{ width: "auto" }}
+                onChange={(e) => setProfile((p) => ({ ...p, curriculum: e.target.value as Curriculum }))}
+              >
+                {CURRICULA.map((c) => (
+                  <option key={c} value={c}>
+                    {CURRICULUM_NAMES[c]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <button
             className="btn secondary small"
             onClick={() => {

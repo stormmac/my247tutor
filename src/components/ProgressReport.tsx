@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { curriculumOf, subjectName, yearName } from "@/lib/curriculum/curricula";
 import { getOutcome } from "@/lib/curriculum/outcomes";
 import { getSkill, skillsFor } from "@/lib/curriculum/skills";
 import type { Skill, Subject } from "@/lib/curriculum/types";
 import { SUBTOPICS } from "@/lib/content/tree";
+import { US_SKILL_STANDARDS } from "@/lib/content/us";
 import { recentAccuracy, skillState, type AttemptRecord, type LearnerProfile } from "@/lib/learner/model";
 import {
   LEVEL_NAMES,
@@ -97,7 +99,7 @@ export function ProgressReport({
       <StartingReport
         profile={profile}
         subject="maths"
-        title="Maths"
+        title={subjectName("maths", curriculumOf(profile.curriculum))}
         onRedo={onChange && (() => onChange((p) => ({ ...p, placementDone: { ...p.placementDone, maths: false } })))}
       />
       <StartingReport
@@ -112,7 +114,7 @@ export function ProgressReport({
       <RecentQuestions profile={profile} />
       <TopicResults profile={profile} />
 
-      <SubjectReport profile={profile} subject="maths" title="Mathematics" />
+      <SubjectReport profile={profile} subject="maths" title={curriculumOf(profile.curriculum) === "us" ? "Math" : "Mathematics"} />
       <SubjectReport profile={profile} subject="english" title="English" />
 
       <p className="muted small">
@@ -150,10 +152,10 @@ export function ProgressReport({
   );
 }
 
-const STANDING: Record<Standing, { label: (year: number) => string; pill: string }> = {
-  ahead: { label: (y) => `Ahead of Year ${y}`, pill: "good" },
-  "on track": { label: (y) => `On track for Year ${y}`, pill: "good" },
-  "needs support": { label: (y) => `Working towards Year ${y}`, pill: "warn" },
+const STANDING: Record<Standing, { label: (year: string) => string; pill: string }> = {
+  ahead: { label: (y) => `Ahead of ${y}`, pill: "good" },
+  "on track": { label: (y) => `On track for ${y}`, pill: "good" },
+  "needs support": { label: (y) => `Working towards ${y}`, pill: "warn" },
   "not enough evidence": { label: () => "Needs more practice to tell", pill: "" },
 };
 
@@ -177,12 +179,19 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
   const plan = recommendedPlan(profile, subject);
   const standing = STANDING[level.standing];
   const skills = skillsFor(subject);
+  const curriculum = curriculumOf(profile.curriculum);
+  const year = (y: number) => yearName(y, curriculum);
+  // The skill's code in the child's curriculum: its NESA outcome, or the Common Core standard it's filed under.
+  const code = (skill: Skill) =>
+    curriculum === "us" && US_SKILL_STANDARDS[skill.id]
+      ? { code: US_SKILL_STANDARDS[skill.id], codeVerified: true }
+      : getOutcome(skill.outcome);
 
   return (
     <div className="card stack report">
       <div className="row spread">
         <h2 style={{ margin: 0 }}>{title}</h2>
-        <span className={`pill ${standing.pill}`}>{standing.label(profile.yearLevel)}</span>
+        <span className={`pill ${standing.pill}`}>{standing.label(year(profile.yearLevel))}</span>
       </div>
 
       <div>
@@ -191,14 +200,17 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
           {level.standing === "not enough evidence"
             ? "Not enough practice yet"
             : level.beyondYear6
-              ? "Working beyond Year 6"
-              : `Working at about Year ${level.workingAtYear} level`}
+              ? `Working beyond ${year(6)}`
+              : `Working at about ${year(level.workingAtYear)} level`}
         </div>
         <div className="grid grid-2" style={{ marginTop: 12 }}>
           {level.stages.map((s) => (
             <div key={s.stage}>
               <div className="small">
-                Stage {s.stage} (Years {s.stage === 2 ? "3–4" : "5–6"}): {s.secure} of {s.total} skills competent or better
+                {curriculum === "us"
+                  ? `Grades ${s.stage === 2 ? "3–4" : "5–6"}`
+                  : `Stage ${s.stage} (Years ${s.stage === 2 ? "3–4" : "5–6"})`}
+                : {s.secure} of {s.total} skills competent or better
               </div>
               <div className="progress" style={{ marginTop: 6 }}>
                 <div style={{ width: `${Math.round((s.secure / s.total) * 100)}%` }} />
@@ -216,7 +228,7 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
               <li key={step.skill.id}>
                 <div className="row spread">
                   <div>
-                    <strong>{step.skill.title}</strong> <span className="muted small">{getOutcome(step.skill.outcome).code}</span>
+                    <strong>{step.skill.title}</strong> <span className="muted small">{code(step.skill).code}</span>
                     <div className="small muted">{step.why}</div>
                   </div>
                   <Link className="btn secondary small no-print" href={practiceHref(step.skill)}>
@@ -240,7 +252,7 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
           <table className="skill-table">
             <thead>
               <tr>
-                <th>Outcome</th>
+                <th>{curriculum === "us" ? "Standard" : "Outcome"}</th>
                 <th>Skill</th>
                 <th>Competency</th>
                 <th className="accuracy">Recent accuracy</th>
@@ -248,7 +260,7 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
             </thead>
             <tbody>
               {skills.map((skill) => {
-                const o = getOutcome(skill.outcome);
+                const o = code(skill);
                 const c = competency(profile, skill);
                 const accuracy = recentAccuracy(profile, skill.id);
                 return (
@@ -256,7 +268,7 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
                     <td>
                       <strong>{o.code}</strong>
                       {!o.codeVerified && <span className="muted small"> *</span>}
-                      <div className="muted small">Stage {skill.stage}</div>
+                      {curriculum !== "us" && <div className="muted small">Stage {skill.stage}</div>}
                     </td>
                     <td>
                       {skill.title}
@@ -275,7 +287,7 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
             </tbody>
           </table>
         </div>
-        {skills.some((s) => !getOutcome(s.outcome).codeVerified) && (
+        {skills.some((s) => !code(s).codeVerified) && (
           <p className="muted small" style={{ marginTop: 8 }}>
             * Outcome code still being confirmed against the NESA syllabus.
           </p>
@@ -324,18 +336,23 @@ function StartingReport({
   const strong = topics.filter((t) => t.right === t.total);
   const work = topics.filter((t) => t.right < t.total);
   const right = record.answers.filter((a) => a.correct).length;
+  const curriculum = curriculumOf(profile.curriculum);
   return (
     <div className="card stack report">
       <div className="row spread">
         <div>
           <h2 style={{ margin: 0 }}>Starting assessment: {title}</h2>
           <div className="muted small">
-            {new Date(record.at).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })} · {record.answers.length}{" "}
-            questions, {right} right · started at Year {record.startYear}, level 1
+            {new Date(record.at).toLocaleDateString(curriculum === "us" ? "en-US" : "en-AU", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}{" "}
+            · {record.answers.length} questions, {right} right · started at {yearName(record.startYear, curriculum)}, level 1
           </div>
         </div>
         <span className={`pill ${ASSESSMENT_PILL[s]}`}>
-          {ASSESSMENT_LABEL[s]} for Year {record.yearLevel}
+          {ASSESSMENT_LABEL[s]} for {yearName(record.yearLevel, curriculum)}
         </span>
       </div>
       <p style={{ margin: 0, fontSize: 18 }}>{summarySentence(record, profile.name)}</p>
@@ -372,8 +389,9 @@ function StartingReport({
         </div>
       </div>
       <p className="small muted" style={{ margin: 0 }}>
-        Levels go from 1 (very easy) to 5 (very hard) within each year. Questions were picked at random from the NSW syllabus topics for
-        each year, so this is a snapshot, not a school assessment.
+        Levels go from 1 (very easy) to 5 (very hard) within each {curriculum === "us" ? "grade" : "year"}. Questions were picked at random
+        from the {curriculum === "us" ? "Common Core" : "NSW syllabus"} topics for each {curriculum === "us" ? "grade" : "year"}, so this is
+        a snapshot, not a school assessment.
       </p>
       <div className="row no-print">
         <button className="btn secondary small" onClick={() => setShowQuestions((v) => !v)}>

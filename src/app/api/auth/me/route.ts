@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
       trialEndsAt: plan === "trial" ? trialEndsAt : null,
       actingAdmin: actor ? actor.name : null,
       actingRole: actor ? actor.role : null,
+      curriculum: result.user.curriculum,
     },
   });
 }

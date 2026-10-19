@@ -9,6 +9,7 @@ import { useAccount } from "@/components/useAccount";
 import { switchChild, useChildren, useProfile } from "@/components/useProfile";
 import { currentLesson, lessonProgress } from "@/lib/learner/lesson";
 import { MAX_CHILDREN, newProfile, skillState, type LearnerProfile } from "@/lib/learner/model";
+import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, subjectName, yearName } from "@/lib/curriculum/curricula";
 import { skillsFor } from "@/lib/curriculum/skills";
 import { YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
 import { currentSightLevel, currentUnit, readingOf, sightLevelsDone, unitsDone } from "@/lib/phonics/progress";
@@ -26,7 +27,14 @@ export default function LearnPage() {
   // A teacher or centre picks one of their students.
   if ((account.user?.role === "teacher" || account.user?.role === "centre") && !self)
     return <ClassLearnPicker onSelf={() => setSelf(true)} />;
-  if (!profile) return <Setup onCreate={(name, year) => setProfile(newProfile(name, year))} />;
+  if (!profile)
+    return (
+      <Setup
+        startOn={account.user?.curriculum ?? undefined}
+        onCreate={(name, year, curriculum) => setProfile(newProfile(name, year, Date.now(), curriculum))}
+      />
+    );
+  const curriculum = curriculumOf(profile.curriculum);
 
   return (
     <div className="stack">
@@ -35,13 +43,13 @@ export default function LearnPage() {
         <div>
           <h1>Hi {profile.name}! What shall we learn?</h1>
           <p className="muted" style={{ margin: 0 }}>
-            Year {profile.yearLevel}. Pick a subject to keep going, and ask Suni if you get stuck.
+            {yearName(profile.yearLevel, curriculum)}. Pick a subject to keep going, and ask Suni if you get stuck.
           </p>
         </div>
       </div>
       <ReadingCard profile={profile} />
       <div className="grid grid-2">
-        <SubjectCard profile={profile} subject="maths" title="Maths" />
+        <SubjectCard profile={profile} subject="maths" title={subjectName("maths", curriculum)} />
         <SubjectCard profile={profile} subject="english" title="English" />
       </div>
       <TablesCard profile={profile} />
@@ -215,18 +223,28 @@ function TopicsCard({ profile, subject, title }: { profile: LearnerProfile; subj
   );
 }
 
-function Setup({ onCreate }: { onCreate: (name: string, year: YearLevel) => void }) {
+function Setup({
+  startOn,
+  onCreate,
+}: {
+  /** The curriculum Admin chose for the family, if any. */
+  startOn?: Curriculum;
+  onCreate: (name: string, year: YearLevel, curriculum: Curriculum) => void;
+}) {
   const [name, setName] = useState("");
   // No year is picked for them: the starting check is set from it, so a grown-up has to choose.
   const [year, setYear] = useState<YearLevel | null>(null);
   const { children } = useChildren();
+  // A brother or sister usually learns the same curriculum.
+  const [picked, setPicked] = useState<Curriculum | null>(null);
+  const curriculum = picked ?? startOn ?? curriculumOf(children[0]?.curriculum);
   const ready = name.trim() !== "" && year !== null;
   return (
     <form
       className="card narrow stack"
       onSubmit={(e) => {
         e.preventDefault();
-        if (ready) onCreate(name.trim().slice(0, 20), year);
+        if (ready) onCreate(name.trim().slice(0, 20), year, curriculum);
       }}
     >
       <h1>{children.length ? "Add a child" : "Let's get started"}</h1>
@@ -239,7 +257,23 @@ function Setup({ onCreate }: { onCreate: (name: string, year: YearLevel) => void
         <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={20} autoComplete="off" />
       </div>
       <fieldset className="year-picker">
-        <legend>What year are they in at school now?</legend>
+        <legend>Which curriculum do they follow at school?</legend>
+        <div className="tabs">
+          {CURRICULA.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className={`tab${curriculum === c ? " active" : ""}`}
+              aria-pressed={curriculum === c}
+              onClick={() => setPicked(c)}
+            >
+              {CURRICULUM_NAMES[c]}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset className="year-picker">
+        <legend>What {curriculum === "us" ? "grade" : "year"} are they in at school now?</legend>
         <div className="tabs">
           {YEARS.map((y) => (
             <button
@@ -249,14 +283,16 @@ function Setup({ onCreate }: { onCreate: (name: string, year: YearLevel) => void
               aria-pressed={year === y}
               onClick={() => setYear(y)}
             >
-              Year {y}
+              {yearName(y, curriculum)}
             </button>
           ))}
         </div>
         <p className="muted small" style={{ margin: "8px 0 0" }}>
           {year === null
             ? "Their first check starts two years below this, then moves up to find their level."
-            : `Their first check starts at Year ${Math.max(3, year - 2)} and moves up to find their level.`}
+            : year < 3
+              ? "They start straight away with a weekly lesson."
+              : `Their first check starts at ${yearName(Math.max(3, year - 2), curriculum)} and moves up to find their level.`}
         </p>
       </fieldset>
       <button className="btn" disabled={!ready}>

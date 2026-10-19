@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
 import type { NextRequest } from "next/server";
+import { type Curriculum, isCurriculum } from "@/lib/curriculum/curricula";
 import { ready } from "./db";
 import { isAdminEmail, isLockedOut, LOCKOUT_MINUTES, temporaryPassword, type Role } from "./rules";
 import { SESSION_COOKIE, verifySession } from "./session";
@@ -39,9 +40,11 @@ export interface User {
   learnerId: string | null;
   /** For a teacher at a tutoring centre: the centre's account. */
   centreId: string | null;
+  /** For a parent or centre: the curriculum their children learn (set by Admin). Null means NSW. */
+  curriculum: Curriculum | null;
 }
 
-export const USER_COLUMNS = `id, email, display_name, role, is_active, session_version, created_at, last_login_at, free_access, trial_ends_at, stripe_customer_id, subscription_status, paid_until, username, parent_id, learner_id, centre_id`;
+export const USER_COLUMNS = `id, email, display_name, role, is_active, session_version, created_at, last_login_at, free_access, trial_ends_at, stripe_customer_id, subscription_status, paid_until, username, parent_id, learner_id, centre_id, curriculum`;
 
 const ms = (value: unknown) => (value ? new Date(value as string).getTime() : null);
 
@@ -64,6 +67,7 @@ export function toUser(row: Record<string, unknown>): User {
     parentId: (row.parent_id as string | null) ?? null,
     learnerId: (row.learner_id as string | null) ?? null,
     centreId: (row.centre_id as string | null) ?? null,
+    curriculum: isCurriculum(row.curriculum) ? row.curriculum : null,
   };
 }
 
@@ -359,6 +363,8 @@ export interface OwnedLearner {
   name: string;
   yearLevel: number;
   username: string | null;
+  /** The curriculum they learn: their own, or their parent's or centre's. */
+  curriculum: Curriculum;
 }
 
 export interface LearnerOwner {
@@ -367,6 +373,8 @@ export interface LearnerOwner {
   email: string;
   role: "parent" | "centre";
   isActive: boolean;
+  /** The default for their children (NSW when Admin hasn't chosen). */
+  curriculum: Curriculum;
   learners: OwnedLearner[];
 }
 
@@ -375,8 +383,9 @@ export async function listLearnerOwners(): Promise<LearnerOwner[]> {
   const { rows } = await (
     await ready()
   ).query(
-    `SELECT o.id, o.display_name, o.email, o.role, o.is_active,
-       COALESCE(json_agg(json_build_object('id', l.id, 'name', l.profile->>'name', 'yearLevel', (l.profile->>'yearLevel')::int, 'username', s.username)
+    `SELECT o.id, o.display_name, o.email, o.role, o.is_active, COALESCE(o.curriculum, 'nsw') AS curriculum,
+       COALESCE(json_agg(json_build_object('id', l.id, 'name', l.profile->>'name', 'yearLevel', (l.profile->>'yearLevel')::int, 'username', s.username,
+         'curriculum', COALESCE(l.curriculum, o.curriculum, 'nsw'))
          ORDER BY l.profile->>'name') FILTER (WHERE l.id IS NOT NULL), '[]') AS learners
      FROM users o
      LEFT JOIN learners l ON l.parent_id = o.id
@@ -390,6 +399,7 @@ export async function listLearnerOwners(): Promise<LearnerOwner[]> {
     email: r.email as string,
     role: r.role as LearnerOwner["role"],
     isActive: r.is_active as boolean,
+    curriculum: r.curriculum as Curriculum,
     learners: r.learners as OwnedLearner[],
   }));
 }

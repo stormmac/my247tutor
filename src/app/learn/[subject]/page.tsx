@@ -8,6 +8,7 @@ import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components
 import { questionFocus, useSuniFocus, useSuniSay, useSuniScreen } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { WeeklyLesson } from "@/components/WeeklyLesson";
+import { type Curriculum, curriculumOf, subjectName, toUS } from "@/lib/curriculum/curricula";
 import { getOutcome } from "@/lib/curriculum/outcomes";
 import type { Subject, YearLevel } from "@/lib/curriculum/types";
 import { pickNextSkill, recordAttempt, skillState, type LearnerProfile, type NextReason } from "@/lib/learner/model";
@@ -20,6 +21,7 @@ import {
   type AssessmentRecord,
 } from "@/lib/learner/assessment";
 import { toPracticeQuestion } from "@/lib/content/practice";
+import { US_SKILL_STANDARDS } from "@/lib/content/us";
 import { answerText, generateQuestion } from "@/lib/practice";
 import { randomSeed } from "@/lib/practice/rng";
 
@@ -67,6 +69,7 @@ function SubjectLearning() {
         subject={subject}
         name={profile.name}
         yearLevel={profile.yearLevel}
+        curriculum={curriculumOf(profile.curriculum)}
         onFinish={(record) => {
           // Saved straight away, so the parent sees the report even if the tab is closed now.
           setProfile((p) => applyAssessment(p, record));
@@ -125,26 +128,36 @@ function AssessmentDone({
         </button>
       </div>
     );
-  return <Assessment subject={subject} name={profile.name} yearLevel={profile.yearLevel} onFinish={setFinished} />;
+  return (
+    <Assessment
+      subject={subject}
+      name={profile.name}
+      yearLevel={profile.yearLevel}
+      curriculum={curriculumOf(profile.curriculum)}
+      onFinish={setFinished}
+    />
+  );
 }
 
 function Assessment({
   subject,
   name,
   yearLevel,
+  curriculum,
   onFinish,
 }: {
   subject: Subject;
   name: string;
   yearLevel: YearLevel;
+  curriculum: Curriculum;
   onFinish: (r: AssessmentRecord) => void;
 }) {
   const [started, setStarted] = useState(false);
-  const [state, setState] = useState(() => startAssessment(subject, yearLevel));
+  const [state, setState] = useState(() => startAssessment(subject, yearLevel, curriculum));
   const [question, setQuestion] = useState(() => nextQuestion(state));
   const [seed, setSeed] = useState(randomSeed);
   const practice = useMemo(() => (question ? toPracticeQuestion(question, seed) : null), [question, seed]);
-  const title = subject === "maths" ? "Maths" : "English";
+  const title = subjectName(subject, curriculum);
   useSuniScreen({
     screen: started
       ? `The ${title} starting check, question ${state.answers.length + 1}. It finds where they should start, so there are no hints.`
@@ -226,7 +239,7 @@ function Practice({
           correctAnswer: answerText(question.answer, question.choices),
           answered,
           hintsShown,
-          screen: `Free ${subject === "maths" ? "maths" : "English"} practice: ${current.skill.title}.`,
+          screen: `Free ${subjectName(subject, curriculumOf(profile.curriculum))} practice: ${current.skill.title}.`,
         })
       : null,
   );
@@ -246,6 +259,7 @@ function Practice({
   const skill = current.skill;
   const asked = question;
   const outcome = getOutcome(skill.outcome);
+  const usStandard = curriculumOf(profile.curriculum) === "us" ? US_SKILL_STANDARDS[skill.id] : undefined;
   const state = skillState(profile, skill.id);
 
   function onDone(o: QuestionOutcome) {
@@ -274,9 +288,15 @@ function Practice({
       <div className="row spread">
         <div>
           <span className="pill">{REASON_LABEL[current.reason]}</span>{" "}
-          <span className="pill" title={outcome.codeVerified ? "" : "Outcome code still to be confirmed against the syllabus"}>
-            {outcome.code}
-          </span>
+          {usStandard ? (
+            <span className="pill" title="Common Core standard">
+              {usStandard}
+            </span>
+          ) : (
+            <span className="pill" title={outcome.codeVerified ? "" : "Outcome code still to be confirmed against the syllabus"}>
+              {outcome.code}
+            </span>
+          )}
           <h1 style={{ marginTop: 8 }}>{skill.title}</h1>
           <p className="muted" style={{ margin: 0 }}>
             {skill.description}
@@ -309,7 +329,10 @@ function Practice({
         />
       </div>
       <p className="small muted">
-        Skill from the NSW syllabus, {outcome.focusArea}: {outcome.summary}. <Link href="/learn">Change subject</Link>
+        {usStandard
+          ? `Common Core standard ${usStandard}: ${toUS(outcome.summary)}.`
+          : `Skill from the NSW syllabus, ${outcome.focusArea}: ${outcome.summary}.`}{" "}
+        <Link href="/learn">Change subject</Link>
       </p>
     </div>
   );

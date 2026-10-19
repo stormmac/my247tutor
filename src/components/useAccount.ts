@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { pickChildOnLoad } from "@/components/useProfile";
 import type { Plan, Role } from "@/lib/auth/rules";
+import type { Curriculum } from "@/lib/curriculum/curricula";
 
 export interface Account {
   id: string;
@@ -21,6 +22,8 @@ export interface Account {
   actingAdmin?: string | null;
   /** Who is logged in as this account: an admin, or a teacher or centre learning as their student. */
   actingRole?: Role | null;
+  /** A parent's or centre's curriculum, set by Admin: what a new child starts on. */
+  curriculum?: Curriculum | null;
 }
 
 export interface AccountState {

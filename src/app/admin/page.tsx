@@ -5,6 +5,7 @@ import { AdminTabs } from "@/components/AdminTabs";
 import { SetupStatus } from "@/components/SetupStatus";
 import { logInAs, useAccount } from "@/components/useAccount";
 import type { Plan, Role } from "@/lib/auth/rules";
+import { CURRICULA, CURRICULUM_NAMES, type Curriculum } from "@/lib/curriculum/curricula";
 
 interface Row {
   id: string;
@@ -21,6 +22,7 @@ interface Row {
   plan: Plan;
   paidUntil: number | null;
   trialEndsAt: number | null;
+  curriculum: Curriculum;
 }
 
 const PLAN: Record<Plan, { label: string; pill: string }> = {
@@ -73,7 +75,7 @@ function Accounts() {
     void load();
   }, [load]);
 
-  async function change(user: Row, update: { role?: Role; isActive?: boolean; freeAccess?: boolean }) {
+  async function change(user: Row, update: { role?: Role; isActive?: boolean; freeAccess?: boolean; curriculum?: Curriculum }) {
     setError(null);
     setNotice(null);
     const res = await fetch(`/api/admin/users/${user.id}`, {
@@ -199,6 +201,7 @@ function Accounts() {
               <th>Role</th>
               <th>Plan</th>
               <th>Learners</th>
+              <th>Curriculum</th>
               <th>Joined</th>
               <th>Last sign-in</th>
               <th>Status</th>
@@ -253,6 +256,31 @@ function Accounts() {
                     {!billing && u.plan !== "staff" && u.plan !== "free" && <div className="small muted">Payments are off</div>}
                   </td>
                   <td>{u.learners}</td>
+                  <td>
+                    {u.role === "parent" || u.role === "centre" ? (
+                      <select
+                        value={u.curriculum}
+                        onChange={(e) => {
+                          const curriculum = e.target.value as Curriculum;
+                          if (
+                            u.learners === 0 ||
+                            confirm(`Change ${u.name} and all ${u.learners} of their students to ${CURRICULUM_NAMES[curriculum]}?`)
+                          )
+                            void change(u, { curriculum });
+                        }}
+                        aria-label={`Curriculum for ${u.email}`}
+                        style={{ width: "auto" }}
+                      >
+                        {CURRICULA.map((c) => (
+                          <option key={c} value={c}>
+                            {CURRICULUM_NAMES[c]}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="muted">–</span>
+                    )}
+                  </td>
                   <td>{date(u.createdAt)}</td>
                   <td>{date(u.lastLoginAt)}</td>
                   <td>

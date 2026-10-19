@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { type Curriculum, curriculumOf } from "@/lib/curriculum/curricula";
 import { MAX_CHILDREN, newChildId, type LearnerProfile } from "@/lib/learner/model";
 
 /**
@@ -183,6 +184,11 @@ export function useProfile() {
   }, []);
 
   return { profile, setProfile, loaded };
+}
+
+/** The curriculum of the child on screen (NSW when there's no child yet). */
+export function useCurriculum(): Curriculum {
+  return curriculumOf(useProfile().profile?.curriculum);
 }
 
 /** Every child in this browser, oldest first so the order stays put when switching, kept up to date as they change. */

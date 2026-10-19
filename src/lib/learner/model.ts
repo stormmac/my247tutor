@@ -1,6 +1,7 @@
 import { SKILLS, getSkill, skillsFor } from "../curriculum/skills";
 import type { Skill, Stage, Subject, YearLevel } from "../curriculum/types";
 import { yearToStage } from "../curriculum/types";
+import type { Curriculum } from "../curriculum/curricula";
 import type { AssessmentRecord } from "./assessment";
 import type { ReadingProgress } from "../phonics/progress";
 import type { TablesRecord } from "../tables/game";
@@ -73,6 +74,8 @@ export interface LearnerProfile {
   tables?: TablesRecord;
   /** This week's lesson in each subject. Missing until the first lesson. */
   lessons?: Partial<Record<Subject, WeeklyLesson>>;
+  /** Which curriculum the child learns. Missing means NSW. On an account, the saved copy decides (see auth/learners.ts). */
+  curriculum?: Curriculum;
 }
 
 export const MASTERY_THRESHOLD = 0.8;
@@ -86,12 +89,13 @@ export const MAX_DETAILED_HISTORY = 300;
 const clip = (text: string | undefined, max: number) =>
   text === undefined ? undefined : text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
-export function newProfile(name: string, yearLevel: YearLevel, now = Date.now()): LearnerProfile {
+export function newProfile(name: string, yearLevel: YearLevel, now = Date.now(), curriculum?: Curriculum): LearnerProfile {
   return {
     version: 1,
     id: newChildId(),
     name,
     yearLevel,
+    ...(curriculum ? { curriculum } : {}),
     createdAt: now,
     skills: {},
     placementDone: {},
