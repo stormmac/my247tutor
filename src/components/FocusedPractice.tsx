@@ -89,9 +89,9 @@ export function FocusedPractice({
     }
   }
 
-  // On the US curriculum the subtopic carries its Common Core standard.
+  // Outside NSW the subtopic carries its Common Core standard or National Curriculum heading.
   const outcome =
-    curriculum === "us"
+    curriculum !== "nsw"
       ? subtopic.outcome_code
         ? { code: subtopic.outcome_code, codeVerified: true }
         : null

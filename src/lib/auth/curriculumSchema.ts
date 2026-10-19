@@ -14,3 +14,16 @@ BEGIN
     ALTER TABLE learners ADD CONSTRAINT learners_year_level_check CHECK (year_level BETWEEN 1 AND 6);
   END IF;
 END $$;`;
+
+/** Lets a family or child be on the UK curriculum (database/016_my247tutor_uk_curriculum.sql, kept identical by a test). */
+export const UK_CURRICULUM_SQL = `DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_curriculum_check' AND pg_get_constraintdef(oid) NOT LIKE '%uk%') THEN
+    ALTER TABLE users DROP CONSTRAINT users_curriculum_check;
+    ALTER TABLE users ADD CONSTRAINT users_curriculum_check CHECK (curriculum IN ('nsw', 'us', 'uk'));
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'learners_curriculum_check' AND pg_get_constraintdef(oid) NOT LIKE '%uk%') THEN
+    ALTER TABLE learners DROP CONSTRAINT learners_curriculum_check;
+    ALTER TABLE learners ADD CONSTRAINT learners_curriculum_check CHECK (curriculum IN ('nsw', 'us', 'uk'));
+  END IF;
+END $$;`;

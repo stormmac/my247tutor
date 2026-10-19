@@ -6,51 +6,52 @@ import type { Subject, YearLevel } from "../curriculum/types";
  * builds the records, and curricula.ts turns the text into US English.
  * Each NSW subtopic appears at most once, so a subtopic id always has one place in the US tree.
  */
-export interface UsTopicSpec {
+/** A topic in a curriculum built from NSW subtopics (US and UK). */
+export interface TopicSpec {
   subject: Subject;
   grade: YearLevel;
   title: string;
   description: string;
-  /** [NSW subtopic number, Common Core standard]. */
+  /** [NSW subtopic number, the code it has in this curriculum]. */
   subtopics: [number, string][];
 }
 
-const NBT = (grade: YearLevel, subtopics: [number, string][]): UsTopicSpec => ({
+const NBT = (grade: YearLevel, subtopics: [number, string][]): TopicSpec => ({
   subject: "maths",
   grade,
   title: "Number and operations in base ten",
   description: "Place value, and adding, subtracting, multiplying and dividing whole numbers and decimals.",
   subtopics,
 });
-const OA = (grade: YearLevel, subtopics: [number, string][]): UsTopicSpec => ({
+const OA = (grade: YearLevel, subtopics: [number, string][]): TopicSpec => ({
   subject: "maths",
   grade,
   title: "Operations and algebraic thinking",
   description: "Number facts, missing numbers and word problems.",
   subtopics,
 });
-const NF = (grade: YearLevel, subtopics: [number, string][]): UsTopicSpec => ({
+const NF = (grade: YearLevel, subtopics: [number, string][]): TopicSpec => ({
   subject: "maths",
   grade,
   title: "Fractions",
   description: "Understanding, comparing and calculating with fractions.",
   subtopics,
 });
-const MD = (grade: YearLevel, subtopics: [number, string][]): UsTopicSpec => ({
+const MD = (grade: YearLevel, subtopics: [number, string][]): TopicSpec => ({
   subject: "maths",
   grade,
   title: "Measurement and data",
   description: "Length, mass, volume, time, area and reading graphs.",
   subtopics,
 });
-const G = (grade: YearLevel, subtopics: [number, string][]): UsTopicSpec => ({
+const G = (grade: YearLevel, subtopics: [number, string][]): TopicSpec => ({
   subject: "maths",
   grade,
   title: "Geometry",
   description: "Shapes, their features, and the coordinate plane.",
   subtopics,
 });
-const ela = (grade: YearLevel, title: string, description: string, subtopics: [number, string][]): UsTopicSpec => ({
+const ela = (grade: YearLevel, title: string, description: string, subtopics: [number, string][]): TopicSpec => ({
   subject: "english",
   grade,
   title,
@@ -63,7 +64,7 @@ const VOCAB = "Working out and using the meanings of words.";
 const READING = "Reading closely and understanding stories, poems and information.";
 const WRITING = "Writing stories, information and opinion pieces.";
 
-export const US_TOPIC_SPECS: UsTopicSpec[] = [
+export const US_TOPIC_SPECS: TopicSpec[] = [
   // ---------- Math ----------
   NBT(1, [
     [10101, "1.NBT.1"],

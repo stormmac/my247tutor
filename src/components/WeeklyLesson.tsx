@@ -9,7 +9,7 @@ import type { useProfile } from "@/components/useProfile";
 import { buildLesson, skillBuilder } from "@/lib/content/lesson";
 import { progressKey, toPracticeQuestion } from "@/lib/content/practice";
 import { QUESTIONS, subtopicPath } from "@/lib/content/tree";
-import { type Curriculum, curriculumOf, subjectName, yearName } from "@/lib/curriculum/curricula";
+import { type Curriculum, curriculumOf, localeOf, subjectName, yearName } from "@/lib/curriculum/curricula";
 import type { Subject } from "@/lib/curriculum/types";
 import {
   LESSON_TRIES,
@@ -118,7 +118,7 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
   const title = subjectName(subject, curriculum);
   const { done, total } = lessonProgress(lesson);
   const finished = nextPart(lesson) < 0;
-  const monday = new Date(`${lesson.week}T00:00:00`).toLocaleDateString(curriculum === "us" ? "en-US" : "en-AU", {
+  const monday = new Date(`${lesson.week}T00:00:00`).toLocaleDateString(localeOf(curriculum), {
     weekday: "long",
     day: "numeric",
     month: "long",

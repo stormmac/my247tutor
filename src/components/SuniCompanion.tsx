@@ -129,8 +129,8 @@ export function SuniCompanion() {
     focus?.context ?? (profile ? { studentName: profile.name, yearLevel: profile.yearLevel, skillId: "general" } : null);
   const context: TutorContext | null = base && {
     ...base,
-    // Suni talks the child's curriculum: US spelling and "Grade" for a child on US Common Core.
-    ...(profile?.curriculum === "us" ? { curriculum: "us" as const } : {}),
+    // Suni talks the child's curriculum: US spelling and "Grade" for a child on US Common Core, pounds in the UK.
+    ...(profile?.curriculum === "us" || profile?.curriculum === "uk" ? { curriculum: profile.curriculum } : {}),
     screen: base.screen ?? onScreen.screen,
     ...((base.noHelp ?? onScreen.noHelp) ? { noHelp: true } : {}),
   };

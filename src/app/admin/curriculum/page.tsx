@@ -4,20 +4,17 @@ import { accountsEnabled } from "@/lib/auth/session";
 import {
   COUNTRIES,
   NSW_ID,
+  OVERLAYS,
   questionsOf,
   STATES,
   SUBJECT_IDS,
   SUBJECTS,
   subtopicsOf,
   topicsFor,
-  US_COUNTRY,
-  US_STATE,
-  US_SUBJECT_IDS,
-  US_SUBJECTS,
   yearsWithContent,
 } from "@/lib/content/tree";
 import type { ContentQuestion, Country, State, Subject, Subtopic, Topic } from "@/lib/content/types";
-import { type Curriculum, pictureToUS, toUS, yearName } from "@/lib/curriculum/curricula";
+import { type Curriculum, localise, localisePicture, yearName } from "@/lib/curriculum/curricula";
 import { getSkill } from "@/lib/curriculum/skills";
 import type { Subject as SubjectKey } from "@/lib/curriculum/types";
 
@@ -51,7 +48,7 @@ const PRACTICE: Record<string, string> = {
   wordwork: "spelling and vocabulary questions",
 };
 
-/** Each curriculum's tree. The US one reuses the NSW questions, shown here as US students see them. */
+/** Each curriculum's tree. The US and UK ones reuse the NSW questions, shown here as their students see them. */
 const NSW_STATE = STATES.find((s) => s.id === NSW_ID)!;
 const TREES: { curriculum: Curriculum; country: Country; state: State; subjects: Record<SubjectKey, Subject> }[] = [
   {
@@ -60,15 +57,18 @@ const TREES: { curriculum: Curriculum; country: Country; state: State; subjects:
     state: NSW_STATE,
     subjects: { maths: SUBJECTS.find((s) => s.id === SUBJECT_IDS.maths)!, english: SUBJECTS.find((s) => s.id === SUBJECT_IDS.english)! },
   },
-  {
-    curriculum: "us",
-    country: US_COUNTRY,
-    state: US_STATE,
-    subjects: {
-      maths: US_SUBJECTS.find((s) => s.id === US_SUBJECT_IDS.maths)!,
-      english: US_SUBJECTS.find((s) => s.id === US_SUBJECT_IDS.english)!,
-    },
-  },
+  ...(["us", "uk"] as const).map((curriculum) => {
+    const o = OVERLAYS[curriculum];
+    return {
+      curriculum,
+      country: o.country,
+      state: o.state,
+      subjects: {
+        maths: o.subjects.find((s) => s.id === o.subjectIds.maths)!,
+        english: o.subjects.find((s) => s.id === o.subjectIds.english)!,
+      },
+    };
+  }),
 ];
 
 /** The whole content tree, Country → State → Subject → Year → Topic → Subtopic → Question, as in myteacher. */
@@ -99,8 +99,9 @@ export default function CurriculumAdminPage() {
       <AdminTabs current="curriculum" />
       <p className="muted" style={{ margin: 0 }}>
         {total.topics} topics, {total.subtopics} subtopics and {total.questions} written questions. Subtopics linked to a skill also
-        practise with questions the app makes fresh each time. US Common Core reuses these subtopics and questions under Common Core
-        standards, in US English, leaving out questions only an Australian would know.
+        practise with questions the app makes fresh each time. US Common Core and the UK National Curriculum reuse these subtopics and
+        questions under their own headings, in US or UK English (with pounds and pence in the UK), leaving out questions only an Australian
+        would know.
       </p>
       <div className="tree">
         {TREES.map(({ curriculum, country, state, subjects }) => (
@@ -190,8 +191,8 @@ function SubtopicNode({ subtopic, curriculum }: { subtopic: Subtopic; curriculum
 }
 
 function QuestionItem({ q, curriculum }: { q: ContentQuestion; curriculum: Curriculum }) {
-  // As the student sees it: in US English on the US curriculum.
-  const t = (text: string) => (curriculum === "us" ? toUS(text) : text);
+  // As the student sees it: in US or UK English outside NSW.
+  const t = (text: string) => localise(text, curriculum);
   const correct = new Set(Array.isArray(q.correct_answer) ? q.correct_answer : [q.correct_answer]);
   return (
     <li>
@@ -208,7 +209,7 @@ function QuestionItem({ q, curriculum }: { q: ContentQuestion; curriculum: Curri
       </div>
       {q.picture && (
         <div className="admin-picture">
-          <Picture picture={curriculum === "us" ? pictureToUS(q.picture) : q.picture} />
+          <Picture picture={localisePicture(q.picture, curriculum)} />
         </div>
       )}
       {q.answer_options ? (

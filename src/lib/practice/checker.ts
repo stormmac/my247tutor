@@ -5,7 +5,7 @@ const EPS = 1e-9;
 
 /** Parses "4 723", "4,723", "$7.50", "0.5" or "3/4" into a number; null if it can't. */
 export function parseNumber(raw: string): number | null {
-  const s = raw.trim().replace(/^\$/, "").replace(/[\s,]/g, "");
+  const s = raw.trim().replace(/^[$£]/, "").replace(/[\s,]/g, "");
   if (/^[-+]?(\d+\.?\d*|\.\d+)$/.test(s)) return Number(s);
   const frac = parseFraction(raw);
   return frac ? frac.num / frac.den : null;

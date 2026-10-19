@@ -9,7 +9,7 @@ import { useAccount } from "@/components/useAccount";
 import { switchChild, useChildren, useProfile } from "@/components/useProfile";
 import { currentLesson, lessonProgress } from "@/lib/learner/lesson";
 import { MAX_CHILDREN, newProfile, skillState, type LearnerProfile } from "@/lib/learner/model";
-import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, subjectName, yearName } from "@/lib/curriculum/curricula";
+import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, subjectName, yearName, yearWord } from "@/lib/curriculum/curricula";
 import { skillsFor } from "@/lib/curriculum/skills";
 import { YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
 import { currentSightLevel, currentUnit, readingOf, sightLevelsDone, unitsDone } from "@/lib/phonics/progress";
@@ -273,7 +273,7 @@ function Setup({
         </div>
       </fieldset>
       <fieldset className="year-picker">
-        <legend>What {curriculum === "us" ? "grade" : "year"} are they in at school now?</legend>
+        <legend>What {yearWord(curriculum)} are they in at school now?</legend>
         <div className="tabs">
           {YEARS.map((y) => (
             <button

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CURRICULUM_SQL } from "../auth/curriculumSchema";
+import { CURRICULUM_SQL, UK_CURRICULUM_SQL } from "../auth/curriculumSchema";
 import { buildLesson } from "../content/lesson";
 import { toPracticeQuestion } from "../content/practice";
 import {
@@ -11,13 +11,26 @@ import {
   subtopicsOf,
   questionsOf,
   topicsFor,
+  overlaySubtopic,
+  UK_TOPICS,
   US_TOPICS,
   usSubtopic,
   yearsWithContent,
 } from "../content/tree";
 import type { ContentQuestion } from "../content/types";
+import { UK_SKILL_STANDARDS } from "../content/uk";
 import { US_SKILL_STANDARDS } from "../content/us";
-import { curriculumOf, localiseQuestion, pictureToUS, toUS, usableInUS, yearName } from "../curriculum/curricula";
+import {
+  curriculumOf,
+  localisePicture,
+  localiseQuestion,
+  pictureToUS,
+  toUK,
+  toUS,
+  usableInUK,
+  usableInUS,
+  yearName,
+} from "../curriculum/curricula";
 import { YEARS } from "../curriculum/types";
 import { questionsAt, startAssessment, summarySentence, finishAssessment } from "../learner/assessment";
 import { currentLesson, saveLesson } from "../learner/lesson";
@@ -223,8 +236,149 @@ describe("a child on the US curriculum", () => {
   });
 });
 
+describe("UK English", () => {
+  it("keeps the spelling and changes money to pounds and pence", () => {
+    expect(toUK("Colour the favourite shape grey in maths.")).toBe("Colour the favourite shape grey in maths.");
+    expect(toUK("Mia has $3.50. A pen costs 85c and a ruler costs 60 cents.")).toBe(
+      "Mia has £3.50. A pen costs 85p and a ruler costs 60p.",
+    );
+    expect(toUK("How many dollars is a 20-cent coin and a $2 coin? Count the cents.")).toBe(
+      "How many pounds is a 20p coin and a £2 coin? Count the pence.",
+    );
+    expect(toUK("Per cent means out of 100.")).toBe("Per cent means out of 100.");
+  });
+
+  it("changes Australian words and places, and writes large numbers with commas", () => {
+    expect(toUK("Two icy poles and an icy pole at the sausage sizzle.")).toBe("Two ice lollies and an ice lolly at the cake sale.");
+    expect(toUK("Kindergarten kids went from Sydney to Bondi Beach in a ute with lollies.")).toBe(
+      "Reception kids went from London to Brighton Beach in a van with sweets.",
+    );
+    expect(toUK("The Swimming Carnival had 12 480 people.")).toBe("The Swimming Gala had 12,480 people.");
+    expect(toUK("A bus leaves Newcastle for perth.")).toBe("A bus leaves Newcastle for bristol.");
+  });
+
+  it("keeps coin questions, which work with UK coins, and hides Australian history and seasons", () => {
+    const coin = written({ question_text: "Which unit is best for measuring the thickness of a 20-cent coin?" });
+    expect(usableInUK(coin)).toBe(true);
+    expect(usableInUS(coin)).toBe(false);
+    expect(usableInUK(written({ question_text: "How many years after Federation did the Sydney Harbour Bridge open?" }))).toBe(false);
+    expect(usableInUK(written({ question_text: "It is July in Sydney. Is it more likely to be cold or hot?" }))).toBe(false);
+  });
+
+  it("shows a question in UK English, and takes £ in a typed amount", () => {
+    const q = toPracticeQuestion(
+      written({ question_type: "short_answer", question_text: "Jack has $45. How many dollars is that?", correct_answer: ["45", "$45"] }),
+      1,
+    );
+    const uk = localiseQuestion(q, "uk");
+    expect(uk.prompt).toBe("Jack has £45. How many pounds is that?");
+    expect(checkAnswer(uk.answer, "£45").correct).toBe(true);
+    expect(checkAnswer({ kind: "number", value: 4.5 }, "£4.50").correct).toBe(true);
+    expect(localisePicture({ kind: "table", headings: ["Item", "Cost"], rows: [["Pie", "$4"]] }, "uk")).toEqual({
+      kind: "table",
+      headings: ["Item", "Cost"],
+      rows: [["Pie", "£4"]],
+    });
+  });
+});
+
+describe("the UK National Curriculum tree", () => {
+  it("has Maths and English for Years 1 to 6, under the National Curriculum headings", () => {
+    expect(yearsWithContent("maths", "uk")).toEqual(YEARS);
+    expect(yearsWithContent("english", "uk")).toEqual(YEARS);
+    expect(topicsFor("maths", 6, "uk").map((t) => t.title)).toEqual([
+      "Place value",
+      "Four operations",
+      "Fractions",
+      "Ratio and proportion",
+      "Algebra",
+      "Measurement",
+      "Properties of shapes",
+      "Position and direction",
+      "Statistics",
+    ]);
+    expect(topicsFor("english", 1, "uk").map((t) => t.title)).toEqual([
+      "Word reading",
+      "Comprehension",
+      "Spelling",
+      "Grammar and punctuation",
+    ]);
+  });
+
+  it("reuses the NSW subtopics, each once, with UK titles and headings, and no probability", () => {
+    const used = UK_TOPICS.flatMap((t) => subtopicsOf(t.id));
+    expect(new Set(used.map((s) => s.id)).size).toBe(used.length);
+    for (const s of used) {
+      const nsw = SUBTOPICS.find((n) => n.id === s.id)!;
+      expect(s.outcome_code).toMatch(/^Y[1-6] [A-Z]/);
+      expect(s.title).toBe(toUK(nsw.title));
+      expect(nsw.title).not.toMatch(/chance|probability/i);
+    }
+    // The US tree is unchanged by it.
+    expect(subtopicsOf(US_TOPICS[0].id)[0].outcome_code).toBe("1.NBT.1");
+  });
+
+  it("places a subtopic in the UK tree for a UK child", () => {
+    const id = subtopicsOf(topicsFor("maths", 3, "uk")[0].id)[0].id;
+    const path = subtopicPath(id, "uk")!;
+    expect(path.country.name).toBe("United Kingdom");
+    expect(path.state.name).toBe("England");
+    expect(path.year.name).toBe("Year 3");
+    expect(path.subject.name).toBe("Mathematics");
+    expect(path.subjectKey).toBe("maths");
+    expect(path.subtopic.outcome_code).toBe("Y3 Place value");
+  });
+
+  it("keeps the skill headings list in step with the tree", () => {
+    const fromTree = Object.fromEntries(
+      SUBTOPICS.filter((s) => s.skill_id && overlaySubtopic(s.id, "uk")).map((s) => [
+        s.skill_id,
+        overlaySubtopic(s.id, "uk")!.outcome_code,
+      ]),
+    );
+    expect(UK_SKILL_STANDARDS).toEqual(fromTree);
+  });
+
+  it("leaves Australian-only questions out of UK practice", () => {
+    const all = UK_TOPICS.flatMap((t) => subtopicsOf(t.id)).flatMap((s) => questionsOf(s.id, "uk"));
+    expect(all.length).toBeGreaterThan(3500);
+    expect(all.every(usableInUK)).toBe(true);
+  });
+});
+
+describe("a child on the UK curriculum", () => {
+  const child = { ...newProfile("Olly", 4, Date.now(), "uk"), id: "22222222-2222-2222-2222-222222222222" };
+
+  it("gets a weekly lesson and starting check from the UK tree", () => {
+    const lesson = buildLesson(child, "maths");
+    expect(lesson.curriculum).toBe("uk");
+    expect(lesson.parts[0].title).toBe("Year 3 review");
+    const ukTitles = topicsFor("maths", 4, "uk").map((t) => t.title);
+    for (const part of lesson.parts.slice(1)) expect(ukTitles.some((t) => part.title.startsWith(t))).toBe(true);
+    const state = startAssessment("maths", 5, "uk");
+    expect(questionsAt("maths", state.steps[0], "uk").every(usableInUK)).toBe(true);
+    expect(finishAssessment(state).curriculum).toBe("uk");
+  });
+
+  it("tells Suni to use UK English, pounds and the National Curriculum", () => {
+    const prompt = buildContextPrompt({
+      studentName: "Olly",
+      yearLevel: 4,
+      skillId: "ma2-place-value",
+      curriculum: "uk",
+      question: { prompt: "Jack has $45 and a ute.", correctAnswer: "$45", answered: false, hintsShown: 0 },
+    });
+    expect(prompt).toContain("Student: Olly, Year 4.");
+    expect(prompt).toContain("National Curriculum in England");
+    expect(prompt).toContain("National Curriculum: Y3 Place value");
+    expect(prompt).toContain("Jack has £45 and a van.");
+    expect(prompt).toContain("The correct answer is £45.");
+  });
+});
+
 describe("curriculum columns", () => {
-  it("match the migration", () => {
+  it("match the migrations", () => {
     expect(readFileSync(join(__dirname, "../../../database/015_my247tutor_curriculum.sql"), "utf8")).toContain(CURRICULUM_SQL);
+    expect(readFileSync(join(__dirname, "../../../database/016_my247tutor_uk_curriculum.sql"), "utf8")).toContain(UK_CURRICULUM_SQL);
   });
 });
