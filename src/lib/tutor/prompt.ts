@@ -2,8 +2,7 @@ import { z } from "zod";
 import { getOutcome } from "../curriculum/outcomes";
 import { SKILLS } from "../curriculum/skills";
 import { subtopicPath } from "../content/tree";
-import { US_SKILL_STANDARDS } from "../content/us";
-import { CURRICULA, type Curriculum, curriculumOf, toUS, yearName } from "../curriculum/curricula";
+import { CURRICULA, type Curriculum, curriculumOf, localise, skillStandard, standardName, yearName } from "../curriculum/curricula";
 import { TUTOR_NAME } from "./persona";
 
 /** Stable instructions shared by every tutor conversation (kept identical so it caches). */
@@ -57,13 +56,17 @@ export type TutorContext = z.infer<typeof TutorContextSchema>;
 
 /** Per-session details, sent after the cached instructions. */
 export function buildContextPrompt(ctx: TutorContext): string {
-  const us = ctx.curriculum === "us";
-  // Questions are written in Australian English and shown to US students in US English.
-  const local = (text: string) => (us ? toUS(text) : text);
-  const lines = [`Student: ${ctx.studentName}, ${yearName(ctx.yearLevel, ctx.curriculum)}.`];
-  if (us)
+  const curriculum = curriculumOf(ctx.curriculum);
+  // Questions are written in Australian English and shown to US and UK students in their own English.
+  const local = (text: string) => localise(text, curriculum);
+  const lines = [`Student: ${ctx.studentName}, ${yearName(ctx.yearLevel, curriculum)}.`];
+  if (curriculum === "us")
     lines.push(
       "This student follows the US Common Core State Standards, not the NSW syllabus. Use US spelling (color, center, math), say Grade rather than Year, say math rather than maths, and use US school words. Refer to Common Core standards rather than NESA outcomes.",
+    );
+  if (curriculum === "uk")
+    lines.push(
+      "This student follows the National Curriculum in England, not the NSW syllabus. Use UK spelling and school words, use pounds and pence for money, and refer to the National Curriculum rather than NESA outcomes. Their Year is the English school year.",
     );
   lines.push(...topicLines(ctx.skillId, ctx.curriculum));
   if (ctx.screen) lines.push(`On the student's screen now: ${ctx.screen}`);
@@ -86,11 +89,12 @@ function topicLines(id: string, curriculum?: Curriculum): string[] {
   const skill = SKILLS.find((s) => s.id === id);
   if (skill) {
     const outcome = getOutcome(skill.outcome);
-    const usStandard = curriculum === "us" ? US_SKILL_STANDARDS[skill.id] : undefined;
-    return usStandard
+    const c = curriculumOf(curriculum);
+    const standard = skillStandard(skill.id, c);
+    return standard
       ? [
-          `Current skill: ${toUS(skill.title)}. ${toUS(skill.description)}`,
-          `Common Core standard: ${usStandard} (${toUS(outcome.summary)}).`,
+          `Current skill: ${localise(skill.title, c)}. ${localise(skill.description, c)}`,
+          `${standardName(c)}: ${standard} (${localise(outcome.summary, c)}).`,
         ]
       : [
           `Current skill: ${skill.title}. ${skill.description}`,
@@ -100,9 +104,7 @@ function topicLines(id: string, curriculum?: Curriculum): string[] {
   const path = subtopicPath(id, curriculumOf(curriculum));
   if (path) {
     const { subject, year, topic, subtopic } = path;
-    const code = subtopic.outcome_code
-      ? ` (${curriculum === "us" ? "Common Core standard" : "NESA outcome"} ${subtopic.outcome_code})`
-      : "";
+    const code = subtopic.outcome_code ? ` (${standardName(curriculumOf(curriculum))} ${subtopic.outcome_code})` : "";
     return [`Current topic: ${subject.name}, ${year.name}, ${topic.title}: ${subtopic.title}${code}. ${subtopic.description}`];
   }
   return [];

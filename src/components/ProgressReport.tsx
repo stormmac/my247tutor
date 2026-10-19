@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { curriculumOf, subjectName, yearName } from "@/lib/curriculum/curricula";
+import { curriculumOf, frameworkName, localeOf, skillStandard, subjectName, yearName, yearWord } from "@/lib/curriculum/curricula";
 import { getOutcome } from "@/lib/curriculum/outcomes";
 import { getSkill, skillsFor } from "@/lib/curriculum/skills";
 import type { Skill, Subject } from "@/lib/curriculum/types";
 import { SUBTOPICS } from "@/lib/content/tree";
-import { US_SKILL_STANDARDS } from "@/lib/content/us";
 import { recentAccuracy, skillState, type AttemptRecord, type LearnerProfile } from "@/lib/learner/model";
 import {
   LEVEL_NAMES,
@@ -181,11 +180,11 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
   const skills = skillsFor(subject);
   const curriculum = curriculumOf(profile.curriculum);
   const year = (y: number) => yearName(y, curriculum);
-  // The skill's code in the child's curriculum: its NESA outcome, or the Common Core standard it's filed under.
-  const code = (skill: Skill) =>
-    curriculum === "us" && US_SKILL_STANDARDS[skill.id]
-      ? { code: US_SKILL_STANDARDS[skill.id], codeVerified: true }
-      : getOutcome(skill.outcome);
+  // The skill's code in the child's curriculum: its NESA outcome, or the Common Core standard or National Curriculum heading it's filed under.
+  const code = (skill: Skill) => {
+    const standard = skillStandard(skill.id, curriculum);
+    return standard ? { code: standard, codeVerified: true } : getOutcome(skill.outcome);
+  };
 
   return (
     <div className="card stack report">
@@ -209,7 +208,9 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
               <div className="small">
                 {curriculum === "us"
                   ? `Grades ${s.stage === 2 ? "3–4" : "5–6"}`
-                  : `Stage ${s.stage} (Years ${s.stage === 2 ? "3–4" : "5–6"})`}
+                  : curriculum === "uk"
+                    ? `Years ${s.stage === 2 ? "3–4" : "5–6"}`
+                    : `Stage ${s.stage} (Years ${s.stage === 2 ? "3–4" : "5–6"})`}
                 : {s.secure} of {s.total} skills competent or better
               </div>
               <div className="progress" style={{ marginTop: 6 }}>
@@ -252,7 +253,7 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
           <table className="skill-table">
             <thead>
               <tr>
-                <th>{curriculum === "us" ? "Standard" : "Outcome"}</th>
+                <th>{{ nsw: "Outcome", us: "Standard", uk: "Curriculum" }[curriculum]}</th>
                 <th>Skill</th>
                 <th>Competency</th>
                 <th className="accuracy">Recent accuracy</th>
@@ -268,7 +269,7 @@ function SubjectReport({ profile, subject, title }: { profile: LearnerProfile; s
                     <td>
                       <strong>{o.code}</strong>
                       {!o.codeVerified && <span className="muted small"> *</span>}
-                      {curriculum !== "us" && <div className="muted small">Stage {skill.stage}</div>}
+                      {curriculum === "nsw" && <div className="muted small">Stage {skill.stage}</div>}
                     </td>
                     <td>
                       {skill.title}
@@ -343,7 +344,7 @@ function StartingReport({
         <div>
           <h2 style={{ margin: 0 }}>Starting assessment: {title}</h2>
           <div className="muted small">
-            {new Date(record.at).toLocaleDateString(curriculum === "us" ? "en-US" : "en-AU", {
+            {new Date(record.at).toLocaleDateString(localeOf(curriculum), {
               day: "numeric",
               month: "long",
               year: "numeric",
@@ -389,9 +390,8 @@ function StartingReport({
         </div>
       </div>
       <p className="small muted" style={{ margin: 0 }}>
-        Levels go from 1 (very easy) to 5 (very hard) within each {curriculum === "us" ? "grade" : "year"}. Questions were picked at random
-        from the {curriculum === "us" ? "Common Core" : "NSW syllabus"} topics for each {curriculum === "us" ? "grade" : "year"}, so this is
-        a snapshot, not a school assessment.
+        Levels go from 1 (very easy) to 5 (very hard) within each {yearWord(curriculum)}. Questions were picked at random from the{" "}
+        {frameworkName(curriculum)} topics for each {yearWord(curriculum)}, so this is a snapshot, not a school assessment.
       </p>
       <div className="row no-print">
         <button className="btn secondary small" onClick={() => setShowQuestions((v) => !v)}>

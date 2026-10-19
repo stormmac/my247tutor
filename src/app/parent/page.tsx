@@ -8,7 +8,7 @@ import { ChildTabs } from "@/components/ChildSwitcher";
 import { ProgressReport } from "@/components/ProgressReport";
 import { removeCurrentChild, useProfile } from "@/components/useProfile";
 import type { LearnerProfile } from "@/lib/learner/model";
-import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, yearName } from "@/lib/curriculum/curricula";
+import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, localeOf, outcomesName, yearName } from "@/lib/curriculum/curricula";
 import { YEARS } from "@/lib/curriculum/types";
 
 export default function ParentPage() {
@@ -40,9 +40,8 @@ export default function ParentPage() {
         <div>
           <h1>{profile.name}'s progress</h1>
           <p className="muted" style={{ margin: 0 }}>
-            {yearName(profile.yearLevel, curriculum)}. Shown against the{" "}
-            {curriculum === "us" ? "US Common Core standards" : "NSW (NESA) syllabus outcomes"}, as of{" "}
-            {new Date().toLocaleDateString(curriculum === "us" ? "en-US" : "en-AU")}.
+            {yearName(profile.yearLevel, curriculum)}. Shown against the {outcomesName(curriculum)}, as of{" "}
+            {new Date().toLocaleDateString(localeOf(curriculum))}.
           </p>
         </div>
         <button className="btn secondary small no-print" onClick={() => window.print()}>

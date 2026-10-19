@@ -29,10 +29,11 @@ import * as E4X from "./bank/english-year4-extra";
 import * as E5X from "./bank/english-year5-extra";
 import * as E6X from "./bank/english-year6-extra";
 import * as SMALL from "./bank/small-subtopics";
-import { type Curriculum, DEFAULT_CURRICULUM, toUS, usableInUS } from "../curriculum/curricula";
+import { type Curriculum, DEFAULT_CURRICULUM, localise, usableIn } from "../curriculum/curricula";
 import { choice, multi, ordering, type QuestionSpec, trueFalse, typed } from "./spec";
 import type { ContentQuestion, Country, State, Subject, Subtopic, Topic, YearLevel } from "./types";
-import { US_TOPIC_SPECS } from "./us";
+import { UK_TOPIC_SPECS } from "./uk";
+import { type TopicSpec as OverlayTopicSpec, US_TOPIC_SPECS } from "./us";
 
 // ---------- Reference data: copied from the myteacher seed (database/seeds/001_sample_data.sql), same ids ----------
 
@@ -1979,77 +1980,143 @@ for (const spec of TOPIC_SPECS) {
   });
 }
 
-// ---------- US Common Core: the NSW subtopics and questions, filed under Common Core ----------
-
-export const US_ID = "00000000-0000-0000-0000-000000000002";
-export const US_STATE_ID = "11000000-0000-0000-0000-000000000001";
-
-/** Kept apart from the NSW reference data, which mirrors the myteacher database (see content/sql.ts). */
-export const US_COUNTRY: Country = { id: US_ID, name: "United States", code: "US", curriculum_framework: "Common Core State Standards" };
-export const US_STATE: State = { id: US_STATE_ID, country_id: US_ID, name: "Common Core", code: "CCSS", curriculum_authority: "CCSSO" };
-
-/** The app's subject keys, mapped to the US subject records. */
-export const US_SUBJECT_IDS: Record<SubjectKey, string> = {
-  maths: "21000000-0000-0000-0000-000000000004",
-  english: "21000000-0000-0000-0000-000000000005",
-};
-export const US_SUBJECTS: Subject[] = [
-  { id: US_SUBJECT_IDS.maths, state_id: US_STATE_ID, name: "Math", colour_hex: "#FAEEDA", icon: "calculator" },
-  { id: US_SUBJECT_IDS.english, state_id: US_STATE_ID, name: "English Language Arts", colour_hex: "#FAECE7", icon: "book" },
-];
-
-export const US_YEAR_LEVELS: YearLevel[] = ["Kindergarten", ...Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`)].map((name, i) => ({
-  id: `31000000-0000-0000-0000-0000000000${String(i + 1).padStart(2, "0")}`,
-  state_id: US_STATE_ID,
-  name,
-  sort_order: i,
-  age_min: i + 5,
-  age_max: i + 6,
-}));
+// ---------- US Common Core and the UK National Curriculum: the NSW subtopics and questions, filed under their own topics ----------
 
 /**
- * US topics are their own records (ids 42…). Their subtopics are the NSW subtopics with US
- * titles and Common Core codes laid over them: the ids stay the same, so progress, lessons and
- * questions work the same whichever curriculum a child is on.
+ * A curriculum built from the NSW subtopics. Its topics are its own records; its subtopics are the
+ * NSW subtopics with local titles and codes laid over them. The ids stay the same, so progress,
+ * lessons and questions work the same whichever curriculum a child is on.
  */
-export const US_TOPICS: Topic[] = [];
-const US_SUBTOPICS = new Map<string, Subtopic>();
+export interface Overlay {
+  country: Country;
+  state: State;
+  /** The app's subject keys, mapped to this curriculum's subject records. */
+  subjectIds: Record<SubjectKey, string>;
+  subjects: Subject[];
+  /** Indexed by year: 0 is the first year of school (Kindergarten or Reception). */
+  yearLevels: YearLevel[];
+  topics: Topic[];
+  subtopics: Map<string, Subtopic>;
+}
 
-US_TOPIC_SPECS.forEach((spec, i) => {
-  const subjectId = US_SUBJECT_IDS[spec.subject];
-  const yearId = US_YEAR_LEVELS[spec.grade].id;
-  const topicId = id("42", spec.grade * 100 + i + 1);
-  US_TOPICS.push({
-    id: topicId,
-    subject_id: subjectId,
-    year_level_id: yearId,
-    title: spec.title,
-    description: spec.description,
-    sort_order: US_TOPICS.filter((t) => t.subject_id === subjectId && t.year_level_id === yearId).length + 1,
-  });
-  spec.subtopics.forEach(([n, code], j) => {
-    const nsw = SUBTOPICS.find((s) => s.id === id("51", n));
-    if (!nsw) throw new Error(`US topic ${spec.title} names subtopic ${n}, which doesn't exist.`);
-    if (US_SUBTOPICS.has(nsw.id)) throw new Error(`Subtopic ${n} is in the US tree twice.`);
-    US_SUBTOPICS.set(nsw.id, {
-      ...nsw,
-      topic_id: topicId,
-      title: toUS(nsw.title),
-      description: toUS(nsw.description),
-      sort_order: j + 1,
-      outcome_code: code,
+/** Kept apart from the NSW reference data, which mirrors the myteacher database (see content/sql.ts). */
+function overlay(
+  curriculum: Exclude<Curriculum, "nsw">,
+  n: number,
+  {
+    country,
+    state,
+    subjects,
+    years,
+  }: { country: Omit<Country, "id">; state: Omit<State, "id" | "country_id">; subjects: [string, string]; years: string[] },
+  specs: OverlayTopicSpec[],
+): Overlay {
+  const countryId = `00000000-0000-0000-0000-00000000000${n}`;
+  const stateId = `1${n - 1}000000-0000-0000-0000-000000000001`;
+  const subjectIds = { maths: `2${n - 1}000000-0000-0000-0000-000000000004`, english: `2${n - 1}000000-0000-0000-0000-000000000005` };
+  const o: Overlay = {
+    country: { id: countryId, ...country },
+    state: { id: stateId, country_id: countryId, ...state },
+    subjectIds,
+    subjects: [
+      { id: subjectIds.maths, state_id: stateId, name: subjects[0], colour_hex: "#FAEEDA", icon: "calculator" },
+      { id: subjectIds.english, state_id: stateId, name: subjects[1], colour_hex: "#FAECE7", icon: "book" },
+    ],
+    yearLevels: years.map((name, i) => ({
+      id: `3${n - 1}000000-0000-0000-0000-0000000000${String(i + 1).padStart(2, "0")}`,
+      state_id: stateId,
+      name,
+      sort_order: i,
+      age_min: i + 5,
+      age_max: i + 6,
+    })),
+    topics: [],
+    subtopics: new Map(),
+  };
+  specs.forEach((spec, i) => {
+    const subjectId = subjectIds[spec.subject];
+    const yearId = o.yearLevels[spec.grade].id;
+    const topicId = id(`4${n}`, spec.grade * 100 + i + 1);
+    o.topics.push({
+      id: topicId,
+      subject_id: subjectId,
+      year_level_id: yearId,
+      title: spec.title,
+      description: spec.description,
+      sort_order: o.topics.filter((t) => t.subject_id === subjectId && t.year_level_id === yearId).length + 1,
+    });
+    spec.subtopics.forEach(([sub, code], j) => {
+      const nsw = SUBTOPICS.find((s) => s.id === id("51", sub));
+      if (!nsw) throw new Error(`${curriculum} topic ${spec.title} names subtopic ${sub}, which doesn't exist.`);
+      if (o.subtopics.has(nsw.id)) throw new Error(`Subtopic ${sub} is in the ${curriculum} tree twice.`);
+      o.subtopics.set(nsw.id, {
+        ...nsw,
+        topic_id: topicId,
+        title: localise(nsw.title, curriculum),
+        description: localise(nsw.description, curriculum),
+        sort_order: j + 1,
+        outcome_code: code,
+      });
     });
   });
-});
+  return o;
+}
+
+const GRADES = Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`);
+const UK_YEARS = Array.from({ length: 13 }, (_, i) => `Year ${i + 1}`);
+
+/** US topics have ids 42…, UK topics 43…. */
+export const OVERLAYS: Record<Exclude<Curriculum, "nsw">, Overlay> = {
+  us: overlay(
+    "us",
+    2,
+    {
+      country: { name: "United States", code: "US", curriculum_framework: "Common Core State Standards" },
+      state: { name: "Common Core", code: "CCSS", curriculum_authority: "CCSSO" },
+      subjects: ["Math", "English Language Arts"],
+      years: ["Kindergarten", ...GRADES],
+    },
+    US_TOPIC_SPECS,
+  ),
+  uk: overlay(
+    "uk",
+    3,
+    {
+      country: { name: "United Kingdom", code: "GB", curriculum_framework: "National Curriculum" },
+      state: { name: "England", code: "ENG", curriculum_authority: "Department for Education" },
+      subjects: ["Mathematics", "English"],
+      years: ["Reception", ...UK_YEARS],
+    },
+    UK_TOPIC_SPECS,
+  ),
+};
+
+export const US_ID = OVERLAYS.us.country.id;
+export const US_STATE_ID = OVERLAYS.us.state.id;
+export const US_COUNTRY = OVERLAYS.us.country;
+export const US_STATE = OVERLAYS.us.state;
+export const US_SUBJECT_IDS = OVERLAYS.us.subjectIds;
+export const US_SUBJECTS = OVERLAYS.us.subjects;
+export const US_YEAR_LEVELS = OVERLAYS.us.yearLevels;
+export const US_TOPICS = OVERLAYS.us.topics;
+export const UK_TOPICS = OVERLAYS.uk.topics;
+
+const overlayOf = (curriculum: Curriculum): Overlay | undefined => (curriculum === "nsw" ? undefined : OVERLAYS[curriculum]);
+const ALL_OVERLAYS = Object.values(OVERLAYS);
+
+/** The subtopic as this curriculum's tree shows it, if it's in that tree. */
+export function overlaySubtopic(subtopicId: string, curriculum: Curriculum): Subtopic | undefined {
+  return overlayOf(curriculum)?.subtopics.get(subtopicId);
+}
 
 /** The subtopic as the US tree shows it, if it's in the US tree. */
 export function usSubtopic(subtopicId: string): Subtopic | undefined {
-  return US_SUBTOPICS.get(subtopicId);
+  return overlaySubtopic(subtopicId, "us");
 }
 
-/** The subtopic's code in this curriculum: a NESA outcome or a Common Core standard. */
+/** The subtopic's code in this curriculum: a NESA outcome, a Common Core standard or a National Curriculum heading. */
 export function standardFor(subtopic: Subtopic, curriculum: Curriculum = DEFAULT_CURRICULUM): string | null {
-  return curriculum === "us" ? (US_SUBTOPICS.get(subtopic.id)?.outcome_code ?? null) : subtopic.outcome_code;
+  return curriculum === "nsw" ? subtopic.outcome_code : (overlaySubtopic(subtopic.id, curriculum)?.outcome_code ?? null);
 }
 
 // ---------- Lookups ----------
@@ -2065,21 +2132,24 @@ export interface SubtopicPath {
 }
 
 export function topicsFor(subject: SubjectKey, year: YearNumber, curriculum: Curriculum = DEFAULT_CURRICULUM): Topic[] {
-  const [topics, subjectId, yearId] =
-    curriculum === "us" ? [US_TOPICS, US_SUBJECT_IDS[subject], US_YEAR_LEVELS[year].id] : [TOPICS, SUBJECT_IDS[subject], yearLevelId(year)];
+  const o = overlayOf(curriculum);
+  const [topics, subjectId, yearId] = o
+    ? [o.topics, o.subjectIds[subject], o.yearLevels[year].id]
+    : [TOPICS, SUBJECT_IDS[subject], yearLevelId(year)];
   return topics.filter((t) => t.subject_id === subjectId && t.year_level_id === yearId).sort((a, b) => a.sort_order - b.sort_order);
 }
 
-/** A topic's subtopics, from either tree. */
+/** A topic's subtopics, from any tree. */
 export function subtopicsOf(topicId: string): Subtopic[] {
-  const all = topicId.startsWith("42") ? [...US_SUBTOPICS.values()] : SUBTOPICS;
+  const o = ALL_OVERLAYS.find((o) => o.topics.some((t) => t.id === topicId));
+  const all = o ? [...o.subtopics.values()] : SUBTOPICS;
   return all.filter((s) => s.topic_id === topicId).sort((a, b) => a.sort_order - b.sort_order);
 }
 
-/** A subtopic's written questions. The US curriculum leaves out the ones only an Australian would know. */
+/** A subtopic's written questions. Outside NSW, the ones only an Australian would know are left out. */
 export function questionsOf(subtopicId: string, curriculum: Curriculum = DEFAULT_CURRICULUM): ContentQuestion[] {
   const all = QUESTIONS.filter((q) => q.subtopic_id === subtopicId);
-  return curriculum === "us" ? all.filter(usableInUS) : all;
+  return curriculum === "nsw" ? all : all.filter((q) => usableIn(q, curriculum));
 }
 
 /** Years that have content for a subject. */
@@ -2087,16 +2157,16 @@ export function yearsWithContent(subject: SubjectKey, curriculum: Curriculum = D
   return YEARS.filter((y) => topicsFor(subject, y, curriculum).length > 0);
 }
 
-/** Where a subtopic sits in the tree. On the US curriculum, its place in the US tree when it has one. */
+/** Where a subtopic sits in the tree. Outside NSW, its place in that curriculum's tree when it has one. */
 export function subtopicPath(subtopicId: string, curriculum: Curriculum = DEFAULT_CURRICULUM): SubtopicPath | null {
-  const subtopic = (curriculum === "us" && US_SUBTOPICS.get(subtopicId)) || SUBTOPICS.find((s) => s.id === subtopicId);
+  const subtopic = overlaySubtopic(subtopicId, curriculum) || SUBTOPICS.find((s) => s.id === subtopicId);
   if (!subtopic) return null;
-  const topic = [...TOPICS, ...US_TOPICS].find((t) => t.id === subtopic.topic_id)!;
-  const subject = [...SUBJECTS, ...US_SUBJECTS].find((s) => s.id === topic.subject_id)!;
-  const year = [...YEAR_LEVELS, ...US_YEAR_LEVELS].find((y) => y.id === topic.year_level_id)!;
-  const state = [...STATES, US_STATE].find((s) => s.id === subject.state_id)!;
-  const country = [...COUNTRIES, US_COUNTRY].find((c) => c.id === state.country_id)!;
-  const ids = state.id === US_STATE_ID ? US_SUBJECT_IDS : SUBJECT_IDS;
+  const topic = [...TOPICS, ...ALL_OVERLAYS.flatMap((o) => o.topics)].find((t) => t.id === subtopic.topic_id)!;
+  const subject = [...SUBJECTS, ...ALL_OVERLAYS.flatMap((o) => o.subjects)].find((s) => s.id === topic.subject_id)!;
+  const year = [...YEAR_LEVELS, ...ALL_OVERLAYS.flatMap((o) => o.yearLevels)].find((y) => y.id === topic.year_level_id)!;
+  const state = [...STATES, ...ALL_OVERLAYS.map((o) => o.state)].find((s) => s.id === subject.state_id)!;
+  const country = [...COUNTRIES, ...ALL_OVERLAYS.map((o) => o.country)].find((c) => c.id === state.country_id)!;
+  const ids = ALL_OVERLAYS.find((o) => o.state.id === state.id)?.subjectIds ?? SUBJECT_IDS;
   const subjectKey = (Object.keys(ids) as SubjectKey[]).find((k) => ids[k] === subject.id)!;
   return { country, state, subject, subjectKey, year, topic, subtopic };
 }

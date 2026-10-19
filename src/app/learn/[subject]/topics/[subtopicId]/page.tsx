@@ -6,7 +6,7 @@ import { FocusedPractice } from "@/components/FocusedPractice";
 import { useSuniScreen } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { subtopicPath } from "@/lib/content/tree";
-import { curriculumOf, toUS } from "@/lib/curriculum/curricula";
+import { curriculumOf, localise } from "@/lib/curriculum/curricula";
 import { getSkill } from "@/lib/curriculum/skills";
 import { WRITING_TASKS } from "@/lib/english/bank";
 
@@ -16,7 +16,7 @@ export default function SubtopicPage() {
   const curriculum = curriculumOf(profile?.curriculum);
   const path = subtopicPath(subtopicId, curriculum);
   const writingSkill = path?.subtopic.skill_id ? getSkill(path.subtopic.skill_id) : null;
-  const local = (text: string) => (curriculum === "us" ? toUS(text) : text);
+  const local = (text: string) => localise(text, curriculum);
   useSuniScreen(
     writingSkill?.practice === "writing"
       ? { screen: `A writing topic, ${path!.subtopic.title}. The task: ${local(WRITING_TASKS[writingSkill.id][0].prompt)}` }

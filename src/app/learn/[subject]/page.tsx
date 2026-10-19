@@ -8,7 +8,7 @@ import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components
 import { questionFocus, useSuniFocus, useSuniSay, useSuniScreen } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { WeeklyLesson } from "@/components/WeeklyLesson";
-import { type Curriculum, curriculumOf, subjectName, toUS } from "@/lib/curriculum/curricula";
+import { type Curriculum, curriculumOf, localise, skillStandard, standardName, subjectName } from "@/lib/curriculum/curricula";
 import { getOutcome } from "@/lib/curriculum/outcomes";
 import type { Subject, YearLevel } from "@/lib/curriculum/types";
 import { pickNextSkill, recordAttempt, skillState, type LearnerProfile, type NextReason } from "@/lib/learner/model";
@@ -21,7 +21,6 @@ import {
   type AssessmentRecord,
 } from "@/lib/learner/assessment";
 import { toPracticeQuestion } from "@/lib/content/practice";
-import { US_SKILL_STANDARDS } from "@/lib/content/us";
 import { answerText, generateQuestion } from "@/lib/practice";
 import { randomSeed } from "@/lib/practice/rng";
 
@@ -259,7 +258,8 @@ function Practice({
   const skill = current.skill;
   const asked = question;
   const outcome = getOutcome(skill.outcome);
-  const usStandard = curriculumOf(profile.curriculum) === "us" ? US_SKILL_STANDARDS[skill.id] : undefined;
+  const curriculum = curriculumOf(profile.curriculum);
+  const standard = skillStandard(skill.id, curriculum);
   const state = skillState(profile, skill.id);
 
   function onDone(o: QuestionOutcome) {
@@ -288,9 +288,9 @@ function Practice({
       <div className="row spread">
         <div>
           <span className="pill">{REASON_LABEL[current.reason]}</span>{" "}
-          {usStandard ? (
-            <span className="pill" title="Common Core standard">
-              {usStandard}
+          {standard ? (
+            <span className="pill" title={standardName(curriculum)}>
+              {standard}
             </span>
           ) : (
             <span className="pill" title={outcome.codeVerified ? "" : "Outcome code still to be confirmed against the syllabus"}>
@@ -329,8 +329,8 @@ function Practice({
         />
       </div>
       <p className="small muted">
-        {usStandard
-          ? `Common Core standard ${usStandard}: ${toUS(outcome.summary)}.`
+        {standard
+          ? `${standardName(curriculum)} ${standard}: ${localise(outcome.summary, curriculum)}.`
           : `Skill from the NSW syllabus, ${outcome.focusArea}: ${outcome.summary}.`}{" "}
         <Link href="/learn">Change subject</Link>
       </p>
