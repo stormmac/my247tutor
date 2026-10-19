@@ -1,11 +1,37 @@
 "use client";
 
-import { backToAdmin, useAccount } from "@/components/useAccount";
+import { useEffect, useState } from "react";
+import { useProfile } from "@/components/useProfile";
+import { backToAdmin, learningAsStudent, useAccount } from "@/components/useAccount";
 
 /** Shown across the top while an admin is logged in as someone else, or a teacher is learning as a student, with the way back. */
 export function ActingBanner() {
   const { user } = useAccount();
+  const { profile } = useProfile();
+  // Read after the first render, since the server can't see this tab's storage.
+  const [learning, setLearning] = useState(false);
+  useEffect(() => setLearning(learningAsStudent()), []);
   if (!user?.actingAdmin) return null;
+  // An admin who picked a student on the Learn page: they stay as that student until they choose another or go back.
+  if (learning && user.actingRole === "admin")
+    return (
+      <div className="acting-banner" role="status">
+        <div className="container">
+          <span>
+            Admin: you&apos;re learning as <strong>{profile?.name ?? user.name}</strong>
+            {user.role !== "student" && <> ({user.name}&apos;s account)</>}. Learn stays on this student until you switch.
+          </span>
+          <span className="row" style={{ gap: 8 }}>
+            <button className="btn small" onClick={() => void backToAdmin("/learn")}>
+              Choose another student
+            </button>
+            <button className="btn small secondary" onClick={() => void backToAdmin("/admin")}>
+              Back to Admin
+            </button>
+          </span>
+        </div>
+      </div>
+    );
   if (user.actingRole === "teacher" || user.actingRole === "centre")
     return (
       <div className="acting-banner" role="status">

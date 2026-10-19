@@ -81,6 +81,7 @@ export async function logInAs(userId: string): Promise<string | null> {
 }
 
 const RETURN_KEY = "my247tutor.admin-return";
+const LEARNING_KEY = "my247tutor.learning-as";
 
 /** An admin, teacher or centre learns as one student from the Learn picker, then lands on their Learn page. */
 export async function learnAs(learnerId: string, from: "admin" | "classes" = "admin"): Promise<string | null> {
@@ -90,6 +91,8 @@ export async function learnAs(learnerId: string, from: "admin" | "classes" = "ad
   if (!res?.ok) return body?.error ?? "That didn't work.";
   try {
     localStorage.clear();
+    // Kept in every tab, and cleared with the rest of storage when they go back.
+    localStorage.setItem(LEARNING_KEY, "1");
     sessionStorage.setItem(RETURN_KEY, "/learn");
   } catch {}
   pickChildOnLoad(body?.pick ?? null);
@@ -97,8 +100,20 @@ export async function learnAs(learnerId: string, from: "admin" | "classes" = "ad
   return null;
 }
 
-/** Ends logging in as someone else and goes back to where they started: Admin, or the Learn picker. */
-export async function backToAdmin() {
+/** Whether this browser is learning as a student picked on the Learn page, rather than logged in as an account from Admin. */
+export function learningAsStudent(): boolean {
+  try {
+    return localStorage.getItem(LEARNING_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ends logging in as someone else and goes back to where they started: Admin, or the Learn picker
+ * to choose another student. `to` sends them somewhere else instead.
+ */
+export async function backToAdmin(to?: string) {
   const res = await fetch("/api/auth/back-to-admin", { method: "POST" }).catch(() => null);
   const body = (await res?.json().catch(() => ({}))) as { role?: string } | undefined;
   let back = body?.role === "admin" ? "/admin" : "/learn";
@@ -107,7 +122,7 @@ export async function backToAdmin() {
     back = sessionStorage.getItem(RETURN_KEY) ?? back;
     sessionStorage.removeItem(RETURN_KEY);
   } catch {}
-  window.location.assign(res?.ok ? back : "/login");
+  window.location.assign(res?.ok ? (to ?? back) : "/login");
 }
 
 /** Logs out, then goes to `to` (the home page unless asked). */
