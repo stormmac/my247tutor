@@ -56,7 +56,8 @@ function Writing() {
     );
   }
 
-  const stage = yearToStage(profile.yearLevel);
+  // Writing tasks go up to Stage 3; Years 7 and 8 get the Stage 3 tasks.
+  const stage = Math.min(3, yearToStage(profile.yearLevel));
   const writingSkills = SKILLS.filter((s) => s.practice === "writing" && s.stage === stage);
 
   if (!skillId) {

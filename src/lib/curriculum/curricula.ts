@@ -328,11 +328,11 @@ export function localise(text: string, curriculum: Curriculum = DEFAULT_CURRICUL
 // ---------- Questions that only make sense in Australia ----------
 
 /**
- * History and time zones a child outside Australia couldn't be expected to know. Places that are
+ * History, time zones and tax (GST) a child outside Australia couldn't be expected to know. Places that are
  * only a setting become local places (see PLACES); animals and sports stay.
  */
 const AUSTRALIA_ONLY =
-  /\b(NSW|New South Wales|Adelaide|Darwin|Opera House|Harbour Bridge|Blue Mountains|First Fleet|Federation|Anzac|daylight saving|Uluru|Vegemite)\b/i;
+  /\b(NSW|New South Wales|Adelaide|Darwin|Opera House|Harbour Bridge|Blue Mountains|First Fleet|Federation|Anzac|daylight saving|Uluru|Vegemite|GST|Goods and Services Tax)\b/i;
 /** Seasons fall in the opposite months in the northern hemisphere. */
 const SEASON_MONTHS =
   /\b(December|January|February|June|July|August)\b[^]*\b(winter|summer|autumn|cold|hot|warm|snow)|\b(winter|summer|autumn|cold|hot|warm|snow)\b[^]*\b(December|January|February|June|July|August)\b/i;

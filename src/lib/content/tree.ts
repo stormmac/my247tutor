@@ -29,6 +29,18 @@ import * as E4X from "./bank/english-year4-extra";
 import * as E5X from "./bank/english-year5-extra";
 import * as E6X from "./bank/english-year6-extra";
 import * as SMALL from "./bank/small-subtopics";
+import * as Y7A from "./bank/maths-year7a";
+import * as Y7B from "./bank/maths-year7b";
+import * as Y7C from "./bank/maths-year7c";
+import * as Y7D from "./bank/maths-year7d";
+import * as Y8A from "./bank/maths-year8a";
+import * as Y8B from "./bank/maths-year8b";
+import * as Y8C from "./bank/maths-year8c";
+import * as Y8D from "./bank/maths-year8d";
+import * as E7A from "./bank/english-year7a";
+import * as E7B from "./bank/english-year7b";
+import * as E8A from "./bank/english-year8a";
+import * as E8B from "./bank/english-year8b";
 import { type Curriculum, DEFAULT_CURRICULUM, localise, usableIn } from "../curriculum/curricula";
 import { choice, multi, ordering, type QuestionSpec, trueFalse, typed } from "./spec";
 import type { ContentQuestion, Country, State, Subject, Subtopic, Topic, YearLevel } from "./types";
@@ -89,7 +101,7 @@ export function yearLevelId(year: YearNumber): string {
   return YEAR_LEVELS.find((y) => y.sort_order === year)!.id;
 }
 
-// ---------- my247tutor content: NSW Maths and English, Years 1–6 ----------
+// ---------- my247tutor content: NSW Maths and English, Years 1–8 ----------
 
 /*
  * Ids are written by hand so they never change when content is added or reordered:
@@ -1927,6 +1939,429 @@ const TOPIC_SPECS: TopicSpec[] = [
         description: "Compares genres and themes, and how a writer's point of view shapes a text.",
         outcome: "EN3-UARL-02",
         questions: [...E6.GENRE_THEME, ...E6X.GENRE_THEME],
+      },
+    ],
+  },
+  // ---------- Mathematics and English, Year 7: Stage 4, 30 questions for each subtopic ----------
+  {
+    n: 701,
+    subject: "maths",
+    year: 7,
+    title: "Integers",
+    description: "Positive and negative whole numbers.",
+    subtopics: [
+      {
+        n: 70101,
+        title: "Integers",
+        description: "Orders integers and adds, subtracts, multiplies and divides them.",
+        outcome: "MA4-INT-C-01",
+        questions: [...Y7A.INTEGERS, ...Y7A.INTEGERS_2],
+      },
+    ],
+  },
+  {
+    n: 702,
+    subject: "maths",
+    year: 7,
+    title: "Fractions, decimals and percentages",
+    description: "Calculating and converting.",
+    subtopics: [
+      {
+        n: 70201,
+        title: "Fractions, decimals and percentages",
+        description: "Calculates with fractions and mixed numerals, and converts between fractions, decimals and percentages.",
+        outcome: "MA4-FRC-C-01",
+        questions: [...Y7A.FRACTIONS, ...Y7A.FRACTIONS_2],
+      },
+    ],
+  },
+  {
+    n: 703,
+    subject: "maths",
+    year: 7,
+    title: "Algebra and indices",
+    description: "Expressions, pronumerals, powers and roots.",
+    subtopics: [
+      {
+        n: 70301,
+        title: "Algebraic expressions",
+        description: "Writes expressions with pronumerals, substitutes into them and simplifies them.",
+        outcome: "MA4-ALG-C-01",
+        questions: [...Y7A.ALGEBRA, ...Y7A.ALGEBRA_2],
+      },
+      {
+        n: 70302,
+        title: "Indices, squares and roots",
+        description: "Uses index notation, squares, cubes and their roots, and prime factors.",
+        outcome: "MA4-IND-C-01",
+        questions: [...Y7B.INDICES, ...Y7B.INDICES_2],
+      },
+    ],
+  },
+  {
+    n: 704,
+    subject: "maths",
+    year: 7,
+    title: "Equations",
+    description: "Solving linear equations.",
+    subtopics: [
+      {
+        n: 70401,
+        title: "Solving equations",
+        description: "Solves one- and two-step equations and checks the answer.",
+        outcome: "MA4-EQU-C-01",
+        questions: [...Y7B.EQUATIONS, ...Y7B.EQUATIONS_2],
+      },
+    ],
+  },
+  {
+    n: 705,
+    subject: "maths",
+    year: 7,
+    title: "Measurement",
+    description: "Length, perimeter, circumference and area.",
+    subtopics: [
+      {
+        n: 70501,
+        title: "Length, perimeter and circumference",
+        description: "Converts lengths, finds perimeters and the circumference of circles.",
+        outcome: "MA4-LEN-C-01",
+        questions: [...Y7B.LENGTH, ...Y7B.LENGTH_2],
+      },
+      {
+        n: 70502,
+        title: "Area",
+        description: "Finds the area of quadrilaterals, triangles and composite shapes.",
+        outcome: "MA4-ARE-C-01",
+        questions: [...Y7C.AREA, ...Y7C.AREA_2],
+      },
+    ],
+  },
+  {
+    n: 706,
+    subject: "maths",
+    year: 7,
+    title: "Geometry",
+    description: "Angles, shapes and their properties.",
+    subtopics: [
+      {
+        n: 70601,
+        title: "Angle relationships",
+        description: "Uses angles at a point, vertically opposite angles and angles on parallel lines.",
+        outcome: "MA4-ANG-C-01",
+        questions: [...Y7C.ANGLES, ...Y7C.ANGLES_2],
+      },
+      {
+        n: 70602,
+        title: "Properties of shapes",
+        description: "Classifies triangles and quadrilaterals by their properties, and transforms shapes.",
+        outcome: "MA4-GEO-C-01",
+        questions: [...Y7C.SHAPES, ...Y7C.SHAPES_2],
+      },
+    ],
+  },
+  {
+    n: 707,
+    subject: "maths",
+    year: 7,
+    title: "Statistics and probability",
+    description: "Data, graphs and chance.",
+    subtopics: [
+      {
+        n: 70701,
+        title: "Data and graphs",
+        description: "Classifies data and builds and reads dot plots, stem-and-leaf plots and graphs.",
+        outcome: "MA4-DAT-C-01",
+        questions: [...Y7D.DATA, ...Y7D.DATA_2],
+      },
+      {
+        n: 70702,
+        title: "Probability",
+        description: "Lists sample spaces and finds probabilities and relative frequencies.",
+        outcome: "MA4-PRO-C-01",
+        questions: [...Y7D.PROBABILITY, ...Y7D.PROBABILITY_2],
+      },
+    ],
+  },
+  {
+    n: 711,
+    subject: "english",
+    year: 7,
+    title: "Reading",
+    description: "Comprehension, imagery and perspective.",
+    subtopics: [
+      {
+        n: 71101,
+        title: "Reading comprehension",
+        description: "Reads closely for meaning, purpose and audience.",
+        outcome: "EN4-RVL-01",
+        questions: [...E7A.COMPREHENSION, ...E7A.COMPREHENSION_2],
+      },
+      {
+        n: 71102,
+        title: "Imagery, symbol and connotation",
+        description: "Explains figurative language, imagery and symbolism and their effect.",
+        outcome: "EN4-URB-01",
+        questions: [...E7A.IMAGERY, ...E7A.IMAGERY_2],
+      },
+      {
+        n: 71103,
+        title: "Perspective and context",
+        description: "Identifies point of view, perspective, bias and context in texts.",
+        outcome: "EN4-URC-01",
+        questions: [...E7A.PERSPECTIVE, ...E7A.PERSPECTIVE_2],
+      },
+    ],
+  },
+  {
+    n: 712,
+    subject: "english",
+    year: 7,
+    title: "Language",
+    description: "Vocabulary, grammar, punctuation and spelling.",
+    subtopics: [
+      {
+        n: 71201,
+        title: "Vocabulary",
+        description: "Works out word meanings from context, roots and affixes.",
+        outcome: "EN4-URA-01",
+        questions: [...E7B.VOCABULARY, ...E7B.VOCABULARY_2],
+      },
+      {
+        n: 71202,
+        title: "Grammar and punctuation",
+        description: "Builds clear sentences with accurate grammar and punctuation.",
+        outcome: "EN4-ECA-01",
+        questions: [...E7B.GRAMMAR, ...E7B.GRAMMAR_2],
+      },
+      {
+        n: 71203,
+        title: "Spelling",
+        description: "Spells accurately using spelling rules and patterns.",
+        outcome: "EN4-ECA-01",
+        questions: [...E7B.SPELLING, ...E7B.SPELLING_2],
+      },
+    ],
+  },
+  {
+    n: 713,
+    subject: "english",
+    year: 7,
+    title: "Writing",
+    description: "Crafting and editing writing.",
+    subtopics: [
+      {
+        n: 71301,
+        title: "Writing craft",
+        description: "Structures, revises and edits writing for its purpose.",
+        outcome: "EN4-ECB-01",
+        questions: [...E7B.WRITING, ...E7B.WRITING_2],
+      },
+    ],
+  },
+  // ---------- Mathematics and English, Year 8: Stage 4, 30 questions for each subtopic ----------
+  {
+    n: 801,
+    subject: "maths",
+    year: 8,
+    title: "Money, ratios and rates",
+    description: "Percentages in money, ratios and rates.",
+    subtopics: [
+      {
+        n: 80101,
+        title: "Financial mathematics",
+        description: "Percentage increase and decrease, discounts, GST, profit and loss.",
+        outcome: "MA4-FIN-C-01",
+        questions: [...Y8A.FINANCE, ...Y8A.FINANCE_2],
+      },
+      {
+        n: 80102,
+        title: "Ratios and rates",
+        description: "Simplifies and shares in ratios, and works with rates and speed.",
+        outcome: "MA4-RAT-C-01",
+        questions: [...Y8A.RATIOS, ...Y8A.RATIOS_2],
+      },
+    ],
+  },
+  {
+    n: 802,
+    subject: "maths",
+    year: 8,
+    title: "Algebra",
+    description: "Expressions, index laws, equations and linear graphs.",
+    subtopics: [
+      {
+        n: 80201,
+        title: "Expanding and factorising",
+        description: "Expands brackets, factorises and simplifies algebraic expressions.",
+        outcome: "MA4-ALG-C-01",
+        questions: [...Y8A.ALGEBRA, ...Y8A.ALGEBRA_2],
+      },
+      {
+        n: 80202,
+        title: "Index laws",
+        description: "Uses the index laws and the zero index to simplify expressions.",
+        outcome: "MA4-IND-C-01",
+        questions: [...Y8B.INDEX_LAWS, ...Y8B.INDEX_LAWS_2],
+      },
+      {
+        n: 80203,
+        title: "Equations",
+        description: "Solves equations with brackets, fractions and pronumerals on both sides.",
+        outcome: "MA4-EQU-C-01",
+        questions: [...Y8B.EQUATIONS, ...Y8B.EQUATIONS_2],
+      },
+      {
+        n: 80204,
+        title: "Linear relationships",
+        description: "Plots straight-line graphs on the number plane and finds their rules.",
+        outcome: "MA4-LIN-C-01",
+        questions: [...Y8B.LINEAR, ...Y8B.LINEAR_2],
+      },
+    ],
+  },
+  {
+    n: 803,
+    subject: "maths",
+    year: 8,
+    title: "Measurement",
+    description: "Pythagoras' theorem, circles and volume.",
+    subtopics: [
+      {
+        n: 80301,
+        title: "Pythagoras' theorem",
+        description: "Finds side lengths of right-angled triangles with Pythagoras' theorem.",
+        outcome: "MA4-PYT-C-01",
+        questions: [...Y8C.PYTHAGORAS, ...Y8C.PYTHAGORAS_2],
+      },
+      {
+        n: 80302,
+        title: "Circles",
+        description: "Finds the circumference and area of circles and shapes made from them.",
+        outcome: "MA4-ARE-C-01",
+        questions: [...Y8C.CIRCLES, ...Y8C.CIRCLES_2],
+      },
+      {
+        n: 80303,
+        title: "Volume",
+        description: "Finds the volume of prisms and cylinders, and converts to capacity.",
+        outcome: "MA4-VOL-C-01",
+        questions: [...Y8C.VOLUME, ...Y8C.VOLUME_2],
+      },
+    ],
+  },
+  {
+    n: 804,
+    subject: "maths",
+    year: 8,
+    title: "Geometry",
+    description: "Congruence and quadrilaterals.",
+    subtopics: [
+      {
+        n: 80401,
+        title: "Congruence and quadrilaterals",
+        description: "Uses congruence tests for triangles and properties of quadrilaterals.",
+        outcome: "MA4-GEO-C-01",
+        questions: [...Y8D.CONGRUENCE, ...Y8D.CONGRUENCE_2],
+      },
+    ],
+  },
+  {
+    n: 805,
+    subject: "maths",
+    year: 8,
+    title: "Statistics and probability",
+    description: "Analysing data and probability.",
+    subtopics: [
+      {
+        n: 80501,
+        title: "Data analysis",
+        description: "Finds and compares the mean, median, mode and range.",
+        outcome: "MA4-DAT-C-02",
+        questions: [...Y8D.DATA_ANALYSIS, ...Y8D.DATA_ANALYSIS_2],
+      },
+      {
+        n: 80502,
+        title: "Probability",
+        description: "Finds probabilities of two-step experiments and expected frequencies.",
+        outcome: "MA4-PRO-C-01",
+        questions: [...Y8D.PROBABILITY, ...Y8D.PROBABILITY_2],
+      },
+    ],
+  },
+  {
+    n: 811,
+    subject: "english",
+    year: 8,
+    title: "Reading",
+    description: "Comprehension, imagery and perspective.",
+    subtopics: [
+      {
+        n: 81101,
+        title: "Reading comprehension",
+        description: "Reads closely for meaning, purpose and audience.",
+        outcome: "EN4-RVL-01",
+        questions: [...E8A.COMPREHENSION, ...E8A.COMPREHENSION_2],
+      },
+      {
+        n: 81102,
+        title: "Imagery, symbol and connotation",
+        description: "Explains figurative language, imagery and symbolism and their effect.",
+        outcome: "EN4-URB-01",
+        questions: [...E8A.IMAGERY, ...E8A.IMAGERY_2],
+      },
+      {
+        n: 81103,
+        title: "Perspective and context",
+        description: "Identifies point of view, perspective, bias and context in texts.",
+        outcome: "EN4-URC-01",
+        questions: [...E8A.PERSPECTIVE, ...E8A.PERSPECTIVE_2],
+      },
+    ],
+  },
+  {
+    n: 812,
+    subject: "english",
+    year: 8,
+    title: "Language",
+    description: "Vocabulary, grammar, punctuation and spelling.",
+    subtopics: [
+      {
+        n: 81201,
+        title: "Vocabulary",
+        description: "Works out word meanings from context, roots and affixes.",
+        outcome: "EN4-URA-01",
+        questions: [...E8B.VOCABULARY, ...E8B.VOCABULARY_2],
+      },
+      {
+        n: 81202,
+        title: "Grammar and punctuation",
+        description: "Builds clear sentences with accurate grammar and punctuation.",
+        outcome: "EN4-ECA-01",
+        questions: [...E8B.GRAMMAR, ...E8B.GRAMMAR_2],
+      },
+      {
+        n: 81203,
+        title: "Spelling",
+        description: "Spells accurately using spelling rules and patterns.",
+        outcome: "EN4-ECA-01",
+        questions: [...E8B.SPELLING, ...E8B.SPELLING_2],
+      },
+    ],
+  },
+  {
+    n: 813,
+    subject: "english",
+    year: 8,
+    title: "Writing",
+    description: "Crafting and editing writing.",
+    subtopics: [
+      {
+        n: 81301,
+        title: "Writing craft",
+        description: "Structures, revises and edits writing for its purpose.",
+        outcome: "EN4-ECB-01",
+        questions: [...E8B.WRITING, ...E8B.WRITING_2],
       },
     ],
   },

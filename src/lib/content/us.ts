@@ -1,7 +1,7 @@
 import type { Subject, YearLevel } from "../curriculum/types";
 
 /**
- * The US Common Core tree, Grades 1–6. It has no questions of its own: each subtopic is an NSW
+ * The US Common Core tree, Grades 1–8. It has no questions of its own: each subtopic is an NSW
  * subtopic (by its number, as in tree.ts) filed under a Common Core domain and standard. tree.ts
  * builds the records, and curricula.ts turns the text into US English.
  * Each NSW subtopic appears at most once, so a subtopic id always has one place in the US tree.
@@ -229,6 +229,81 @@ export const US_TOPIC_SPECS: TopicSpec[] = [
     ],
   },
 
+  // Grades 7 and 8 file the NSW Stage 4 subtopics; Stage 4 is split across the two years differently.
+  {
+    subject: "maths",
+    grade: 7,
+    title: "Ratios and proportional relationships",
+    description: "Unit rates, proportions, and percent problems such as discounts and tax.",
+    subtopics: [
+      [80102, "7.RP.1"],
+      [80101, "7.RP.3"],
+    ],
+  },
+  {
+    subject: "maths",
+    grade: 7,
+    title: "The number system",
+    description: "Adding, subtracting, multiplying and dividing rational numbers, including negatives.",
+    subtopics: [
+      [70101, "7.NS.1"],
+      [70201, "7.NS.2"],
+    ],
+  },
+  {
+    subject: "maths",
+    grade: 7,
+    title: "Expressions and equations",
+    description: "Simplifying, expanding and factoring expressions, and solving equations.",
+    subtopics: [
+      [70301, "7.EE.1"],
+      [80201, "7.EE.1"],
+      [70401, "7.EE.4a"],
+    ],
+  },
+  G(7, [
+    [70601, "7.G.5"],
+    [70501, "7.G.4"],
+    [80302, "7.G.4"],
+    [70502, "7.G.6"],
+  ]),
+  {
+    subject: "maths",
+    grade: 7,
+    title: "Statistics and probability",
+    description: "Samples, comparing data sets, and the probability of simple and compound events.",
+    subtopics: [
+      [70701, "7.SP.1"],
+      [80501, "7.SP.4"],
+      [70702, "7.SP.6"],
+      [80502, "7.SP.8"],
+    ],
+  },
+  {
+    subject: "maths",
+    grade: 8,
+    title: "Expressions and equations",
+    description: "Exponents, square and cube roots, and solving linear equations.",
+    subtopics: [
+      [80202, "8.EE.1"],
+      [70302, "8.EE.2"],
+      [80203, "8.EE.7"],
+    ],
+  },
+  {
+    subject: "maths",
+    grade: 8,
+    title: "Functions",
+    description: "Linear functions, their tables, rules and graphs.",
+    subtopics: [[80204, "8.F.3"]],
+  },
+  G(8, [
+    [70602, "8.G.3"],
+    [80401, "8.G.2"],
+    [80301, "8.G.7"],
+    [80303, "8.G.9"],
+  ]),
+
   // ---------- English Language Arts ----------
   ela(1, "Foundational skills", FOUNDATIONS, [[11101, "RF.1.3"]]),
   ela(1, "Reading", READING, [
@@ -312,6 +387,30 @@ export const US_TOPIC_SPECS: TopicSpec[] = [
     [61102, "W.6.1"],
     [61103, "W.6.5"],
   ]),
+
+  ela(7, "Reading", READING, [
+    [71101, "RL.7.1"],
+    [71102, "RL.7.4"],
+    [71103, "RL.7.6"],
+  ]),
+  ela(7, "Language", LANGUAGE, [
+    [71202, "L.7.1"],
+    [71203, "L.7.2b"],
+  ]),
+  ela(7, "Vocabulary", VOCAB, [[71201, "L.7.4"]]),
+  ela(7, "Writing", WRITING, [[71301, "W.7.5"]]),
+
+  ela(8, "Reading", READING, [
+    [81101, "RL.8.1"],
+    [81102, "RL.8.4"],
+    [81103, "RL.8.6"],
+  ]),
+  ela(8, "Language", LANGUAGE, [
+    [81202, "L.8.1"],
+    [81203, "L.8.2b"],
+  ]),
+  ela(8, "Vocabulary", VOCAB, [[81201, "L.8.4"]]),
+  ela(8, "Writing", WRITING, [[81301, "W.8.5"]]),
 ];
 
 /**

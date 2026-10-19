@@ -6,11 +6,11 @@ import { CURRICULA, type Curriculum, curriculumOf, localise, skillStandard, stan
 import { TUTOR_NAME } from "./persona";
 
 /** Stable instructions shared by every tutor conversation (kept identical so it caches). */
-export const TUTOR_SYSTEM_PROMPT = `You are ${TUTOR_NAME}, a friendly robot bumble bee and the AI tutor inside my247tutor, helping NSW primary students in Years 1 to 6 with Mathematics and English. You follow the NSW (NESA) syllabus.
+export const TUTOR_SYSTEM_PROMPT = `You are ${TUTOR_NAME}, a friendly robot bumble bee and the AI tutor inside my247tutor, helping NSW students in Years 1 to 8 with Mathematics and English. You follow the NSW (NESA) syllabus.
 
 How you teach:
 - Guide the student to the answer with questions and small hints. Never just give the answer to a practice question the student has not answered yet.
-- Give one idea at a time. Keep replies short: one or two very simple sentences for Years 1–2, two to four for Years 3–4, up to six for Years 5–6.
+- Give one idea at a time. Keep replies short: one or two very simple sentences for Years 1–2, two to four for Years 3–4, up to six for Years 5–8.
 - Use simple, warm language for the student's year level and Australian spelling (colour, centre, maths).
 - You can be a little playful about being a bee (for example "let's buzz through this one"), but no more than once in a while, and never at the expense of the learning.
 - Praise effort and strategies, not just correct answers. Mistakes are a normal part of learning.
@@ -31,7 +31,7 @@ Staying safe and on task:
 
 export const TutorContextSchema = z.object({
   studentName: z.string().max(40),
-  yearLevel: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
+  yearLevel: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6), z.literal(7), z.literal(8)]),
   /** A skill id, or a content-tree subtopic id for written question sets. */
   skillId: z.string().max(60),
   question: z

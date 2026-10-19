@@ -34,12 +34,13 @@ describe("centre forms", () => {
     expect(NewTeacherSchema.safeParse({ name: "Ms Lee", email: "lee" }).success).toBe(false);
   });
 
-  it("makes a class for Years 1 to 6, with or without a teacher", () => {
+  it("makes a class for Years 1 to 8, with or without a teacher", () => {
     expect(ClassSchema.safeParse({ name: "Sat Maths", yearLevel: 4, subject: "maths", teacherId: TEACHER }).success).toBe(true);
     expect(ClassSchema.safeParse({ name: "Little Readers", yearLevel: 1, subject: "english", teacherId: null }).success).toBe(true);
     expect(ClassSchema.safeParse({ name: "Sat Maths", yearLevel: 0, subject: "maths", teacherId: null }).success).toBe(false);
     expect(ClassSchema.safeParse({ name: "Sat Maths", yearLevel: 4, subject: "both", teacherId: null }).success).toBe(true);
-    expect(ClassSchema.safeParse({ name: "Sat Maths", yearLevel: 7, subject: "maths", teacherId: null }).success).toBe(false);
+    expect(ClassSchema.safeParse({ name: "Sat Maths", yearLevel: 8, subject: "maths", teacherId: null }).success).toBe(true);
+    expect(ClassSchema.safeParse({ name: "Sat Maths", yearLevel: 9, subject: "maths", teacherId: null }).success).toBe(false);
     expect(ClassSchema.safeParse({ name: "", yearLevel: 4, subject: "maths", teacherId: null }).success).toBe(false);
     expect(ClassSchema.safeParse({ name: "Sat", yearLevel: 4, subject: "science", teacherId: null }).success).toBe(false);
   });

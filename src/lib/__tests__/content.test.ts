@@ -17,6 +17,7 @@ import {
   yearsWithContent,
 } from "../content/tree";
 import { OUTCOMES } from "../curriculum/outcomes";
+import { yearToStage } from "../curriculum/types";
 import { SKILLS } from "../curriculum/skills";
 import { Rng } from "../practice/rng";
 import { checkAnswer, type Question } from "../practice";
@@ -56,9 +57,9 @@ describe("content tree", () => {
     for (const s of SUBTOPICS.filter((s) => !s.skill_id)) expect(questionsOf(s.id).length).toBeGreaterThanOrEqual(3);
   });
 
-  it("covers Years 1 to 6 in both subjects", () => {
-    expect(yearsWithContent("maths")).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(yearsWithContent("english")).toEqual([1, 2, 3, 4, 5, 6]);
+  it("covers Years 1 to 8 in both subjects", () => {
+    expect(yearsWithContent("maths")).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(yearsWithContent("english")).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(topicsFor("maths", 4).map((t) => t.sort_order)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
@@ -174,12 +175,14 @@ describe("question bank", () => {
   const NOT_QUIZZED = /-(OLC|REFLU|HANDW)-/;
 
   for (const subject of ["maths", "english"] as const)
-    for (const year of [1, 2, 3, 4, 5, 6] as const)
-      it(`gives every Year ${year} ${subject} standard 30 questions, six at each level`, () => {
-        const subtopics = topicsFor(subject, year).flatMap((t) => subtopicsOf(t.id));
-        const stage = year <= 2 ? 1 : year <= 4 ? 2 : 3;
+    for (const year of [1, 2, 3, 4, 5, 6, 7] as const)
+      it(`gives every ${year === 7 ? "Year 7–8" : `Year ${year}`} ${subject} standard 30 questions, six at each level`, () => {
+        // Stage 4 is one two-year stage: Years 7 and 8 between them cover every Stage 4 standard.
+        const years = year === 7 ? ([7, 8] as const) : [year];
+        const subtopics = years.flatMap((y) => topicsFor(subject, y)).flatMap((t) => subtopicsOf(t.id));
+        const stage = yearToStage(year);
         const outcomes = OUTCOMES.filter((o) => o.subject === subject && o.stage === stage && !NOT_QUIZZED.test(o.code));
-        expect(outcomes.length).toBe({ maths: { 1: 16, 2: 20, 3: 21 }, english: { 1: 6, 2: 7, 3: 6 } }[subject][stage]);
+        expect(outcomes.length).toBe({ maths: { 1: 16, 2: 20, 3: 21, 4: 17 }, english: { 1: 6, 2: 7, 3: 6, 4: 6 } }[subject][stage]);
         for (const outcome of outcomes) {
           const questions = subtopics.filter((s) => s.outcome_code === outcome.code).flatMap((s) => questionsOf(s.id));
           expect(questions.length, outcome.code).toBeGreaterThanOrEqual(30);

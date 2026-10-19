@@ -10,7 +10,7 @@ import { buildLesson, skillBuilder } from "@/lib/content/lesson";
 import { progressKey, toPracticeQuestion } from "@/lib/content/practice";
 import { QUESTIONS, subtopicPath } from "@/lib/content/tree";
 import { type Curriculum, curriculumOf, localeOf, subjectName, yearName } from "@/lib/curriculum/curricula";
-import type { Subject } from "@/lib/curriculum/types";
+import { hasSkillPath, type Subject } from "@/lib/curriculum/types";
 import {
   LESSON_TRIES,
   currentLesson,
@@ -166,7 +166,7 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
         </div>
       )}
       <div className="row small">
-        <Link href={profile.yearLevel < 3 ? `/learn/${subject}/topics?year=${profile.yearLevel}` : `/learn/${subject}?mode=practice`}>
+        <Link href={!hasSkillPath(profile.yearLevel) ? `/learn/${subject}/topics?year=${profile.yearLevel}` : `/learn/${subject}?mode=practice`}>
           Free practice
         </Link>
         <Link href={`/learn/${subject}/topics`}>Browse topics</Link>
