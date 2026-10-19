@@ -1,3 +1,4 @@
+import type { Picture } from "../content/picture";
 import type { ContentQuestion } from "../content/types";
 import type { Question } from "../practice/types";
 import type { Subject, YearLevel } from "./types";
@@ -249,6 +250,22 @@ export function usableInUS(q: ContentQuestion): boolean {
   return true;
 }
 
+/** Keys whose values are drawing settings, not words a student reads ("grey" is a counter colour). */
+const PICTURE_SETTINGS = new Set(["kind", "shape", "object", "unit", "colour", "sections"]);
+
+function wordsToUS(value: unknown, key = ""): unknown {
+  if (PICTURE_SETTINGS.has(key)) return value;
+  if (typeof value === "string") return toUS(value);
+  if (Array.isArray(value)) return value.map((v) => wordsToUS(v));
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, wordsToUS(v, k)]));
+  return value;
+}
+
+/** A drawing's titles and labels in US English, such as a graph of "Favorite sport". */
+export function pictureToUS(picture: Picture): Picture {
+  return wordsToUS(picture) as Picture;
+}
+
 /** A question as a child on this curriculum sees it, with its answers in the same spelling. */
 export function localiseQuestion(q: Question, curriculum: Curriculum): Question {
   if (curriculum !== "us") return q;
@@ -263,5 +280,6 @@ export function localiseQuestion(q: Question, curriculum: Curriculum): Question 
     hints: q.hints.map(toUS),
     solution: toUS(q.solution),
     passage: q.passage && { title: toUS(q.passage.title), text: toUS(q.passage.text) },
+    picture: q.picture && pictureToUS(q.picture),
   };
 }

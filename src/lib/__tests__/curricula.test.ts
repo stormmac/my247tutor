@@ -17,7 +17,7 @@ import {
 } from "../content/tree";
 import type { ContentQuestion } from "../content/types";
 import { US_SKILL_STANDARDS } from "../content/us";
-import { curriculumOf, localiseQuestion, toUS, usableInUS, yearName } from "../curriculum/curricula";
+import { curriculumOf, localiseQuestion, pictureToUS, toUS, usableInUS, yearName } from "../curriculum/curricula";
 import { YEARS } from "../curriculum/types";
 import { questionsAt, startAssessment, summarySentence, finishAssessment } from "../learner/assessment";
 import { currentLesson, saveLesson } from "../learner/lesson";
@@ -90,6 +90,18 @@ describe("questions for the US", () => {
       { id: "b", text: "The dog ran." },
     ];
     expect(usableInUS(written({ question_text: "Which sentence starts with a capital letter?", answer_options: caps }))).toBe(true);
+  });
+
+  it("changes the words in a drawing but not its settings", () => {
+    expect(pictureToUS({ kind: "column_graph", title: "Favourite colour", columns: [{ label: "Grey", value: 3 }] })).toEqual({
+      kind: "column_graph",
+      title: "Favorite color",
+      columns: [{ label: "Gray", value: 3 }],
+    });
+    expect(pictureToUS({ kind: "bag", counters: [{ colour: "grey" as never, count: 2 }] })).toEqual({
+      kind: "bag",
+      counters: [{ colour: "grey", count: 2 }],
+    });
   });
 
   it("shows a question in US English and marks either spelling right", () => {
