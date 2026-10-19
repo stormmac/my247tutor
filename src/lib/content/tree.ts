@@ -29,8 +29,10 @@ import * as E4X from "./bank/english-year4-extra";
 import * as E5X from "./bank/english-year5-extra";
 import * as E6X from "./bank/english-year6-extra";
 import * as SMALL from "./bank/small-subtopics";
+import { type Curriculum, DEFAULT_CURRICULUM, toUS, usableInUS } from "../curriculum/curricula";
 import { choice, multi, ordering, type QuestionSpec, trueFalse, typed } from "./spec";
 import type { ContentQuestion, Country, State, Subject, Subtopic, Topic, YearLevel } from "./types";
+import { US_TOPIC_SPECS } from "./us";
 
 // ---------- Reference data: copied from the myteacher seed (database/seeds/001_sample_data.sql), same ids ----------
 
@@ -1977,6 +1979,79 @@ for (const spec of TOPIC_SPECS) {
   });
 }
 
+// ---------- US Common Core: the NSW subtopics and questions, filed under Common Core ----------
+
+export const US_ID = "00000000-0000-0000-0000-000000000002";
+export const US_STATE_ID = "11000000-0000-0000-0000-000000000001";
+
+/** Kept apart from the NSW reference data, which mirrors the myteacher database (see content/sql.ts). */
+export const US_COUNTRY: Country = { id: US_ID, name: "United States", code: "US", curriculum_framework: "Common Core State Standards" };
+export const US_STATE: State = { id: US_STATE_ID, country_id: US_ID, name: "Common Core", code: "CCSS", curriculum_authority: "CCSSO" };
+
+/** The app's subject keys, mapped to the US subject records. */
+export const US_SUBJECT_IDS: Record<SubjectKey, string> = {
+  maths: "21000000-0000-0000-0000-000000000004",
+  english: "21000000-0000-0000-0000-000000000005",
+};
+export const US_SUBJECTS: Subject[] = [
+  { id: US_SUBJECT_IDS.maths, state_id: US_STATE_ID, name: "Math", colour_hex: "#FAEEDA", icon: "calculator" },
+  { id: US_SUBJECT_IDS.english, state_id: US_STATE_ID, name: "English Language Arts", colour_hex: "#FAECE7", icon: "book" },
+];
+
+export const US_YEAR_LEVELS: YearLevel[] = ["Kindergarten", ...Array.from({ length: 12 }, (_, i) => `Grade ${i + 1}`)].map((name, i) => ({
+  id: `31000000-0000-0000-0000-0000000000${String(i + 1).padStart(2, "0")}`,
+  state_id: US_STATE_ID,
+  name,
+  sort_order: i,
+  age_min: i + 5,
+  age_max: i + 6,
+}));
+
+/**
+ * US topics are their own records (ids 42…). Their subtopics are the NSW subtopics with US
+ * titles and Common Core codes laid over them: the ids stay the same, so progress, lessons and
+ * questions work the same whichever curriculum a child is on.
+ */
+export const US_TOPICS: Topic[] = [];
+const US_SUBTOPICS = new Map<string, Subtopic>();
+
+US_TOPIC_SPECS.forEach((spec, i) => {
+  const subjectId = US_SUBJECT_IDS[spec.subject];
+  const yearId = US_YEAR_LEVELS[spec.grade].id;
+  const topicId = id("42", spec.grade * 100 + i + 1);
+  US_TOPICS.push({
+    id: topicId,
+    subject_id: subjectId,
+    year_level_id: yearId,
+    title: spec.title,
+    description: spec.description,
+    sort_order: US_TOPICS.filter((t) => t.subject_id === subjectId && t.year_level_id === yearId).length + 1,
+  });
+  spec.subtopics.forEach(([n, code], j) => {
+    const nsw = SUBTOPICS.find((s) => s.id === id("51", n));
+    if (!nsw) throw new Error(`US topic ${spec.title} names subtopic ${n}, which doesn't exist.`);
+    if (US_SUBTOPICS.has(nsw.id)) throw new Error(`Subtopic ${n} is in the US tree twice.`);
+    US_SUBTOPICS.set(nsw.id, {
+      ...nsw,
+      topic_id: topicId,
+      title: toUS(nsw.title),
+      description: toUS(nsw.description),
+      sort_order: j + 1,
+      outcome_code: code,
+    });
+  });
+});
+
+/** The subtopic as the US tree shows it, if it's in the US tree. */
+export function usSubtopic(subtopicId: string): Subtopic | undefined {
+  return US_SUBTOPICS.get(subtopicId);
+}
+
+/** The subtopic's code in this curriculum: a NESA outcome or a Common Core standard. */
+export function standardFor(subtopic: Subtopic, curriculum: Curriculum = DEFAULT_CURRICULUM): string | null {
+  return curriculum === "us" ? (US_SUBTOPICS.get(subtopic.id)?.outcome_code ?? null) : subtopic.outcome_code;
+}
+
 // ---------- Lookups ----------
 
 export interface SubtopicPath {
@@ -1989,33 +2064,39 @@ export interface SubtopicPath {
   subtopic: Subtopic;
 }
 
-export function topicsFor(subject: SubjectKey, year: YearNumber): Topic[] {
-  return TOPICS.filter((t) => t.subject_id === SUBJECT_IDS[subject] && t.year_level_id === yearLevelId(year)).sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
+export function topicsFor(subject: SubjectKey, year: YearNumber, curriculum: Curriculum = DEFAULT_CURRICULUM): Topic[] {
+  const [topics, subjectId, yearId] =
+    curriculum === "us" ? [US_TOPICS, US_SUBJECT_IDS[subject], US_YEAR_LEVELS[year].id] : [TOPICS, SUBJECT_IDS[subject], yearLevelId(year)];
+  return topics.filter((t) => t.subject_id === subjectId && t.year_level_id === yearId).sort((a, b) => a.sort_order - b.sort_order);
 }
 
+/** A topic's subtopics, from either tree. */
 export function subtopicsOf(topicId: string): Subtopic[] {
-  return SUBTOPICS.filter((s) => s.topic_id === topicId).sort((a, b) => a.sort_order - b.sort_order);
+  const all = topicId.startsWith("42") ? [...US_SUBTOPICS.values()] : SUBTOPICS;
+  return all.filter((s) => s.topic_id === topicId).sort((a, b) => a.sort_order - b.sort_order);
 }
 
-export function questionsOf(subtopicId: string): ContentQuestion[] {
-  return QUESTIONS.filter((q) => q.subtopic_id === subtopicId);
+/** A subtopic's written questions. The US curriculum leaves out the ones only an Australian would know. */
+export function questionsOf(subtopicId: string, curriculum: Curriculum = DEFAULT_CURRICULUM): ContentQuestion[] {
+  const all = QUESTIONS.filter((q) => q.subtopic_id === subtopicId);
+  return curriculum === "us" ? all.filter(usableInUS) : all;
 }
 
 /** Years that have content for a subject. */
-export function yearsWithContent(subject: SubjectKey): YearNumber[] {
-  return YEARS.filter((y) => topicsFor(subject, y).length > 0);
+export function yearsWithContent(subject: SubjectKey, curriculum: Curriculum = DEFAULT_CURRICULUM): YearNumber[] {
+  return YEARS.filter((y) => topicsFor(subject, y, curriculum).length > 0);
 }
 
-export function subtopicPath(subtopicId: string): SubtopicPath | null {
-  const subtopic = SUBTOPICS.find((s) => s.id === subtopicId);
+/** Where a subtopic sits in the tree. On the US curriculum, its place in the US tree when it has one. */
+export function subtopicPath(subtopicId: string, curriculum: Curriculum = DEFAULT_CURRICULUM): SubtopicPath | null {
+  const subtopic = (curriculum === "us" && US_SUBTOPICS.get(subtopicId)) || SUBTOPICS.find((s) => s.id === subtopicId);
   if (!subtopic) return null;
-  const topic = TOPICS.find((t) => t.id === subtopic.topic_id)!;
-  const subject = SUBJECTS.find((s) => s.id === topic.subject_id)!;
-  const year = YEAR_LEVELS.find((y) => y.id === topic.year_level_id)!;
-  const state = STATES.find((s) => s.id === subject.state_id)!;
-  const country = COUNTRIES.find((c) => c.id === state.country_id)!;
-  const subjectKey = (Object.keys(SUBJECT_IDS) as SubjectKey[]).find((k) => SUBJECT_IDS[k] === subject.id)!;
+  const topic = [...TOPICS, ...US_TOPICS].find((t) => t.id === subtopic.topic_id)!;
+  const subject = [...SUBJECTS, ...US_SUBJECTS].find((s) => s.id === topic.subject_id)!;
+  const year = [...YEAR_LEVELS, ...US_YEAR_LEVELS].find((y) => y.id === topic.year_level_id)!;
+  const state = [...STATES, US_STATE].find((s) => s.id === subject.state_id)!;
+  const country = [...COUNTRIES, US_COUNTRY].find((c) => c.id === state.country_id)!;
+  const ids = state.id === US_STATE_ID ? US_SUBJECT_IDS : SUBJECT_IDS;
+  const subjectKey = (Object.keys(ids) as SubjectKey[]).find((k) => ids[k] === subject.id)!;
   return { country, state, subject, subjectKey, year, topic, subtopic };
 }

@@ -8,6 +8,7 @@ import type { useProfile } from "@/components/useProfile";
 import { practiceOrder, progressKey, toPracticeQuestion } from "@/lib/content/practice";
 import { questionsOf } from "@/lib/content/tree";
 import type { Subtopic } from "@/lib/content/types";
+import { curriculumOf } from "@/lib/curriculum/curricula";
 import { getOutcome } from "@/lib/curriculum/outcomes";
 import { getSkill } from "@/lib/curriculum/skills";
 import { recordAttempt, skillState, type LearnerProfile } from "@/lib/learner/model";
@@ -26,7 +27,8 @@ export function FocusedPractice({
 }) {
   const key = progressKey(subtopic);
   const skill = subtopic.skill_id ? getSkill(subtopic.skill_id) : null;
-  const written = useMemo(() => questionsOf(subtopic.id), [subtopic.id]);
+  const curriculum = curriculumOf(profile.curriculum);
+  const written = useMemo(() => questionsOf(subtopic.id, curriculum), [subtopic.id, curriculum]);
 
   const [seed, setSeed] = useState(randomSeed);
   // Written questions come first, easiest to hardest, and all of them before any repeats.
@@ -87,7 +89,15 @@ export function FocusedPractice({
     }
   }
 
-  const outcome = skill ? getOutcome(skill.outcome) : null;
+  // On the US curriculum the subtopic carries its Common Core standard.
+  const outcome =
+    curriculum === "us"
+      ? subtopic.outcome_code
+        ? { code: subtopic.outcome_code, codeVerified: true }
+        : null
+      : skill
+        ? getOutcome(skill.outcome)
+        : null;
 
   return (
     <div className="stack">

@@ -8,7 +8,8 @@ import { questionFocus, useSuniFocus, useSuniSay, useSuniScreen } from "@/compon
 import type { useProfile } from "@/components/useProfile";
 import { buildLesson, skillBuilder } from "@/lib/content/lesson";
 import { progressKey, toPracticeQuestion } from "@/lib/content/practice";
-import { QUESTIONS, SUBTOPICS } from "@/lib/content/tree";
+import { QUESTIONS, subtopicPath } from "@/lib/content/tree";
+import { type Curriculum, curriculumOf, subjectName, yearName } from "@/lib/curriculum/curricula";
 import type { Subject } from "@/lib/curriculum/types";
 import {
   LESSON_TRIES,
@@ -28,13 +29,13 @@ import { Rng, randomSeed } from "@/lib/practice/rng";
 type SetProfile = ReturnType<typeof useProfile>["setProfile"];
 
 const questionById = (id: string) => QUESTIONS.find((q) => q.id === id);
-const subtopicById = (id: string) => SUBTOPICS.find((s) => s.id === id);
+const subtopicById = (id: string, curriculum: Curriculum) => subtopicPath(id, curriculum)?.subtopic;
 
 const COLOUR_WORDS = { good: "right first go", warn: "right on a later go", bad: "not right" } as const;
 
-function describe(part: LessonPart): string {
+function describe(part: LessonPart, curriculum: Curriculum): string {
   return part.kind === "review"
-    ? `${part.questionIds.length} questions from Year ${part.year} to keep earlier skills sharp.`
+    ? `${part.questionIds.length} questions from ${yearName(part.year, curriculum)} to keep earlier skills sharp.`
     : `${part.questionIds.length} questions, easy to hard, on something to work on.`;
 }
 
@@ -93,7 +94,7 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
   useSuniScreen(
     lesson && running === null
       ? {
-          screen: `This week's ${subject === "maths" ? "maths" : "English"} lesson plan. Parts: ${lesson.parts
+          screen: `This week's ${subjectName(subject, curriculumOf(profile.curriculum))} lesson plan. Parts: ${lesson.parts
             .map((p, i) => `${i + 1}. ${p.title} (${p.results.length} of ${p.questionIds.length} done)`)
             .join("; ")}. They can do the parts in any order.`,
           greeting: `Hi ${profile.name}! This is your lesson for the week. Pick any part to start, and tap me if you get stuck.`,
@@ -113,10 +114,15 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
       />
     );
 
-  const title = subject === "maths" ? "Maths" : "English";
+  const curriculum = curriculumOf(profile.curriculum);
+  const title = subjectName(subject, curriculum);
   const { done, total } = lessonProgress(lesson);
   const finished = nextPart(lesson) < 0;
-  const monday = new Date(`${lesson.week}T00:00:00`).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" });
+  const monday = new Date(`${lesson.week}T00:00:00`).toLocaleDateString(curriculum === "us" ? "en-US" : "en-AU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 
   return (
     <div className="card narrow stack" style={{ margin: "0 auto" }}>
@@ -143,7 +149,7 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
                   </button>
                 )}
               </div>
-              <div className="small muted">{describe(p)}</div>
+              <div className="small muted">{describe(p, curriculum)}</div>
               <QuestionStrip
                 total={p.questionIds.length}
                 results={p.results}
@@ -204,7 +210,7 @@ function LessonPartView({
   const [answered, setAnswered] = useState(false);
 
   const content = questionById(builder ? builder.ids[builder.position] : lessonPart.questionIds[index]);
-  const subtopic = content ? subtopicById(content.subtopic_id) : undefined;
+  const subtopic = content ? subtopicById(content.subtopic_id, curriculumOf(profile.curriculum)) : undefined;
   const question = useMemo(() => (content ? toPracticeQuestion(content, seed) : null), [content, seed]);
   const say = useSuniSay();
   const praise = usePraise();
@@ -279,7 +285,7 @@ function LessonPartView({
     }
     if (lastResult === 0) {
       setLastResult(null);
-      const ids = skillBuilder(content!, lessonPart.questionIds, new Rng(randomSeed()));
+      const ids = skillBuilder(content!, lessonPart.questionIds, new Rng(randomSeed()), curriculumOf(profile.curriculum));
       if (ids.length) return setBuilder({ ids, position: 0, results: [] });
     }
     setLastResult(null);

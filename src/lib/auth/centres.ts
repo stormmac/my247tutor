@@ -7,6 +7,7 @@ import { newProfile, type LearnerProfile } from "@/lib/learner/model";
 import { summarise, type StudentSummary } from "@/lib/learner/summary";
 import { newReading, setEnrolled } from "@/lib/phonics/progress";
 import { ready } from "./db";
+import { CHILD_CURRICULUM } from "./learners";
 import { MAX_CENTRE_STUDENTS, type ClassTime } from "./rules";
 import { audit, toUser, USER_COLUMNS, type User } from "./users";
 
@@ -385,13 +386,13 @@ export async function studentForViewer(viewer: User, learnerId: string): Promise
   const { rows } = await (
     await ready()
   ).query(
-    `SELECT l.id, l.profile FROM learners l
+    `SELECT l.id, l.profile, ${CHILD_CURRICULUM} AS curriculum FROM learners l
      WHERE l.id = $1 AND l.parent_id = $2
        AND ($3::uuid IS NULL OR EXISTS (
          SELECT 1 FROM class_enrolments e JOIN centre_classes c ON c.id = e.class_id WHERE e.learner_id = l.id AND c.teacher_id = $3))`,
     [learnerId, where.centreId, where.teacherId ?? null],
   );
-  return rows[0] ? { ...(rows[0].profile as LearnerProfile), id: rows[0].id as string } : null;
+  return rows[0] ? { ...(rows[0].profile as LearnerProfile), id: rows[0].id as string, curriculum: rows[0].curriculum } : null;
 }
 
 /** A student a teacher or centre can learn as, from the Learn picker. */

@@ -7,6 +7,7 @@
  * the climb visits levels 1, 3 and 5 of each year so it stays short. Two questions are asked at a
  * step: both right moves up, both wrong stops, and a split gets a third question to decide.
  */
+import { type Curriculum, curriculumOf, DEFAULT_CURRICULUM, subjectName, yearName } from "../curriculum/curricula";
 import type { Subject, YearLevel } from "../curriculum/types";
 import { questionsOf, subtopicPath, subtopicsOf, topicsFor } from "../content/tree";
 import { DIFFICULTIES, type ContentQuestion, type Difficulty } from "../content/types";
@@ -52,6 +53,8 @@ export interface AssessmentState {
   passed: number;
   answers: AssessmentAnswer[];
   done: boolean;
+  /** Which tree the questions come from. Missing means NSW. */
+  curriculum?: Curriculum;
 }
 
 /** The finished assessment, kept on the learner profile for the parents page. */
@@ -65,6 +68,8 @@ export interface AssessmentRecord {
   /** The step that stopped the climb, if any. */
   stoppedAt: Step | null;
   answers: AssessmentAnswer[];
+  /** The curriculum the questions came from. Missing means NSW. */
+  curriculum?: Curriculum;
 }
 
 const difficultyOf = (level: Level): Difficulty => DIFFICULTIES[level - 1];
@@ -75,23 +80,23 @@ export function startYearFor(yearLevel: YearLevel): YearLevel {
 }
 
 /** Every question for a subject, year and level, from the topic tree. */
-export function questionsAt(subject: Subject, step: Step): ContentQuestion[] {
+export function questionsAt(subject: Subject, step: Step, curriculum: Curriculum = DEFAULT_CURRICULUM): ContentQuestion[] {
   const difficulty = difficultyOf(step.level);
-  return topicsFor(subject, step.year)
+  return topicsFor(subject, step.year, curriculum)
     .flatMap((t) => subtopicsOf(t.id))
-    .flatMap((s) => questionsOf(s.id))
+    .flatMap((s) => questionsOf(s.id, curriculum))
     .filter((q) => q.difficulty === difficulty);
 }
 
-export function startAssessment(subject: Subject, yearLevel: YearLevel): AssessmentState {
+export function startAssessment(subject: Subject, yearLevel: YearLevel, curriculum: Curriculum = DEFAULT_CURRICULUM): AssessmentState {
   const startYear = startYearFor(yearLevel);
   // Up to a year above their own, so a student who is ahead can show it.
   const lastYear = Math.min(6, yearLevel + 1);
   const steps: Step[] = [];
   for (let year = startYear; year <= lastYear; year++)
     for (const level of CLIMB)
-      if (questionsAt(subject, { year: year as YearLevel, level }).length) steps.push({ year: year as YearLevel, level });
-  return { subject, yearLevel, startYear, steps, step: 0, stepResults: [], passed: -1, answers: [], done: steps.length === 0 };
+      if (questionsAt(subject, { year: year as YearLevel, level }, curriculum).length) steps.push({ year: year as YearLevel, level });
+  return { subject, yearLevel, startYear, steps, step: 0, stepResults: [], passed: -1, answers: [], done: steps.length === 0, curriculum };
 }
 
 /**
@@ -102,7 +107,7 @@ export function nextQuestion(state: AssessmentState, random: () => number = Math
   if (state.done) return null;
   const asked = new Set(state.answers.map((a) => a.questionId));
   const askedSubtopics = new Set(state.answers.map((a) => a.subtopicId));
-  const pool = questionsAt(state.subject, state.steps[state.step]).filter((q) => !asked.has(q.id));
+  const pool = questionsAt(state.subject, state.steps[state.step], curriculumOf(state.curriculum)).filter((q) => !asked.has(q.id));
   if (!pool.length) return null;
   const fresh = pool.filter((q) => !askedSubtopics.has(q.subtopic_id));
   const from = fresh.length ? fresh : pool;
@@ -121,7 +126,7 @@ export function recordAnswer(state: AssessmentState, q: ContentQuestion, correct
     {
       questionId: q.id,
       subtopicId: q.subtopic_id,
-      topic: subtopicPath(q.subtopic_id)?.subtopic.title ?? "",
+      topic: subtopicPath(q.subtopic_id, curriculumOf(state.curriculum))?.subtopic.title ?? "",
       year: step.year,
       level: step.level,
       correct,
@@ -153,6 +158,7 @@ export function finishAssessment(state: AssessmentState, now = Date.now()): Asse
     reached: state.passed >= 0 ? state.steps[state.passed] : null,
     stoppedAt: stopped && state.steps[state.step] ? state.steps[state.step] : null,
     answers: state.answers,
+    ...(state.curriculum ? { curriculum: state.curriculum } : {}),
   };
 }
 
@@ -172,7 +178,7 @@ export function applyAssessment(profile: LearnerProfile, record: AssessmentRecor
     const passedYear = reached.level === 5 ? reached.year : reached.year - 1;
     const years = new Map<string, number>();
     for (let year = FIRST_YEAR; year <= 6; year++)
-      for (const t of topicsFor(record.subject, year as YearLevel))
+      for (const t of topicsFor(record.subject, year as YearLevel, curriculumOf(profile.curriculum)))
         for (const s of subtopicsOf(t.id)) if (s.skill_id) years.set(s.skill_id, Math.max(years.get(s.skill_id) ?? 0, year));
     for (const [id, lastYear] of years) {
       if (lastYear > passedYear || skillState(profile, id).mastered) continue;
@@ -237,19 +243,21 @@ export function standing(record: AssessmentRecord): Standing {
 
 /** One plain sentence for the parent saying where their child is working. */
 export function summarySentence(record: AssessmentRecord, name: string): string {
-  const subject = record.subject === "maths" ? "Maths" : "English";
+  const curriculum = curriculumOf(record.curriculum);
+  const subject = subjectName(record.subject, curriculum);
+  const year = (y: number) => yearName(y, curriculum);
   const r = record.reached;
   if (!r)
-    return `${name} found the very easy Year ${record.startYear} ${subject} questions tricky, so practice will start with the Year ${record.startYear} basics.`;
-  const at = `Year ${r.year} questions up to level ${r.level} of 5 (${LEVEL_NAMES[r.level]})`;
+    return `${name} found the very easy ${year(record.startYear)} ${subject} questions tricky, so practice will start with the ${year(record.startYear)} basics.`;
+  const at = `${year(r.year)} questions up to level ${r.level} of 5 (${LEVEL_NAMES[r.level]})`;
   switch (standing(record)) {
     case "ahead":
-      return `${name} answered ${at} in ${subject}, which is ahead of Year ${record.yearLevel}.`;
+      return `${name} answered ${at} in ${subject}, which is ahead of ${year(record.yearLevel)}.`;
     case "on track":
-      return `${name} answered ${at} in ${subject}, which is on track for Year ${record.yearLevel}.`;
+      return `${name} answered ${at} in ${subject}, which is on track for ${year(record.yearLevel)}.`;
     case "below":
-      return `${name} answered ${at} in ${subject}, a little behind Year ${record.yearLevel}. Practice will start there and build up.`;
+      return `${name} answered ${at} in ${subject}, a little behind ${year(record.yearLevel)}. Practice will start there and build up.`;
     case "well below":
-      return `${name} answered ${at} in ${subject}, which is well behind Year ${record.yearLevel}. Practice will start there and build up.`;
+      return `${name} answered ${at} in ${subject}, which is well behind ${year(record.yearLevel)}. Practice will start there and build up.`;
   }
 }

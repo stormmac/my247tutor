@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     plan: planFor(u),
     paidUntil: u.paidUntil,
     trialEndsAt: u.trialEndsAt,
+    curriculum: u.curriculum ?? "nsw",
   }));
   return Response.json({ users, me: result.user.id, billing: billingEnabled(), email: emailEnabled() });
 }

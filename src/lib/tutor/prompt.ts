@@ -2,6 +2,8 @@ import { z } from "zod";
 import { getOutcome } from "../curriculum/outcomes";
 import { SKILLS } from "../curriculum/skills";
 import { subtopicPath } from "../content/tree";
+import { US_SKILL_STANDARDS } from "../content/us";
+import { CURRICULA, type Curriculum, curriculumOf, toUS, yearName } from "../curriculum/curricula";
 import { TUTOR_NAME } from "./persona";
 
 /** Stable instructions shared by every tutor conversation (kept identical so it caches). */
@@ -47,42 +49,61 @@ export const TutorContextSchema = z.object({
   screen: z.string().max(1500).optional(),
   /** A check, test or timed game: Suni only encourages. */
   noHelp: z.boolean().optional(),
+  /** The child's curriculum. Missing means NSW. */
+  curriculum: z.enum(CURRICULA).optional(),
 });
 
 export type TutorContext = z.infer<typeof TutorContextSchema>;
 
 /** Per-session details, sent after the cached instructions. */
 export function buildContextPrompt(ctx: TutorContext): string {
-  const lines = [`Student: ${ctx.studentName}, Year ${ctx.yearLevel}.`, ...topicLines(ctx.skillId)];
+  const us = ctx.curriculum === "us";
+  // Questions are written in Australian English and shown to US students in US English.
+  const local = (text: string) => (us ? toUS(text) : text);
+  const lines = [`Student: ${ctx.studentName}, ${yearName(ctx.yearLevel, ctx.curriculum)}.`];
+  if (us)
+    lines.push(
+      "This student follows the US Common Core State Standards, not the NSW syllabus. Use US spelling (color, center, math), say Grade rather than Year, say math rather than maths, and use US school words. Refer to Common Core standards rather than NESA outcomes.",
+    );
+  lines.push(...topicLines(ctx.skillId, ctx.curriculum));
   if (ctx.screen) lines.push(`On the student's screen now: ${ctx.screen}`);
   if (ctx.noHelp)
     lines.push("This is a check, test or timed game. Do not give hints, answers or worked examples for it; just encourage them.");
   if (ctx.question) {
-    if (ctx.question.passage) lines.push(`Reading passage:\n${ctx.question.passage}`);
-    lines.push(`Practice question on screen: ${ctx.question.prompt}`);
+    if (ctx.question.passage) lines.push(`Reading passage:\n${local(ctx.question.passage)}`);
+    lines.push(`Practice question on screen: ${local(ctx.question.prompt)}`);
     lines.push(
       ctx.question.answered
-        ? `The student has already answered. The correct answer is ${ctx.question.correctAnswer}; you may now explain it fully.`
-        : `The correct answer is ${ctx.question.correctAnswer}. The student has NOT answered yet, so do not reveal it, even if asked directly. Hints already shown: ${ctx.question.hintsShown}.`,
+        ? `The student has already answered. The correct answer is ${local(ctx.question.correctAnswer)}; you may now explain it fully.`
+        : `The correct answer is ${local(ctx.question.correctAnswer)}. The student has NOT answered yet, so do not reveal it, even if asked directly. Hints already shown: ${ctx.question.hintsShown}.`,
     );
   }
-  if (ctx.writingTask) lines.push(`Writing task: ${ctx.writingTask}`);
+  if (ctx.writingTask) lines.push(`Writing task: ${local(ctx.writingTask)}`);
   return lines.join("\n");
 }
 
-function topicLines(id: string): string[] {
+function topicLines(id: string, curriculum?: Curriculum): string[] {
   const skill = SKILLS.find((s) => s.id === id);
   if (skill) {
     const outcome = getOutcome(skill.outcome);
-    return [
-      `Current skill: ${skill.title}. ${skill.description}`,
-      `NESA outcome: ${outcome.code} (${outcome.focusArea}: ${outcome.summary}).`,
-    ];
+    const usStandard = curriculum === "us" ? US_SKILL_STANDARDS[skill.id] : undefined;
+    return usStandard
+      ? [
+          `Current skill: ${toUS(skill.title)}. ${toUS(skill.description)}`,
+          `Common Core standard: ${usStandard} (${toUS(outcome.summary)}).`,
+        ]
+      : [
+          `Current skill: ${skill.title}. ${skill.description}`,
+          `NESA outcome: ${outcome.code} (${outcome.focusArea}: ${outcome.summary}).`,
+        ];
   }
-  const path = subtopicPath(id);
+  const path = subtopicPath(id, curriculumOf(curriculum));
   if (path) {
     const { subject, year, topic, subtopic } = path;
-    return [`Current topic: ${subject.name}, ${year.name}, ${topic.title}: ${subtopic.title}. ${subtopic.description}`];
+    const code = subtopic.outcome_code
+      ? ` (${curriculum === "us" ? "Common Core standard" : "NESA outcome"} ${subtopic.outcome_code})`
+      : "";
+    return [`Current topic: ${subject.name}, ${year.name}, ${topic.title}: ${subtopic.title}${code}. ${subtopic.description}`];
   }
   return [];
 }

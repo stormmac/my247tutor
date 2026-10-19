@@ -6,6 +6,7 @@
  * the question bank. The lesson itself is built in ../content/lesson.ts.
  */
 
+import { type Curriculum, curriculumOf } from "../curriculum/curricula";
 import type { Subject, YearLevel } from "../curriculum/types";
 import type { LearnerProfile } from "./model";
 
@@ -47,6 +48,8 @@ export interface LessonPart {
 export interface WeeklyLesson {
   /** The Monday the lesson belongs to, as yyyy-mm-dd in the child's time zone. */
   week: string;
+  /** The curriculum it was made for. Missing on lessons made before there was a choice (NSW). */
+  curriculum?: Curriculum;
   parts: LessonPart[];
 }
 
@@ -58,10 +61,10 @@ export function weekOf(now = Date.now()): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** This week's lesson in a subject, or null when it hasn't been made yet this week. */
+/** This week's lesson in a subject, or null when it hasn't been made yet this week (or the child changed curriculum). */
 export function currentLesson(profile: LearnerProfile, subject: Subject, now = Date.now()): WeeklyLesson | null {
   const lesson = profile.lessons?.[subject];
-  return lesson && lesson.week === weekOf(now) ? lesson : null;
+  return lesson && lesson.week === weekOf(now) && curriculumOf(lesson.curriculum) === curriculumOf(profile.curriculum) ? lesson : null;
 }
 
 /** The first part with questions still to answer, or -1 when the lesson is finished. */

@@ -6,18 +6,9 @@ import { Suspense } from "react";
 import { useSuniScreen } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { progressKey } from "@/lib/content/practice";
-import {
-  COUNTRIES,
-  NSW_ID,
-  STATES,
-  SUBJECT_IDS,
-  SUBJECTS,
-  questionsOf,
-  subtopicsOf,
-  topicsFor,
-  yearsWithContent,
-} from "@/lib/content/tree";
+import { questionsOf, subtopicPath, subtopicsOf, topicsFor, yearsWithContent } from "@/lib/content/tree";
 import type { Subtopic } from "@/lib/content/types";
+import { type Curriculum, curriculumOf, subjectName, yearName } from "@/lib/curriculum/curricula";
 import { getSkill } from "@/lib/curriculum/skills";
 import type { YearLevel } from "@/lib/curriculum/types";
 import { skillState, type LearnerProfile } from "@/lib/learner/model";
@@ -35,13 +26,15 @@ function Topics() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { profile, loaded } = useProfile();
+  const curriculum = curriculumOf(profile?.curriculum);
   const shownYear = (Number(searchParams.get("year")) || profile?.yearLevel || 3) as YearLevel;
   useSuniScreen(
     subject === "maths" || subject === "english"
       ? {
-          screen: `Browsing Year ${shownYear} ${subject === "maths" ? "maths" : "English"} topics to pick one to practise: ${topicsFor(
+          screen: `Browsing ${yearName(shownYear, curriculum)} ${subjectName(subject, curriculum)} topics to pick one to practise: ${topicsFor(
             subject,
             shownYear,
+            curriculum,
           )
             .map((t) => t.title)
             .join(", ")}.`,
@@ -62,22 +55,22 @@ function Topics() {
     );
   }
 
-  const years = yearsWithContent(subject);
+  const years = yearsWithContent(subject, curriculum);
   const asked = Number(searchParams.get("year"));
   const year: YearLevel = years.includes(asked as YearLevel)
     ? (asked as YearLevel)
     : years.includes(profile.yearLevel)
       ? profile.yearLevel
       : years[0];
-  const subjectRecord = SUBJECTS.find((s) => s.id === SUBJECT_IDS[subject])!;
-  const state = STATES.find((s) => s.id === NSW_ID)!;
-  const country = COUNTRIES.find((c) => c.id === state.country_id)!;
-  const label = subject === "maths" ? "Maths" : "English";
+  const topics = topicsFor(subject, year, curriculum);
+  // Where this subject sits in the curriculum's tree, such as Australia › New South Wales › Mathematics.
+  const path = subtopicPath(subtopicsOf(topics[0].id)[0].id, curriculum)!;
+  const label = subjectName(subject, curriculum);
 
   return (
     <div className="stack">
       <nav className="small muted" aria-label="Where you are">
-        {country.name} › {state.name} › {subjectRecord.name}
+        {path.country.name} › {path.state.name} › {path.subject.name}
       </nav>
       <div className="row spread">
         <h1 style={{ margin: 0 }}>{label} topics</h1>
@@ -95,12 +88,12 @@ function Topics() {
             className={`tab ${y === year ? "active" : ""}`}
             onClick={() => router.replace(`/learn/${subject}/topics?year=${y}`, { scroll: false })}
           >
-            Year {y}
+            {yearName(y, curriculum)}
           </button>
         ))}
       </div>
 
-      {topicsFor(subject, year).map((topic) => (
+      {topics.map((topic) => (
         <section key={topic.id} className="card stack">
           <div>
             <h2 style={{ margin: 0 }}>{topic.title}</h2>
@@ -110,7 +103,7 @@ function Topics() {
           </div>
           <ul className="subtopics">
             {subtopicsOf(topic.id).map((sub) => (
-              <SubtopicRow key={sub.id} subject={subject} subtopic={sub} profile={profile} />
+              <SubtopicRow key={sub.id} subject={subject} subtopic={sub} profile={profile} curriculum={curriculum} />
             ))}
           </ul>
         </section>
@@ -119,11 +112,21 @@ function Topics() {
   );
 }
 
-function SubtopicRow({ subject, subtopic, profile }: { subject: string; subtopic: Subtopic; profile: LearnerProfile }) {
+function SubtopicRow({
+  subject,
+  subtopic,
+  profile,
+  curriculum,
+}: {
+  subject: string;
+  subtopic: Subtopic;
+  profile: LearnerProfile;
+  curriculum: Curriculum;
+}) {
   const isWriting = subtopic.skill_id !== null && getSkill(subtopic.skill_id).practice === "writing";
   const st = skillState(profile, progressKey(subtopic));
   const started = st.attempts > 0 || st.mastered;
-  const written = questionsOf(subtopic.id).length;
+  const written = questionsOf(subtopic.id, curriculum).length;
   const kind = isWriting
     ? "Writing task"
     : subtopic.skill_id
@@ -136,6 +139,7 @@ function SubtopicRow({ subject, subtopic, profile }: { subject: string; subtopic
     <li className="subtopic">
       <div style={{ flex: 1 }}>
         <strong>{subtopic.title}</strong>
+        {subtopic.outcome_code && <span className="small muted"> · {subtopic.outcome_code}</span>}
         <div className="small muted">
           {kind}
           {!isWriting && (st.mastered ? " · Mastered" : started ? ` · Strength ${Math.round(st.mastery * 100)}%` : "")}

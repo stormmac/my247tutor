@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 /** Switches between the admin pages. */
-export function AdminTabs({ current }: { current: "accounts" | "curriculum" | "suni" }) {
+export function AdminTabs({ current }: { current: "accounts" | "students" | "curriculum" | "suni" }) {
   return (
     <nav className="tabs" aria-label="Admin">
       <Link
@@ -10,6 +10,13 @@ export function AdminTabs({ current }: { current: "accounts" | "curriculum" | "s
         aria-current={current === "accounts" ? "page" : undefined}
       >
         Accounts
+      </Link>
+      <Link
+        href="/admin/students"
+        className={`tab ${current === "students" ? "active" : ""}`}
+        aria-current={current === "students" ? "page" : undefined}
+      >
+        Students
       </Link>
       <Link
         href="/admin/curriculum"

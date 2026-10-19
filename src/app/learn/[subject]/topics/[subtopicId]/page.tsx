@@ -6,17 +6,20 @@ import { FocusedPractice } from "@/components/FocusedPractice";
 import { useSuniScreen } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { subtopicPath } from "@/lib/content/tree";
+import { curriculumOf, toUS } from "@/lib/curriculum/curricula";
 import { getSkill } from "@/lib/curriculum/skills";
 import { WRITING_TASKS } from "@/lib/english/bank";
 
 export default function SubtopicPage() {
   const { subject, subtopicId } = useParams<{ subject: string; subtopicId: string }>();
   const { profile, setProfile, loaded } = useProfile();
-  const path = subtopicPath(subtopicId);
+  const curriculum = curriculumOf(profile?.curriculum);
+  const path = subtopicPath(subtopicId, curriculum);
   const writingSkill = path?.subtopic.skill_id ? getSkill(path.subtopic.skill_id) : null;
+  const local = (text: string) => (curriculum === "us" ? toUS(text) : text);
   useSuniScreen(
     writingSkill?.practice === "writing"
-      ? { screen: `A writing topic, ${path!.subtopic.title}. The task: ${WRITING_TASKS[writingSkill.id][0].prompt}` }
+      ? { screen: `A writing topic, ${path!.subtopic.title}. The task: ${local(WRITING_TASKS[writingSkill.id][0].prompt)}` }
       : null,
   );
 
@@ -52,7 +55,7 @@ export default function SubtopicPage() {
           <p className="muted" style={{ margin: 0 }}>
             {subtopic.description}
           </p>
-          <p>{WRITING_TASKS[skill.id][0].prompt}</p>
+          <p>{local(WRITING_TASKS[skill.id][0].prompt)}</p>
           <Link className="btn" href={`/learn/writing?skill=${skill.id}`}>
             Start writing
           </Link>

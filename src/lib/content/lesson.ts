@@ -1,3 +1,4 @@
+import { type Curriculum, curriculumOf, DEFAULT_CURRICULUM, yearName } from "../curriculum/curricula";
 import { getSkill } from "../curriculum/skills";
 import type { Subject, YearLevel } from "../curriculum/types";
 import {
@@ -22,11 +23,11 @@ const UNKNOWN = 0.5;
 const rank = (q: ContentQuestion) => DIFFICULTIES.indexOf(q.difficulty);
 
 /** Subtopics in a year that have written questions to practise (writing tasks don't). */
-function practiseable(subject: Subject, year: YearLevel) {
-  return topicsFor(subject, year).map((topic) => ({
+function practiseable(subject: Subject, year: YearLevel, curriculum: Curriculum) {
+  return topicsFor(subject, year, curriculum).map((topic) => ({
     topic,
     subtopics: subtopicsOf(topic.id).filter(
-      (s) => !(s.skill_id && getSkill(s.skill_id).practice === "writing") && questionsOf(s.id).length > 0,
+      (s) => !(s.skill_id && getSkill(s.skill_id).practice === "writing") && questionsOf(s.id, curriculum).length > 0,
     ),
   }));
 }
@@ -44,14 +45,14 @@ export function subtopicStrength(profile: LearnerProfile, subtopic: Subtopic): n
 }
 
 /** Twenty questions spread across the year's subtopics, easy to hard. */
-function review(subject: Subject, year: YearLevel, rng: Rng): string[] {
-  const subtopics = rng.shuffle(practiseable(subject, year).flatMap((t) => t.subtopics));
+function review(subject: Subject, year: YearLevel, rng: Rng, curriculum: Curriculum): string[] {
+  const subtopics = rng.shuffle(practiseable(subject, year, curriculum).flatMap((t) => t.subtopics));
   if (!subtopics.length) return [];
   const used = new Set<string>();
   const picked: ContentQuestion[] = [];
   for (let i = 0; picked.length < REVIEW_QUESTIONS && i < REVIEW_QUESTIONS * 4; i++) {
     const level = REVIEW_LEVELS[Math.floor((picked.length * REVIEW_LEVELS.length) / REVIEW_QUESTIONS)];
-    const pool = questionsOf(subtopics[i % subtopics.length].id).filter((q) => !used.has(q.id));
+    const pool = questionsOf(subtopics[i % subtopics.length].id, curriculum).filter((q) => !used.has(q.id));
     const atLevel = pool.filter((q) => q.difficulty === level);
     const q = atLevel.length ? rng.pick(atLevel) : pool.length ? rng.pick(pool) : null;
     if (!q) continue;
@@ -62,8 +63,8 @@ function review(subject: Subject, year: YearLevel, rng: Rng): string[] {
 }
 
 /** Ten questions on one subtopic: two at each level, very easy to very hard. */
-function activity(subtopic: Subtopic, rng: Rng): string[] {
-  const questions = questionsOf(subtopic.id);
+function activity(subtopic: Subtopic, rng: Rng, curriculum: Curriculum): string[] {
+  const questions = questionsOf(subtopic.id, curriculum);
   const perLevel = ACTIVITY_QUESTIONS / DIFFICULTIES.length;
   const picked = DIFFICULTIES.flatMap((d) => rng.shuffle(questions.filter((q) => q.difficulty === d)).slice(0, perLevel));
   // A subtopic short of a level fills up from the rest, still easiest first.
@@ -79,7 +80,7 @@ function activity(subtopic: Subtopic, rng: Rng): string[] {
  * A topic's strength is the average of its subtopics', and the activity is its weakest subtopic.
  */
 export function weakestSubtopics(profile: LearnerProfile, subject: Subject, count = 2): { topic: string; subtopic: Subtopic }[] {
-  const topics = practiseable(subject, profile.yearLevel)
+  const topics = practiseable(subject, profile.yearLevel, curriculumOf(profile.curriculum))
     .filter((t) => t.subtopics.length)
     .map((t) => {
       const scored = t.subtopics
@@ -99,27 +100,39 @@ export function buildLesson(profile: LearnerProfile, subject: Subject, now = Dat
   const week = weekOf(now);
   const rng = new Rng(hash(`${profile.id ?? profile.name}:${subject}:${week}`));
   const reviewYear = Math.max(1, profile.yearLevel - 1) as YearLevel;
+  const curriculum = curriculumOf(profile.curriculum);
   const parts: LessonPart[] = [
-    { kind: "review", title: `Year ${reviewYear} review`, year: reviewYear, questionIds: review(subject, reviewYear, rng), results: [] },
+    {
+      kind: "review",
+      title: `${yearName(reviewYear, curriculum)} review`,
+      year: reviewYear,
+      questionIds: review(subject, reviewYear, rng, curriculum),
+      results: [],
+    },
     ...weakestSubtopics(profile, subject).map(({ topic, subtopic }): LessonPart => ({
       kind: "activity",
       title: topic === subtopic.title ? topic : `${topic}: ${subtopic.title}`,
       year: profile.yearLevel,
       subtopicId: subtopic.id,
-      questionIds: activity(subtopic, rng),
+      questionIds: activity(subtopic, rng, curriculum),
       results: [],
     })),
   ];
-  return { week, parts: parts.filter((p) => p.questionIds.length) };
+  return { week, curriculum, parts: parts.filter((p) => p.questionIds.length) };
 }
 
 /**
  * Skill builder questions for a missed question: others from its subtopic, closest in difficulty
  * first, leaving out the ones in this week's lesson so none is seen early.
  */
-export function skillBuilder(missed: ContentQuestion, lessonIds: string[], rng: Rng): string[] {
+export function skillBuilder(
+  missed: ContentQuestion,
+  lessonIds: string[],
+  rng: Rng,
+  curriculum: Curriculum = DEFAULT_CURRICULUM,
+): string[] {
   const skip = new Set([missed.id, ...lessonIds]);
-  const pool = questionsOf(missed.subtopic_id).filter((q) => !skip.has(q.id));
+  const pool = questionsOf(missed.subtopic_id, curriculum).filter((q) => !skip.has(q.id));
   const distance = (q: ContentQuestion) => Math.abs(rank(q) - rank(missed));
   const byLevel = DIFFICULTIES.map((_, gap) => rng.shuffle(pool.filter((q) => distance(q) === gap)));
   return byLevel
