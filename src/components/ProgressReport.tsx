@@ -32,6 +32,8 @@ import { describeTables, SPEEDS, tablesOf, trickyFacts } from "@/lib/tables/game
 import { UNITS } from "@/lib/phonics/sequence";
 import { COMPETENCY_LABELS, competency, recommendedPlan, subjectLevel, type Competency, type Standing } from "@/lib/learner/report";
 import { SuniChatsReport } from "@/components/SuniChats";
+import { programFor, streamSubtopics } from "@/lib/content/program";
+import { focusStreams, PASS_MARK, STREAM_NAMES } from "@/lib/learner/program";
 
 /**
  * A learner's progress report: this week's practice, the starting assessments, recent questions,
@@ -363,6 +365,7 @@ function StartingReport({
       </div>
       <p style={{ margin: 0, fontSize: 18 }}>{summarySentence(record, profile.name)}</p>
       <LevelLadder record={record} />
+      <WorkProgramReport profile={profile} subject={subject} />
       <div className="grid grid-2">
         <div>
           <h3>Strengths</h3>
@@ -445,6 +448,63 @@ function StartingReport({
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The work program from the assessment: the year each stream is at, how much of it is passed, and
+ * which streams the lessons are on now.
+ */
+function WorkProgramReport({ profile, subject }: { profile: LearnerProfile; subject: Subject }) {
+  const program = programFor(profile, subject);
+  if (!program) return null;
+  const curriculum = curriculumOf(profile.curriculum);
+  const focus = new Set(focusStreams(program, profile.yearLevel).map((s) => s.stream));
+  const year = (y: number) => yearName(y, curriculum);
+  return (
+    <div className="stack" style={{ gap: 6 }}>
+      <h3 style={{ margin: 0 }}>Work program</h3>
+      <p className="small muted" style={{ margin: 0 }}>
+        It started at {year(program.startYear)}.{" "}
+        {subject === "maths"
+          ? `The lessons work on the two areas ${profile.name} found hardest in the check.`
+          : `The lessons work on ${profile.name}'s weakest English topics.`}{" "}
+        An activity is passed with over {PASS_MARK * 100}% right first go, and an area moves up a {yearWord(curriculum)} once all its topics
+        for that {yearWord(curriculum)} are passed.
+      </p>
+      <div className="table-scroll">
+        <table className="results-table">
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>In the check</th>
+              <th>Working at</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {program.streams.map((s) => {
+              const caughtUp = s.year > profile.yearLevel;
+              const total = streamSubtopics(subject, s.stream, s.year, curriculum).length;
+              return (
+                <tr key={s.stream}>
+                  <td>{STREAM_NAMES[s.stream]}</td>
+                  <td data-label="In the check">{s.asked ? `${s.right} of ${s.asked} right` : "Not asked"}</td>
+                  <td data-label="Working at">
+                    {caughtUp ? `Caught up to ${year(profile.yearLevel)}` : `${year(s.year)}, ${s.passed.length} of ${total} passed`}
+                  </td>
+                  <td>
+                    <span className={`pill ${caughtUp ? "good" : focus.has(s.stream) ? "warn" : ""}`}>
+                      {caughtUp ? "Done" : focus.has(s.stream) ? "Working on now" : "Coming up"}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

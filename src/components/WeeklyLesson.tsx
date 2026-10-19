@@ -7,9 +7,10 @@ import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components
 import { questionFocus, useSuniFocus, useSuniSay, useSuniScreen } from "@/components/SuniCompanion";
 import type { useProfile } from "@/components/useProfile";
 import { buildLesson, skillBuilder } from "@/lib/content/lesson";
+import { advanceProgram, ensureProgram, programFor, streamSubtopics } from "@/lib/content/program";
 import { progressKey, toPracticeQuestion } from "@/lib/content/practice";
 import { QUESTIONS, subtopicPath } from "@/lib/content/tree";
-import { type Curriculum, curriculumOf, localeOf, subjectName, yearName } from "@/lib/curriculum/curricula";
+import { type Curriculum, curriculumOf, localeOf, subjectName, yearName, yearWord } from "@/lib/curriculum/curricula";
 import { hasSkillPath, type Subject } from "@/lib/curriculum/types";
 import {
   LESSON_TRIES,
@@ -23,6 +24,7 @@ import {
   type LessonResult,
 } from "@/lib/learner/lesson";
 import { recordAttempt, type LearnerProfile } from "@/lib/learner/model";
+import { focusStreams, moveUpMessage, PASS_MARK, STREAM_NAMES, type MoveUp } from "@/lib/learner/program";
 import { answerText } from "@/lib/practice";
 import { Rng, randomSeed } from "@/lib/practice/rng";
 
@@ -36,7 +38,35 @@ const COLOUR_WORDS = { good: "right first go", warn: "right on a later go", bad:
 function describe(part: LessonPart, curriculum: Curriculum): string {
   return part.kind === "review"
     ? `${part.questionIds.length} questions from ${yearName(part.year, curriculum)} to keep earlier skills sharp.`
-    : `${part.questionIds.length} questions, easy to hard, on something to work on.`;
+    : `${part.questionIds.length} questions, easy to hard, on something to work on. Get over ${PASS_MARK * 100}% right first go to pass it.`;
+}
+
+/** The streams the lessons are working on, and how far through each year's work the child is. */
+function ProgramLine({ subject, profile }: { subject: Subject; profile: LearnerProfile }) {
+  const program = programFor(profile, subject);
+  if (!program) return null;
+  const curriculum = curriculumOf(profile.curriculum);
+  const focus = focusStreams(program, profile.yearLevel);
+  if (!focus.length)
+    return (
+      <p className="small muted" style={{ margin: 0 }}>
+        Your plan: you&apos;ve caught up to {yearName(profile.yearLevel, curriculum)} in everything, so the activities are on what you find
+        hardest.
+      </p>
+    );
+  return (
+    <p className="small muted" style={{ margin: 0 }}>
+      Your plan:{" "}
+      {focus
+        .map((s) => {
+          const total = streamSubtopics(subject, s.stream, s.year, curriculum).length;
+          const name = subject === "english" ? "English" : STREAM_NAMES[s.stream];
+          return `${yearName(s.year, curriculum)} ${name} (${s.passed.length} of ${total} passed)`;
+        })
+        .join(" and ")}
+      . Pass them all to move up a {yearWord(curriculum)}.
+    </p>
+  );
 }
 
 /** Numbered boxes, one per question: green right first go, yellow right on a later go, red not right. */
@@ -85,10 +115,17 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
   const lesson = currentLesson(profile, subject);
   // The part being worked on. Fixed while it runs, so the last answer's feedback stays on screen.
   const [running, setRunning] = useState<number | null>(null);
+  // Streams that moved up while the child was doing a part, shown back on the plan.
+  const [moved, setMoved] = useState<MoveUp[]>([]);
 
   // A new week (or a first visit) makes a new lesson from how the child is going now.
   useEffect(() => {
-    if (!lesson) setProfile((p) => (currentLesson(p, subject) ? p : saveLesson(p, subject, buildLesson(p, subject))));
+    if (!lesson)
+      setProfile((p) => {
+        // Children assessed before there were work programs get theirs now.
+        const q = ensureProgram(p, subject);
+        return currentLesson(q, subject) ? q : saveLesson(q, subject, buildLesson(q, subject));
+      });
   }, [lesson, subject, setProfile]);
 
   useSuniScreen(
@@ -110,6 +147,7 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
         part={running}
         profile={profile}
         setProfile={setProfile}
+        onMoveUp={(m) => setMoved((all) => [...all, ...m])}
         onStop={() => setRunning(null)}
       />
     );
@@ -130,6 +168,13 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
       <p className="muted" style={{ margin: 0 }}>
         For the week starting {monday}. Do the parts in any order. A new lesson is ready every Monday.
       </p>
+      <ProgramLine subject={subject} profile={profile} />
+      {moved.map((m) => (
+        <div key={`${m.stream}-${m.year}`} className="feedback good">
+          <strong>{moveUpMessage(m, subject, (y) => yearName(y, curriculum))}</strong>{" "}
+          {m.caughtUp ? "Next week's lesson moves on to something new." : "Next week's lesson has the new work."}
+        </div>
+      ))}
       <div className="progress" aria-label={`${done} of ${total} questions done`}>
         <div style={{ width: `${Math.round((done / Math.max(1, total)) * 100)}%` }} />
       </div>
@@ -193,12 +238,14 @@ function LessonPartView({
   part,
   profile,
   setProfile,
+  onMoveUp,
   onStop,
 }: {
   subject: Subject;
   part: number;
   profile: LearnerProfile;
   setProfile: SetProfile;
+  onMoveUp: (moved: MoveUp[]) => void;
   onStop: () => void;
 }) {
   const lessonPart = currentLesson(profile, subject)!.parts[part];
@@ -260,8 +307,11 @@ function LessonPartView({
       setProfile(updated);
       setBuilder({ ...builder, results: [...builder.results, result] });
     } else {
-      setProfile(recordLessonAnswer(updated, subject, part, index, result));
+      // Finishing an activity over 75% passes its subtopic, and can move the stream up a year.
+      const { profile: advanced, moved } = advanceProgram(recordLessonAnswer(updated, subject, part, index, result), subject);
+      setProfile(advanced);
       setLastResult(result);
+      if (moved.length) onMoveUp(moved);
     }
     if (o.correct) say(praise(o, profile.name));
     else if (!builder) say("That one was tricky. Next, a skill builder: a few more like it to practise.");

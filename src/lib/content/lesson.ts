@@ -1,5 +1,4 @@
 import { type Curriculum, curriculumOf, DEFAULT_CURRICULUM, yearName } from "../curriculum/curricula";
-import { getSkill } from "../curriculum/skills";
 import type { Subject, YearLevel } from "../curriculum/types";
 import {
   ACTIVITY_QUESTIONS,
@@ -10,9 +9,11 @@ import {
   type WeeklyLesson,
 } from "../learner/lesson";
 import { skillState, type LearnerProfile } from "../learner/model";
+import { focusStreams, type WorkProgram } from "../learner/program";
+import { practiseable, programFor, streamSubtopics } from "./program";
 import { Rng } from "../practice/rng";
 import { progressKey } from "./practice";
-import { questionsOf, subtopicsOf, topicsFor } from "./tree";
+import { questionsOf } from "./tree";
 import { DIFFICULTIES, type ContentQuestion, type Difficulty, type Subtopic } from "./types";
 
 /** The warm-up is revision, so it leaves out the very easy and very hard levels. */
@@ -21,16 +22,6 @@ const REVIEW_LEVELS: Difficulty[] = ["easy", "medium", "hard"];
 const UNKNOWN = 0.5;
 
 const rank = (q: ContentQuestion) => DIFFICULTIES.indexOf(q.difficulty);
-
-/** Subtopics in a year that have written questions to practise (writing tasks don't). */
-function practiseable(subject: Subject, year: YearLevel, curriculum: Curriculum) {
-  return topicsFor(subject, year, curriculum).map((topic) => ({
-    topic,
-    subtopics: subtopicsOf(topic.id).filter(
-      (s) => !(s.skill_id && getSkill(s.skill_id).practice === "writing") && questionsOf(s.id, curriculum).length > 0,
-    ),
-  }));
-}
 
 /**
  * How well the child can do a subtopic, 0 to 1: mastery from practice, otherwise how they went on
@@ -45,7 +36,7 @@ export function subtopicStrength(profile: LearnerProfile, subtopic: Subtopic): n
 }
 
 /** Twenty questions spread across the year's subtopics, easy to hard. */
-function review(subject: Subject, year: YearLevel, rng: Rng, curriculum: Curriculum): string[] {
+function reviewQuestions(subject: Subject, year: YearLevel, rng: Rng, curriculum: Curriculum): string[] {
   const subtopics = rng.shuffle(practiseable(subject, year, curriculum).flatMap((t) => t.subtopics));
   if (!subtopics.length) return [];
   const used = new Set<string>();
@@ -95,30 +86,76 @@ export function weakestSubtopics(profile: LearnerProfile, subject: Subject, coun
   return picks;
 }
 
-/** Makes this week's lesson. The seed makes it the same for a child however often it is rebuilt in a week. */
+/** An activity: ten questions on one subtopic. */
+function activityPart(topic: string, subtopic: Subtopic, year: YearLevel, rng: Rng, curriculum: Curriculum, label?: string): LessonPart {
+  const title = topic === subtopic.title ? topic : `${topic}: ${subtopic.title}`;
+  return {
+    kind: "activity",
+    title: label ? `${title} (${label})` : title,
+    year,
+    subtopicId: subtopic.id,
+    questionIds: activity(subtopic, rng, curriculum),
+    results: [],
+  };
+}
+
+/**
+ * The activities from the work program: the weakest subtopic not passed yet in each of the two
+ * focus streams, at the stream's year. With one stream left, both come from it. Null when every
+ * stream is caught up.
+ */
+function programActivities(profile: LearnerProfile, subject: Subject, program: WorkProgram, rng: Rng): LessonPart[] | null {
+  const curriculum = curriculumOf(profile.curriculum);
+  const focus = focusStreams(program, profile.yearLevel);
+  if (!focus.length) return null;
+  const queues = focus.map((s) => {
+    const all = streamSubtopics(subject, s.stream, s.year, curriculum)
+      .map((x) => ({ ...x, strength: subtopicStrength(profile, x.subtopic) }))
+      .sort((a, b) => a.strength - b.strength);
+    // Ones still to pass first, then the rest in case a stream is short.
+    return {
+      stream: s,
+      items: [...all.filter((x) => !s.passed.includes(x.subtopic.id)), ...all.filter((x) => s.passed.includes(x.subtopic.id))],
+    };
+  });
+  const parts: LessonPart[] = [];
+  const used = new Set<string>();
+  for (let round = 0; parts.length < 2 && round < 2; round++)
+    for (const q of queues) {
+      const next = q.items.find((x) => !used.has(x.subtopic.id));
+      if (!next || parts.length >= 2) continue;
+      used.add(next.subtopic.id);
+      // Work below the child's own year says which year it is, such as "(Year 4)".
+      const label = q.stream.year < profile.yearLevel ? yearName(q.stream.year, curriculum) : undefined;
+      parts.push(activityPart(next.topic.title, next.subtopic, q.stream.year as YearLevel, rng, curriculum, label));
+    }
+  return parts.length ? parts : null;
+}
+
+/**
+ * Makes this week's lesson. The seed makes it the same for a child however often it is rebuilt in a week.
+ * With a work program the activities come from it; otherwise they are the weakest subtopics in the child's year.
+ */
 export function buildLesson(profile: LearnerProfile, subject: Subject, now = Date.now()): WeeklyLesson {
   const week = weekOf(now);
   const rng = new Rng(hash(`${profile.id ?? profile.name}:${subject}:${week}`));
-  const reviewYear = Math.max(1, profile.yearLevel - 1) as YearLevel;
   const curriculum = curriculumOf(profile.curriculum);
-  const parts: LessonPart[] = [
-    {
-      kind: "review",
-      title: `${yearName(reviewYear, curriculum)} review`,
-      year: reviewYear,
-      questionIds: review(subject, reviewYear, rng, curriculum),
-      results: [],
-    },
-    ...weakestSubtopics(profile, subject).map(({ topic, subtopic }): LessonPart => ({
-      kind: "activity",
-      title: topic === subtopic.title ? topic : `${topic}: ${subtopic.title}`,
-      year: profile.yearLevel,
-      subtopicId: subtopic.id,
-      questionIds: activity(subtopic, rng, curriculum),
-      results: [],
-    })),
-  ];
-  return { week, curriculum, parts: parts.filter((p) => p.questionIds.length) };
+  const program = programFor(profile, subject);
+  const focus = program ? focusStreams(program, profile.yearLevel) : [];
+  // The warm-up is the year below the work: the child's own year, or the lowest year the program is at.
+  const workYear = focus.length ? Math.min(profile.yearLevel, ...focus.map((s) => s.year)) : profile.yearLevel;
+  const reviewYear = Math.max(1, workYear - 1) as YearLevel;
+  const review: LessonPart = {
+    kind: "review",
+    title: `${yearName(reviewYear, curriculum)} review`,
+    year: reviewYear,
+    questionIds: reviewQuestions(subject, reviewYear, rng, curriculum),
+    results: [],
+  };
+  const activities =
+    (program && programActivities(profile, subject, program, rng)) ??
+    weakestSubtopics(profile, subject).map(({ topic, subtopic }) => activityPart(topic, subtopic, profile.yearLevel, rng, curriculum));
+  return { week, curriculum, parts: [review, ...activities].filter((p) => p.questionIds.length) };
 }
 
 /**

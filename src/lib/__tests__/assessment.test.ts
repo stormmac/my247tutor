@@ -15,6 +15,7 @@ import {
   type AssessmentState,
 } from "../learner/assessment";
 import { newProfile } from "../learner/model";
+import { YEARS } from "../curriculum/types";
 import { Rng } from "../practice/rng";
 
 const T0 = Date.UTC(2026, 9, 14);
@@ -32,17 +33,20 @@ function run(subject: "maths" | "english", year: 3 | 4 | 5 | 6, answer: (s: Asse
 }
 
 describe("starting assessment", () => {
-  it("starts two years below the student's year, at level 1, but not below Year 3", () => {
-    expect([3, 4, 5, 6].map((y) => startYearFor(y as 3 | 4 | 5 | 6))).toEqual([3, 3, 3, 4]);
+  it("starts two years below the student's year, at level 1, but not below Year 1", () => {
+    expect(YEARS.map((y) => startYearFor(y))).toEqual([1, 1, 1, 2, 3, 4, 5, 6]);
     const s = startAssessment("maths", 6);
     expect(s.steps[0]).toEqual({ year: 4, level: 1 });
-    expect(s.steps.at(-1)).toEqual({ year: 6, level: 5 });
+    // A year above their own, so a student who is ahead can show it.
+    expect(s.steps.at(-1)).toEqual({ year: 7, level: 5 });
     expect(startAssessment("english", 4).steps.at(-1)).toEqual({ year: 5, level: 5 });
+    expect(startAssessment("maths", 8).steps.at(-1)).toEqual({ year: 8, level: 5 });
+    expect(startAssessment("english", 1).steps[0]).toEqual({ year: 1, level: 1 });
   });
 
   it("has written questions at every step, in both subjects", () => {
     for (const subject of ["maths", "english"] as const)
-      for (const year of [3, 4, 5, 6] as const)
+      for (const year of YEARS)
         for (const step of startAssessment(subject, year).steps)
           expect(questionsAt(subject, step).length, `${subject} ${step.year} ${step.level}`).toBeGreaterThan(5);
   });
@@ -67,8 +71,8 @@ describe("starting assessment", () => {
     const { record } = run("english", 4, () => false);
     expect(record.reached).toBeNull();
     expect(record.answers).toHaveLength(2);
-    expect(record.stoppedAt).toEqual({ year: 3, level: 1 });
-    expect(summarySentence(record, "Ava")).toContain("found the very easy Year 3 English questions tricky");
+    expect(record.stoppedAt).toEqual({ year: 2, level: 1 });
+    expect(summarySentence(record, "Ava")).toContain("found the very easy Year 2 English questions tricky");
   });
 
   it("asks a third question when a step is split, and passes it on two of three", () => {

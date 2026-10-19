@@ -6,6 +6,7 @@ import type { AssessmentRecord } from "./assessment";
 import type { ReadingProgress } from "../phonics/progress";
 import type { TablesRecord } from "../tables/game";
 import type { WeeklyLesson } from "./lesson";
+import type { WorkProgram } from "./program";
 
 export interface SkillState {
   /** Estimated probability the student can do this skill unaided, 0–1. */
@@ -74,6 +75,8 @@ export interface LearnerProfile {
   tables?: TablesRecord;
   /** This week's lesson in each subject. Missing until the first lesson. */
   lessons?: Partial<Record<Subject, WeeklyLesson>>;
+  /** The work program from the starting assessment in each subject. Missing until the assessment. */
+  programs?: Partial<Record<Subject, WorkProgram>>;
   /** Which curriculum the child learns. Missing means NSW. On an account, the saved copy decides (see auth/learners.ts). */
   curriculum?: Curriculum;
 }
