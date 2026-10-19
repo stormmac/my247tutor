@@ -59,8 +59,6 @@ function SubjectLearning() {
       </div>
     );
   }
-  // Years 1–2 and 7–8 have no starting check: their lesson starts straight away.
-  if (!hasSkillPath(profile.yearLevel)) return <WeeklyLesson subject={subject} profile={profile} setProfile={setProfile} />;
   if (thanks) return <AssessmentThanks name={profile.name} record={thanks} onContinue={() => setThanks(null)} />;
   if (!profile.placementDone[subject]) {
     return (
@@ -77,7 +75,8 @@ function SubjectLearning() {
       />
     );
   }
-  if (freePractice) return <Practice subject={subject} profile={profile} setProfile={setProfile} />;
+  // Years 1–2 and 7–8 have no skill path, so free practice is their year's topics instead.
+  if (freePractice && hasSkillPath(profile.yearLevel)) return <Practice subject={subject} profile={profile} setProfile={setProfile} />;
   return <WeeklyLesson subject={subject} profile={profile} setProfile={setProfile} />;
 }
 

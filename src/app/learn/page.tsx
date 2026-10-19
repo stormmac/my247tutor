@@ -158,7 +158,7 @@ function TablesCard({ profile }: { profile: LearnerProfile }) {
 }
 
 function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
-  // Years 1–2 and 7–8 have no starting check or skill map; their lesson comes from the topic tree.
+  // Years 1–2 and 7–8 have no skill map; they practise their year's topics.
   if (!hasSkillPath(profile.yearLevel)) return <TopicsCard profile={profile} subject={subject} title={title} />;
   const skills = skillsFor(subject).filter((s) => s.practice !== "writing");
   const mastered = skills.filter((s) => skillState(profile, s.id).mastered).length;
@@ -203,17 +203,18 @@ function lessonLine(profile: LearnerProfile, subject: Subject): string {
   return done ? `This week's lesson: ${done} of ${total} questions done.` : `This week's lesson is ready: ${total} questions.`;
 }
 
-/** A Year 1 or 2 learner's subject: the weekly lesson, and their year's topics to practise. */
+/** A Year 1–2 or 7–8 learner's subject: the weekly lesson, and their year's topics to practise. */
 function TopicsCard({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
+  const placed = profile.placementDone[subject];
   return (
     <div className="card stack">
       <h2 style={{ margin: 0 }}>{title}</h2>
       <p className="muted" style={{ margin: 0 }}>
-        {lessonLine(profile, subject)}
+        {placed ? lessonLine(profile, subject) : "Start with a short check. It begins easy and gets harder, so we know where to begin."}
       </p>
       <div className="row">
         <Link href={`/learn/${subject}`} className="btn">
-          This week&apos;s lesson
+          {placed ? "This week's lesson" : "Start the check"}
         </Link>
         <Link href={`/learn/${subject}/topics?year=${profile.yearLevel}`} className="btn secondary">
           Choose a topic
@@ -290,9 +291,7 @@ function Setup({
         <p className="muted small" style={{ margin: "8px 0 0" }}>
           {year === null
             ? "Their first check starts two years below this, then moves up to find their level."
-            : !hasSkillPath(year)
-              ? "They start straight away with a weekly lesson."
-              : `Their first check starts at ${yearName(Math.max(3, year - 2), curriculum)} and moves up to find their level.`}
+            : `Their first check starts at ${yearName(Math.max(1, year - 2), curriculum)} and moves up to find their level.`}
         </p>
       </fieldset>
       <button className="btn" disabled={!ready}>

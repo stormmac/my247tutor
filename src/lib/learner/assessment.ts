@@ -1,7 +1,8 @@
 /**
  * The starting assessment every new student takes in each subject. It uses the written question
  * bank in the topic tree, picked at random (no AI), starting at competency level 1 (very easy)
- * two years below the student's year and climbing until the questions get too hard.
+ * two years below the student's year (or Year 1) and climbing until the questions get too hard.
+ * The work program (./program.ts) is made from the result.
  *
  * Each step is one year and one competency level. The levels are the bank's five difficulties;
  * the climb visits levels 1, 3 and 5 of each year so it stays short. Two questions are asked at a
@@ -13,12 +14,14 @@ import { questionsOf, subtopicPath, subtopicsOf, topicsFor } from "../content/tr
 import { DIFFICULTIES, type ContentQuestion, type Difficulty } from "../content/types";
 import type { AttemptDetails, AttemptRecord, LearnerProfile } from "./model";
 import { skillState } from "./model";
+import { makeProgram } from "../content/program";
 
 export type Level = 1 | 2 | 3 | 4 | 5;
 export const LEVEL_NAMES: Record<Level, string> = { 1: "very easy", 2: "easy", 3: "medium", 4: "hard", 5: "very hard" };
 const CLIMB: Level[] = [1, 3, 5];
-/** The lowest year the question bank covers. */
-const FIRST_YEAR = 3;
+/** The lowest and highest years the question bank covers. */
+const FIRST_YEAR = 1;
+const LAST_YEAR = 8;
 export const MAX_QUESTIONS = 30;
 
 export interface Step {
@@ -74,7 +77,7 @@ export interface AssessmentRecord {
 
 const difficultyOf = (level: Level): Difficulty => DIFFICULTIES[level - 1];
 
-/** Two years below the student's year, or Year 3, where the question bank starts. */
+/** Two years below the student's year, or Year 1, where the question bank starts. */
 export function startYearFor(yearLevel: YearLevel): YearLevel {
   return Math.max(FIRST_YEAR, yearLevel - 2) as YearLevel;
 }
@@ -91,7 +94,7 @@ export function questionsAt(subject: Subject, step: Step, curriculum: Curriculum
 export function startAssessment(subject: Subject, yearLevel: YearLevel, curriculum: Curriculum = DEFAULT_CURRICULUM): AssessmentState {
   const startYear = startYearFor(yearLevel);
   // Up to a year above their own, so a student who is ahead can show it.
-  const lastYear = Math.min(6, yearLevel + 1);
+  const lastYear = Math.min(LAST_YEAR, yearLevel + 1);
   const steps: Step[] = [];
   for (let year = startYear; year <= lastYear; year++)
     for (const level of CLIMB)
@@ -167,8 +170,8 @@ const REVIEW_DAYS = 3;
 
 /**
  * Saves a finished assessment: the record for the parents page, each answer in the question
- * history, and skills that only appear in years the student has passed marked as known, so
- * practice starts where they are.
+ * history, skills that only appear in years the student has passed marked as known, and the work
+ * program, so practice starts where they are.
  */
 export function applyAssessment(profile: LearnerProfile, record: AssessmentRecord): LearnerProfile {
   const reached = record.reached;
@@ -177,7 +180,7 @@ export function applyAssessment(profile: LearnerProfile, record: AssessmentRecor
     // A year counts as passed once its hardest level is passed.
     const passedYear = reached.level === 5 ? reached.year : reached.year - 1;
     const years = new Map<string, number>();
-    for (let year = FIRST_YEAR; year <= 6; year++)
+    for (let year = FIRST_YEAR; year <= LAST_YEAR; year++)
       for (const t of topicsFor(record.subject, year as YearLevel, curriculumOf(profile.curriculum)))
         for (const s of subtopicsOf(t.id)) if (s.skill_id) years.set(s.skill_id, Math.max(years.get(s.skill_id) ?? 0, year));
     for (const [id, lastYear] of years) {
@@ -206,6 +209,7 @@ export function applyAssessment(profile: LearnerProfile, record: AssessmentRecor
     skills,
     history: [...profile.history, ...history].slice(-1000),
     placementDone: { ...profile.placementDone, [record.subject]: true },
+    programs: { ...profile.programs, [record.subject]: makeProgram({ ...record, yearLevel: profile.yearLevel }) },
     assessments: [...(profile.assessments ?? []).filter((a) => a.subject !== record.subject), record],
   };
 }

@@ -53,8 +53,8 @@ export function yearToStage(year: YearLevel): Stage {
 export const YEARS: YearLevel[] = [1, 2, 3, 4, 5, 6, 7, 8];
 
 /**
- * Whether a year has the starting check and the skill path. Those cover Years 3–6; Years 1–2 and
- * 7–8 practise their year's topics through the weekly lesson instead.
+ * Whether a year has the skill path (the skill map and free practice by skill). It covers Years
+ * 3–6; Years 1–2 and 7–8 practise their year's topics instead. Every year has the starting check.
  */
 export function hasSkillPath(year: YearLevel | number): boolean {
   return year >= 3 && year <= 6;
