@@ -1,6 +1,7 @@
 /**
- * Suni's voice: the browser's own text-to-speech, so talking aloud is free and works offline.
- * Kept free of React so the text clean-up can be tested.
+ * Suni's voice: Azure's Australian voice when the site has it set up (the same on every device),
+ * otherwise the browser's own text-to-speech, which is free and works offline. Kept free of React
+ * so the text clean-up can be tested.
  */
 
 /** Turns a chat message into something that sounds right read aloud. */
@@ -52,16 +53,27 @@ export interface SpeechPart {
 }
 
 let waitedForVoices = false;
-/** Counts what Suni is asked to say, so something newer replaces a line still waiting for voices. */
+/** Counts what Suni is asked to say, so something newer replaces a line still waiting. */
 let latest = 0;
 
 /** Reads the text aloud, cutting off anything Suni was already saying. Parts are said one after another. */
 export function speak(text: string | SpeechPart[]) {
-  if (!speechSupported()) return;
+  if (typeof window === "undefined") return;
   const words = (typeof text === "string" ? [{ text }] : text).map((p) => ({ ...p, text: speakableText(p.text) })).filter((p) => p.text);
   const turn = ++latest;
-  window.speechSynthesis.cancel();
+  stopAudio();
+  if (speechSupported()) window.speechSynthesis.cancel();
   if (!words.length) return;
+  if (cloudOn === false || !("AudioContext" in window)) return speakOnDevice(words, turn);
+  void cloudVoice().then(async (on) => {
+    if (turn !== latest) return;
+    if (on && (await playCloud(words, turn))) return;
+    if (turn === latest) speakOnDevice(words, turn);
+  });
+}
+
+function speakOnDevice(words: SpeechPart[], turn: number) {
+  if (!speechSupported()) return;
   // Chrome loads its voices after the page, so the first thing Suni says could be in the default
   // (often American) voice. Wait for them, briefly, the first time only.
   if (!waitedForVoices && !window.speechSynthesis.getVoices().length) {
@@ -78,6 +90,99 @@ export function speak(text: string | SpeechPart[]) {
     return;
   }
   say(words);
+}
+
+/** The longest line the cloud voice says in one go; longer text is split at sentence ends. */
+export const CLOUD_CHUNK = 400;
+
+/** Splits text into pieces of at most `max` characters, at sentence ends. Null if a sentence is longer than that. */
+export function speechChunks(text: string, max = CLOUD_CHUNK): string[] | null {
+  const chunks: string[] = [];
+  for (const sentence of text.match(/[^.!?]+[.!?]*\s*/g) ?? []) {
+    const last = chunks.length - 1;
+    if (last >= 0 && (chunks[last] + sentence).trim().length <= max) chunks[last] += sentence;
+    else chunks.push(sentence);
+  }
+  const out = chunks.map((c) => c.trim()).filter(Boolean);
+  return out.every((c) => c.length <= max) ? out : null;
+}
+
+/** Whether the site has the cloud voice set up: null until asked. */
+let cloudOn: boolean | null = null;
+let cloudAsked: Promise<boolean> | null = null;
+
+/** Asks the site, once, whether the cloud voice is set up. */
+export function cloudVoice(): Promise<boolean> {
+  cloudAsked ??= fetch("/api/speech")
+    .then((res) => (res.ok ? (res.json() as Promise<{ enabled?: boolean }>) : null))
+    .then((body) => Boolean(body?.enabled))
+    .catch(() => false)
+    .then((on) => (cloudOn = on));
+  return cloudAsked;
+}
+
+let context: AudioContext | null = null;
+let playing: AudioBufferSourceNode[] = [];
+
+/**
+ * Gets the cloud voice ready: asks whether it's set up, and lets audio play. Phones only play
+ * sound after a tap, and Suni often speaks after something loads, so the audio is switched on at
+ * the first tap or key press on the page.
+ */
+export function prepareVoice(): Promise<boolean> {
+  if (typeof window === "undefined" || !("AudioContext" in window)) return Promise.resolve(false);
+  if (!context) {
+    context = new AudioContext();
+    const unlock = () => {
+      if (context?.state !== "suspended") return;
+      void context.resume().catch(() => undefined);
+    };
+    document.addEventListener("pointerdown", unlock);
+    document.addEventListener("keydown", unlock);
+  }
+  return cloudVoice();
+}
+
+/** Plays the parts in the cloud voice, one after another with a short pause. False if it couldn't, so the device's voice can say them. */
+async function playCloud(parts: SpeechPart[], turn: number): Promise<boolean> {
+  void prepareVoice();
+  const ctx = context;
+  if (!ctx) return false;
+  if (ctx.state === "suspended") await ctx.resume().catch(() => undefined);
+  const lines = parts.flatMap((p) => (speechChunks(p.text) ?? [null]).map((text) => ({ ...p, text })));
+  if (lines.some((l) => l.text === null)) return false;
+  try {
+    const buffers = await Promise.all(
+      lines.map(async (line) => {
+        const res = await fetch(`/api/speech?text=${encodeURIComponent(line.text!)}${line.word ? "&word=1" : ""}`);
+        if (!res.ok) throw new Error(`Speech ${res.status}`);
+        return ctx.decodeAudioData(await res.arrayBuffer());
+      }),
+    );
+    if (turn !== latest) return true;
+    if (ctx.state !== "running") return false;
+    let at = ctx.currentTime + 0.05;
+    for (const buffer of buffers) {
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(at);
+      playing.push(source);
+      at += buffer.duration + 0.3;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function stopAudio() {
+  for (const source of playing) {
+    try {
+      source.stop();
+    } catch {}
+  }
+  playing = [];
 }
 
 /** A word, a sentence using it, then the word again, as a teacher reads a spelling word. */
@@ -102,5 +207,6 @@ function say(parts: SpeechPart[]) {
 
 export function stopSpeaking() {
   latest++;
+  stopAudio();
   if (speechSupported()) window.speechSynthesis.cancel();
 }

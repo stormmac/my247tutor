@@ -110,6 +110,18 @@ send it, create a free account at resend.com, verify your domain, and set `RESEN
 fails, the admin page shows the link to pass on instead. `SITE_URL` (such as
 `https://my247tutor.com`) sets the address used in links; otherwise it's the address the admin is on.
 
+## Suni's Australian voice (Azure)
+
+Suni speaks with the device's own voices unless this is set up, so the accent changes from device
+to device. For the same Australian voice (en-AU-NatashaNeural) everywhere:
+
+1. In the Azure portal, create a Speech service resource (the free F0 tier covers 500,000
+   characters a month). Pick a region such as Australia East.
+2. From its Keys and Endpoint page, set `AZURE_SPEECH_KEY` (either key) and `AZURE_SPEECH_REGION`
+   (such as `australiaeast`) in Vercel, then redeploy.
+
+Each word or line is made once and cached. If Azure fails, Suni falls back to the device's voice.
+
 ## Card payments (Stripe)
 
 Once accounts are on, setting these switches on payments: a parent's free trial carries on from the

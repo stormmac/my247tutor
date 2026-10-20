@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { inSentence, pickVoice, speak, speakableText, TALK, WORD } from "../tutor/speech";
+import { inSentence, pickVoice, speak, speakableText, speechChunks, TALK, WORD } from "../tutor/speech";
 
 describe("what Suni reads aloud", () => {
   it("leaves out emoji and markdown", () => {
@@ -72,5 +72,11 @@ describe("saying a word", () => {
 
   it("says a word in a sentence between the word on its own", () => {
     expect(inSentence("cat", "The cat sat.")).toEqual([{ text: "cat", word: true }, { text: "The cat sat." }, { text: "cat", word: true }]);
+  });
+
+  it("splits long text for the cloud voice at sentence ends", () => {
+    expect(speechChunks("One. Two! Three?", 9)).toEqual(["One. Two!", "Three?"]);
+    expect(speechChunks("It costs 3.50 today.", 400)).toEqual(["It costs 3.50 today."]);
+    expect(speechChunks("A sentence much too long.", 10)).toBeNull();
   });
 });
