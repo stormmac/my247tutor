@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { Picture } from "@/components/Picture";
+import { PreviewQuestionButton } from "@/components/QuestionPreview";
 import {
   COUNTRIES,
   NSW_ID,
@@ -181,10 +181,7 @@ function QuestionItem({ q, curriculum }: { q: ContentQuestion; curriculum: Curri
       <div>{t(q.question_text)}</div>
       <div className="small muted">
         {TYPE_NAMES[q.question_type]} · {LEVEL_NAMES[q.difficulty]} · {plural(q.points, "point")}
-        {q.picture && " · with picture"} ·{" "}
-        <Link href={previewHref(q.id, curriculum)} target="_blank" className="preview-link">
-          Preview question
-        </Link>
+        {q.picture && " · with picture"} · <PreviewQuestionButton questionId={q.id} curriculum={curriculum} />
       </div>
       {q.picture && (
         <div className="admin-picture">
@@ -212,11 +209,6 @@ function QuestionItem({ q, curriculum }: { q: ContentQuestion; curriculum: Curri
       {q.explanation && <div className="small muted">Why: {t(q.explanation)}</div>}
     </li>
   );
-}
-
-/** The question on its own, as a student sees it. */
-export function previewHref(questionId: string, curriculum: Curriculum): string {
-  return `/curriculum/preview/${questionId}${curriculum === "nsw" ? "" : `?curriculum=${curriculum}`}`;
 }
 
 function Count({ topics, subtopics, questions }: { topics?: number; subtopics: number; questions: number }) {
