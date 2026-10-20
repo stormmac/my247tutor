@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { StudentReport } from "@/components/StudentReport";
 import { WeekCalendar } from "@/components/WeekCalendar";
 import { CLASS_SUBJECTS as SUBJECTS, describeTime, formatDuration, WEEKDAYS, type ClassTime } from "@/lib/auth/rules";
 import { YEARS } from "@/lib/curriculum/types";
@@ -455,8 +456,10 @@ function ClassPicker({ classes, value, onChange }: { classes: CentreClass[]; val
 function Students({ centre, run, onInvited }: { centre: Centre; run: Run; onInvited: (r: Invite) => void }) {
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [linking, setLinking] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const className = (id: string) => centre.classes.find((c) => c.id === id)?.name;
+  const viewed = centre.students.find((s) => s.id === viewing);
   const shown = centre.students.filter((s) => `${s.name} ${s.username ?? ""}`.toLowerCase().includes(filter.trim().toLowerCase()));
   return (
     <div className="card stack">
@@ -528,7 +531,7 @@ function Students({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
                     </td>
                   </tr>
                 ) : (
-                  <tr key={s.id}>
+                  <tr key={s.id} className={viewing === s.id ? "selected" : ""}>
                     <td>
                       <strong>{s.name}</strong>
                       {s.dateOfBirth && <div className="small muted">{describeBirth(s.dateOfBirth)}</div>}
@@ -565,6 +568,9 @@ function Students({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
                     <td>{date(s.lastLoginAt)}</td>
                     <td>
                       <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+                        <button className="btn small" onClick={() => setViewing(viewing === s.id ? null : s.id)}>
+                          {viewing === s.id ? "Hide progress" : "Progress"}
+                        </button>
                         <button className="btn secondary small" onClick={() => setEditing(s.id)}>
                           Edit
                         </button>
@@ -585,6 +591,15 @@ function Students({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
             </tbody>
           </table>
         </div>
+      )}
+      {viewed && (
+        <StudentReport
+          key={viewed.id}
+          studentId={viewed.id}
+          name={viewed.name}
+          yearLevel={viewed.yearLevel}
+          onClose={() => setViewing(null)}
+        />
       )}
     </div>
   );

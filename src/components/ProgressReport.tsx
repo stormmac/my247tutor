@@ -71,6 +71,24 @@ export function WellbeingAlert({
   );
 }
 
+/** Everything else on the progress report, folded away under the summary. */
+export function FullReport({
+  profile,
+  onChange,
+}: {
+  profile: LearnerProfile;
+  onChange?: (update: (p: LearnerProfile) => LearnerProfile) => void;
+}) {
+  return (
+    <details className="full-report">
+      <summary>Full report: starting assessments, reading, times tables and every topic</summary>
+      <div className="stack" style={{ marginTop: 12 }}>
+        <ProgressReport profile={profile} onChange={onChange} detailOnly />
+      </div>
+    </details>
+  );
+}
+
 /**
  * A learner's progress report: this week's practice, the starting assessments, recent questions,
  * results by topic, where they sit against the NSW syllabus, and writing feedback. Parents see it
