@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSetWork } from "@/components/SetWork";
 import { practiseable } from "@/lib/content/program";
 import { curriculumOf, subjectName, yearName } from "@/lib/curriculum/curricula";
 import type { Subject, YearLevel } from "@/lib/curriculum/types";
 import type { LearnerProfile } from "@/lib/learner/model";
-import { completedSummary, focusAreas, stillToDo, topicTitle, type ToDo } from "@/lib/learner/parentSummary";
+import { activityLog, completedSummary, focusAreas, stillToDo, topicTitle, type Activity, type ToDo } from "@/lib/learner/parentSummary";
 
 const KIND_ICON: Record<ToDo["kind"], string> = { assessment: "📝", lesson: "📚", set: "📌", school: "🏫" };
 
@@ -63,7 +63,10 @@ export function ParentSummary({ profile }: { profile: LearnerProfile }) {
       </div>
 
       <div className="card stack">
-        <h2 style={{ margin: 0 }}>Work completed</h2>
+        <div className="row spread">
+          <h2 style={{ margin: 0 }}>Work completed</h2>
+          <WorkActivities profile={profile} work={work} />
+        </div>
         <div className="grid grid-3">
           <Stat label="Questions answered" value={String(done.allTime.answered)} />
           <Stat label="Right first try" value={done.allTime.percent === null ? "–" : `${done.allTime.percent}%`} />
@@ -170,6 +173,104 @@ export function ParentSummary({ profile }: { profile: LearnerProfile }) {
           subject={(s) => subjectName(s, curriculum)}
         />
       )}
+    </>
+  );
+}
+
+const ACTIVITY_ICON: Record<Activity["kind"], string> = {
+  practice: "✏️",
+  assessment: "📝",
+  writing: "🖊️",
+  tables: "✖️",
+  reading: "📖",
+  set: "📌",
+};
+
+/** The Work completed button: a popup of everything the child did in the last week or month, a day at a time. */
+function WorkActivities({ profile, work }: { profile: LearnerProfile; work: ReturnType<typeof useSetWork>["work"] }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [days, setDays] = useState<7 | 30>(7);
+  const [open, setOpen] = useState(false);
+  const log = open ? activityLog(profile, work, days) : null;
+  const byDay = new Map<string, Activity[]>();
+  for (const a of log?.activities ?? []) {
+    const day = new Date(a.at).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" });
+    byDay.set(day, [...(byDay.get(day) ?? []), a]);
+  }
+  const close = () => {
+    dialog.current?.close();
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className="btn secondary small no-print"
+        onClick={() => {
+          setOpen(true);
+          dialog.current?.showModal();
+        }}
+      >
+        See activities
+      </button>
+      <dialog
+        ref={dialog}
+        className="preview-dialog"
+        aria-label={`${profile.name}'s activities`}
+        onClose={() => setOpen(false)}
+        onClick={(e) => e.target === dialog.current && close()}
+      >
+        {log && (
+          <div className="stack">
+            <div className="row spread">
+              <h2 style={{ margin: 0 }}>{profile.name}&apos;s activities</h2>
+              <button type="button" className="btn secondary small" onClick={close}>
+                Close
+              </button>
+            </div>
+            <div className="tabs" role="tablist" aria-label="How far back">
+              {([7, 30] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  role="tab"
+                  aria-selected={days === d}
+                  className={`tab${days === d ? " active" : ""}`}
+                  onClick={() => setDays(d)}
+                >
+                  {d === 7 ? "Last week" : "Last month"}
+                </button>
+              ))}
+            </div>
+            <p className="muted" style={{ margin: 0 }}>
+              {log.activities.length} {log.activities.length === 1 ? "activity" : "activities"}, {log.tally.answered}{" "}
+              {log.tally.answered === 1 ? "question" : "questions"}
+              {log.tally.percent !== null && `, ${log.tally.percent}% right first try`}.
+            </p>
+            {byDay.size === 0 && <p className="muted">Nothing in the last {days === 7 ? "week" : "month"}.</p>}
+            {[...byDay].map(([day, items]) => (
+              <div key={day}>
+                <h3 style={{ margin: "8px 0 0" }}>{day}</h3>
+                <ul className="summary-list">
+                  {items.map((a) => (
+                    <li key={a.key}>
+                      <span aria-hidden="true">{ACTIVITY_ICON[a.kind]}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <strong>{a.title}</strong>
+                        <div className="small muted">{a.detail}</div>
+                      </div>
+                      <span className="small muted">
+                        {new Date(a.at).toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+      </dialog>
     </>
   );
 }

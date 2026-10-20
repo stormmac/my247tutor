@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SUBTOPICS } from "../content/tree";
 import { SetWorkSchema } from "../auth/rules";
 import { newProfile, recordAttempt, type LearnerProfile } from "../learner/model";
-import { completedSummary, focusAreas, stillToDo, type SetWorkSummary } from "../learner/parentSummary";
+import { activityLog, completedSummary, focusAreas, stillToDo, type SetWorkSummary } from "../learner/parentSummary";
 
 const T0 = Date.UTC(2027, 1, 1);
 const apostrophes = SUBTOPICS.find((s) => s.title === "Apostrophes")!;
@@ -67,5 +67,34 @@ describe("Parents page summary", () => {
     const base = { learnerId: "11111111-1111-4111-8111-111111111111", subject: "english", subtopicIds: [apostrophes.id] };
     expect(SetWorkSchema.parse(base).atSchool).toBe(false);
     expect(SetWorkSchema.parse({ ...base, atSchool: true }).atSchool).toBe(true);
+  });
+
+  it("lists the last week's and month's activities, newest first", () => {
+    const DAY = 86_400_000;
+    let p = newProfile("Ava", 5, T0);
+    p = practise(p, apostrophes.id, [true, false, true], T0 - 2 * DAY);
+    p = practise(p, apostrophes.id, [true], T0 - 20 * DAY);
+    p = practise(p, apostrophes.id, [false], T0 - 40 * DAY);
+    p = {
+      ...p,
+      writing: [{ skillId: "en2-imaginative", at: T0 - DAY, summary: "A story about a dragon.", levels: {} }],
+      tables: {
+        games: [{ at: T0 - 3 * DAY, tables: [7], speed: "medium", right: 18, asked: 20, missed: [] }],
+        best: {},
+        last: { tables: [7], speed: "medium" },
+      },
+    };
+    const set = work({ doneAt: new Date(T0 - 10 * DAY).toISOString(), right: 7, total: 10, atSchool: true });
+
+    const week = activityLog(p, [set], 7, T0);
+    expect(week.activities.map((a) => a.kind)).toEqual(["writing", "practice", "tables"]);
+    expect(week.activities[1].detail).toBe("English · 3 questions, 2 right first try (67%)");
+    expect(week.activities[2].detail).toContain("18 of 20 right (90%)");
+    expect(week.tally).toEqual({ answered: 3, rightFirstTry: 2, percent: 67 });
+
+    const month = activityLog(p, [set], 30, T0);
+    expect(month.activities.map((a) => a.kind)).toEqual(["writing", "practice", "tables", "set", "practice"]);
+    expect(month.activities[3].title).toContain("School topic finished: ");
+    expect(month.tally.answered).toBe(4);
   });
 });
