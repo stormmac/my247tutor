@@ -6,7 +6,7 @@ import { useAccount } from "@/components/useAccount";
 import { ChildLogin } from "@/components/ChildLogin";
 import { ChildTabs } from "@/components/ChildSwitcher";
 import { ParentSummary } from "@/components/ParentSummary";
-import { ProgressReport, WellbeingAlert } from "@/components/ProgressReport";
+import { FullReport, WellbeingAlert } from "@/components/ProgressReport";
 import { SuniChatsButton } from "@/components/SuniChats";
 import { removeCurrentChild, useProfile } from "@/components/useProfile";
 import type { LearnerProfile } from "@/lib/learner/model";
@@ -236,24 +236,6 @@ function ReportButtons({ learnerId, name }: { learnerId?: string; name: string }
         Print or save as PDF
       </button>
     </div>
-  );
-}
-
-/** Everything else on the progress report, folded away under the summary. */
-function FullReport({
-  profile,
-  onChange,
-}: {
-  profile: LearnerProfile;
-  onChange?: (update: (p: LearnerProfile) => LearnerProfile) => void;
-}) {
-  return (
-    <details className="full-report">
-      <summary>Full report: starting assessments, reading, times tables and every topic</summary>
-      <div className="stack" style={{ marginTop: 12 }}>
-        <ProgressReport profile={profile} onChange={onChange} detailOnly />
-      </div>
-    </details>
   );
 }
 

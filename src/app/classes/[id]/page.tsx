@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useAccount } from "@/components/useAccount";
-import { ProgressReport } from "@/components/ProgressReport";
+import { StudentReport } from "@/components/StudentReport";
 import { CLASS_SUBJECTS, describeTime, type ClassTime } from "@/lib/auth/rules";
-import type { LearnerProfile } from "@/lib/learner/model";
 import type { Standing } from "@/lib/learner/report";
 import type { StudentSummary } from "@/lib/learner/summary";
 import { formatReadingAge, READING_AGE_CUTOFF } from "@/lib/phonics/progress";
@@ -59,7 +58,7 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
   const { user } = useAccount();
   const [view, setView] = useState<ClassView | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState<{ id: string; profile: LearnerProfile | null; error?: string } | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
     void fetch(`/api/classes/${id}`)
@@ -71,19 +70,12 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
       .catch(() => setError("Couldn't connect. Try again."));
   }, [id]);
 
-  async function show(studentId: string) {
-    if (open?.id === studentId) return setOpen(null);
-    setOpen({ id: studentId, profile: null });
-    const r = await fetch(`/api/students/${studentId}`).catch(() => null);
-    const body = (await r?.json().catch(() => ({}))) as { profile?: LearnerProfile; error?: string };
-    setOpen({ id: studentId, profile: body?.profile ?? null, error: r?.ok ? undefined : (body?.error ?? "Couldn't load their progress.") });
-    requestAnimationFrame(() => document.getElementById("student-report")?.scrollIntoView({ behavior: "smooth", block: "start" }));
-  }
+  const show = (studentId: string) => setOpen(open === studentId ? null : studentId);
 
   if (error) return <div className="feedback bad">{error}</div>;
   if (!view) return <p className="muted">Loading…</p>;
   const c = view.class;
-  const opened = view.students.find((s) => s.id === open?.id);
+  const opened = view.students.find((s) => s.id === open);
 
   return (
     <div className="stack">
@@ -124,7 +116,7 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
             </thead>
             <tbody>
               {view.students.map((s) => (
-                <tr key={s.id} className={open?.id === s.id ? "selected" : ""}>
+                <tr key={s.id} className={open === s.id ? "selected" : ""}>
                   <td>
                     <strong>{s.name}</strong>
                     <div className="small muted">
@@ -163,8 +155,8 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
                   </td>
                   <td>{when(s.summary.lastPractisedAt)}</td>
                   <td className="no-print">
-                    <button className="btn secondary small" onClick={() => void show(s.id)}>
-                      {open?.id === s.id ? "Hide progress" : "Full progress"}
+                    <button className="btn secondary small" onClick={() => show(s.id)}>
+                      {open === s.id ? "Hide progress" : "Full progress"}
                     </button>
                   </td>
                 </tr>
@@ -174,20 +166,14 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
         </div>
       )}
 
-      {open && opened && (
-        <div id="student-report" className="stack student-report">
-          <div className="row spread">
-            <h2 style={{ margin: 0 }}>
-              {opened.name}&apos;s progress <span className="muted small">Year {opened.yearLevel}</span>
-            </h2>
-            <button className="btn secondary small no-print" onClick={() => setOpen(null)}>
-              Close
-            </button>
-          </div>
-          {open.error && <div className="feedback bad">{open.error}</div>}
-          {!open.profile && !open.error && <p className="muted">Loading…</p>}
-          {open.profile && <ProgressReport profile={open.profile} />}
-        </div>
+      {opened && (
+        <StudentReport
+          key={opened.id}
+          studentId={opened.id}
+          name={opened.name}
+          yearLevel={opened.yearLevel}
+          onClose={() => setOpen(null)}
+        />
       )}
     </div>
   );
