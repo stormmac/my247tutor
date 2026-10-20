@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { canSeeLearner, canSetWork, finishSetWork, removeSetWork } from "@/lib/auth/family";
+import { canAddSchoolWork, canSeeLearner, canSetWork, finishSetWork, removeSetWork } from "@/lib/auth/family";
 import { FinishWorkSchema } from "@/lib/auth/rules";
 import { requireUser } from "@/lib/auth/users";
 
@@ -26,7 +26,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if ("response" in result) return result.response;
   const { id } = await params;
   const learnerId = request.nextUrl.searchParams.get("learner") ?? "";
-  if (!z.uuid().safeParse(id).success || !z.uuid().safeParse(learnerId).success || !(await canSetWork(result.user, learnerId)))
+  if (!z.uuid().safeParse(id).success || !z.uuid().safeParse(learnerId).success)
     return Response.json({ error: "No such work." }, { status: 404 });
-  return (await removeSetWork(learnerId, id)) ? Response.json({ ok: true }) : Response.json({ error: "No such work." }, { status: 404 });
+  // Whoever sets work can take any of it back; a parent linked through a centre, only the school topics they added.
+  const all = await canSetWork(result.user, learnerId);
+  if (!all && !(await canAddSchoolWork(result.user, learnerId))) return Response.json({ error: "No such work." }, { status: 404 });
+  return (await removeSetWork(learnerId, id, all ? undefined : result.user.id))
+    ? Response.json({ ok: true })
+    : Response.json({ error: "No such work." }, { status: 404 });
 }

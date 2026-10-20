@@ -44,6 +44,10 @@ export interface SetWork {
   doneAt: string | null;
   right: number | null;
   total: number | null;
+  /** A topic the child is doing at school now, added by a parent so they practise it here too. */
+  atSchool: boolean;
+  /** Whether the person asking added it. */
+  mine?: boolean;
 }
 
 const iso = (value: unknown) => (value ? new Date(value as string).toISOString() : null);
@@ -161,8 +165,17 @@ export async function canSetWork(viewer: User, learnerId: string): Promise<boole
   return false;
 }
 
-/** Work set for a child, newest first. */
-export async function listSetWork(learnerId: string, limit = 30): Promise<SetWork[]> {
+/**
+ * Whether this person may add topics the child is doing at school: anyone who can set work, and
+ * also a parent linked through a centre, since it's their child's schoolwork.
+ */
+export async function canAddSchoolWork(viewer: User, learnerId: string): Promise<boolean> {
+  if (await canSetWork(viewer, learnerId)) return true;
+  return viewer.role === "parent" && linked(viewer.id, learnerId);
+}
+
+/** Work set for a child, newest first. `viewerId` marks the pieces that person added. */
+export async function listSetWork(learnerId: string, limit = 30, viewerId?: string): Promise<SetWork[]> {
   const { rows } = await (
     await ready()
   ).query(
@@ -180,6 +193,8 @@ export async function listSetWork(learnerId: string, limit = 30): Promise<SetWor
     doneAt: iso(r.done_at),
     right: r.right_count === null ? null : Number(r.right_count),
     total: r.total === null ? null : Number(r.total),
+    atSchool: Boolean(r.at_school),
+    ...(viewerId ? { mine: r.set_by === viewerId } : {}),
   }));
 }
 
@@ -191,20 +206,22 @@ export async function addSetWork(
   learnerId: string,
   items: { subject: SetWork["subject"]; subtopicId: string }[],
   note: string | null,
+  atSchool = false,
 ): Promise<{ added: number } | { error: string }> {
   const pool = await ready();
   const { rows } = await pool.query(`SELECT COUNT(*) AS n FROM set_work WHERE learner_id = $1 AND done_at IS NULL`, [learnerId]);
   if (Number(rows[0].n) + items.length > MAX_OPEN_WORK)
     return { error: `A child can have up to ${MAX_OPEN_WORK} pieces of work still to do. Wait for some to be finished first.` };
   for (const item of items)
-    await pool.query(`INSERT INTO set_work (learner_id, set_by, subject, subtopic_id, note) VALUES ($1, $2, $3, $4, $5)`, [
+    await pool.query(`INSERT INTO set_work (learner_id, set_by, subject, subtopic_id, note, at_school) VALUES ($1, $2, $3, $4, $5, $6)`, [
       learnerId,
       viewer.id,
       item.subject,
       item.subtopicId,
       note,
+      atSchool,
     ]);
-  await audit(viewer.id, "set_work", learnerId, { count: items.length });
+  await audit(viewer.id, "set_work", learnerId, { count: items.length, atSchool });
   return { added: items.length };
 }
 
@@ -221,10 +238,14 @@ export async function finishSetWork(learnerId: string, id: string, right: number
   return Boolean(rowCount);
 }
 
-/** Takes back a piece of work that hasn't been done yet. */
-export async function removeSetWork(learnerId: string, id: string): Promise<boolean> {
+/** Takes back a piece of work that hasn't been done yet. With `onlyBy`, only a school topic that person added. */
+export async function removeSetWork(learnerId: string, id: string, onlyBy?: string): Promise<boolean> {
   const { rowCount } = await (
     await ready()
-  ).query(`DELETE FROM set_work WHERE id = $1 AND learner_id = $2 AND done_at IS NULL`, [id, learnerId]);
+  ).query(
+    `DELETE FROM set_work WHERE id = $1 AND learner_id = $2 AND done_at IS NULL
+       AND ($3::uuid IS NULL OR (set_by = $3 AND at_school))`,
+    [id, learnerId, onlyBy ?? null],
+  );
   return Boolean(rowCount);
 }
