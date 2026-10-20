@@ -21,7 +21,7 @@ export default function CurriculumPage() {
       <h1>Curriculum</h1>
       <p className="muted" style={{ margin: 0 }}>
         Everything students work through: {total.topics} topics, {total.subtopics} subtopics and {total.questions} written questions, with
-        their answers. Open a subtopic to see its questions, and use Preview question to see one as a student sees it.
+        their answers. Open a subtopic to see its questions, and use Preview question to try one as a student sees it.
       </p>
       <CurriculumTree />
     </div>

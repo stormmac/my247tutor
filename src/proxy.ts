@@ -41,6 +41,7 @@ const PARENT_ONLY = [
   "/api/suni",
   // The curriculum tree shows the answers.
   "/curriculum",
+  "/api/curriculum",
 ];
 
 /** Pages for an account holder, not for trying the site: signed out, these go to log in, not the free trial. */

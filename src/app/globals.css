@@ -492,12 +492,30 @@ th {
   font-weight: 600;
 }
 .tree .preview-link {
+  color: var(--brand);
   font-weight: 600;
+  text-decoration: underline;
   white-space: nowrap;
 }
 .feedback.preview-banner {
   margin-top: 0;
   background: var(--warn-tint);
+}
+.preview-dialog {
+  width: min(860px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 20px;
+  border: none;
+  border-radius: 16px;
+  background: var(--bg);
+  /* It sits in the tree's small grey line, so it sets its own text back to normal. */
+  color: var(--text);
+  font-size: 1rem;
+  white-space: normal;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.25);
+}
+.preview-dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
 }
 
 /* Topic tree */
