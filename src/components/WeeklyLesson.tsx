@@ -6,7 +6,8 @@ import { usePraise } from "@/components/usePraise";
 import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components/QuestionView";
 import { questionFocus, useSuniFocus, useSuniSay, useSuniScreen } from "@/components/SuniCompanion";
 import type { useProfile } from "@/components/useProfile";
-import { buildLesson, skillBuilder } from "@/lib/content/lesson";
+import { addSetWork, buildLesson, skillBuilder } from "@/lib/content/lesson";
+import { finishWork, useSetWork } from "@/components/SetWork";
 import { advanceProgram, ensureProgram, programFor, streamSubtopics } from "@/lib/content/program";
 import { progressKey, toPracticeQuestion } from "@/lib/content/practice";
 import { QUESTIONS, subtopicPath } from "@/lib/content/tree";
@@ -19,6 +20,7 @@ import {
   nextPart,
   recordLessonAnswer,
   resultColour,
+  resultTries,
   saveLesson,
   type LessonPart,
   type LessonResult,
@@ -36,6 +38,8 @@ const subtopicById = (id: string, curriculum: Curriculum) => subtopicPath(id, cu
 const COLOUR_WORDS = { good: "right first go", warn: "right on a later go", bad: "not right" } as const;
 
 function describe(part: LessonPart, curriculum: Curriculum): string {
+  if (part.kind === "set")
+    return `${part.questionIds.length} questions, easy to hard, set by ${part.setBy ?? "your teacher"}.${part.note ? ` "${part.note}"` : ""}`;
   return part.kind === "review"
     ? `${part.questionIds.length} questions from ${yearName(part.year, curriculum)} to keep earlier skills sharp.`
     : `${part.questionIds.length} questions, easy to hard, on something to work on. Get over ${PASS_MARK * 100}% right first go to pass it.`;
@@ -117,6 +121,19 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
   const [running, setRunning] = useState<number | null>(null);
   // Streams that moved up while the child was doing a part, shown back on the plan.
   const [moved, setMoved] = useState<MoveUp[]>([]);
+
+  // Work a parent, teacher or centre set, still to do, joins this week's lesson.
+  const setWork = useSetWork(profile.id);
+  useEffect(() => {
+    const open = setWork.work.filter((w) => !w.doneAt && w.subject === subject);
+    if (!lesson || !open.length) return;
+    setProfile((p) => {
+      const now = currentLesson(p, subject);
+      if (!now) return p;
+      const next = addSetWork(now, open, p);
+      return next === now ? p : saveLesson(p, subject, next);
+    });
+  }, [lesson, setWork.work, subject, setProfile]);
 
   // A new week (or a first visit) makes a new lesson from how the child is going now.
   useEffect(() => {
@@ -311,6 +328,10 @@ function LessonPartView({
       const { profile: advanced, moved } = advanceProgram(recordLessonAnswer(updated, subject, part, index, result), subject);
       setProfile(advanced);
       setLastResult(result);
+      if (lessonPart.kind === "set" && lessonPart.setWorkId && profile.id && index === total - 1) {
+        const results = [...lessonPart.results.slice(0, index), result];
+        finishWork(profile.id, lessonPart.setWorkId, results.filter((r) => resultTries(r) === 1).length, total);
+      }
       if (moved.length) onMoveUp(moved);
     }
     if (o.correct) say(praise(o, profile.name));
@@ -321,7 +342,9 @@ function LessonPartView({
   function nextLessonQuestion() {
     setBuilder(null);
     if (index + 1 >= total) {
-      say(`That's ${lessonPart.kind === "review" ? "the review" : "that activity"} done. Great work, ${profile.name}!`);
+      say(
+        `That's ${lessonPart.kind === "review" ? "the review" : lessonPart.kind === "set" ? "that work" : "that activity"} done. Great work, ${profile.name}!`,
+      );
       onStop();
     } else setIndex(index + 1);
   }
@@ -349,9 +372,14 @@ function LessonPartView({
       <div className="row spread">
         <div>
           <span className="pill">
-            Part {part + 1}: {lessonPart.kind === "review" ? "Review" : "Activity"}
+            Part {part + 1}: {lessonPart.kind === "review" ? "Review" : lessonPart.kind === "set" ? "Set work" : "Activity"}
           </span>
           <h1 style={{ marginTop: 8 }}>{lessonPart.title}</h1>
+          {lessonPart.kind === "set" && lessonPart.note && (
+            <p className="muted" style={{ margin: 0 }}>
+              {lessonPart.setBy ?? "Your teacher"} says: &ldquo;{lessonPart.note}&rdquo;
+            </p>
+          )}
           {lessonPart.kind === "review" && (
             <p className="muted" style={{ margin: 0 }}>
               {subtopic.title}

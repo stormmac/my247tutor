@@ -31,8 +31,10 @@ export function ChildSwitcher() {
 }
 
 /** The parent page's row of children, one tab each, with room to add up to three. */
-export function ChildTabs() {
+export function ChildTabs({ elsewhere = false, onSelect }: { elsewhere?: boolean; onSelect?: () => void } = {}) {
   const { children, current } = useChildren();
+  // `elsewhere`: the page is showing another child (such as one at a centre), so none of these is selected.
+  const selected = (id: string | undefined) => !elsewhere && id === current;
   return (
     <div className="tabs no-print" role="tablist" aria-label="Your children">
       {children.map((c) => (
@@ -40,9 +42,12 @@ export function ChildTabs() {
           key={c.id ?? c.name}
           type="button"
           role="tab"
-          aria-selected={c.id === current}
-          className={`tab${c.id === current ? " active" : ""}`}
-          onClick={() => c.id && c.id !== current && switchChild(c.id)}
+          aria-selected={selected(c.id)}
+          className={`tab${selected(c.id) ? " active" : ""}`}
+          onClick={() => {
+            onSelect?.();
+            if (c.id && c.id !== current) switchChild(c.id);
+          }}
         >
           {c.name}
         </button>

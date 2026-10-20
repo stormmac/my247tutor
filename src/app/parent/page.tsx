@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAccount } from "@/components/useAccount";
 import { ChildLogin } from "@/components/ChildLogin";
 import { ChildTabs } from "@/components/ChildSwitcher";
@@ -11,14 +11,83 @@ import type { LearnerProfile } from "@/lib/learner/model";
 import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, localeOf, outcomesName, yearName } from "@/lib/curriculum/curricula";
 import { YEARS } from "@/lib/curriculum/types";
 
+/** A child at a tutoring centre that this parent is linked to. The centre owns their progress. */
+interface CentreChild {
+  id: string;
+  name: string;
+  centreName: string;
+  profile: LearnerProfile;
+}
+
+function useCentreChildren(parent: boolean): CentreChild[] {
+  const [children, setChildren] = useState<CentreChild[]>([]);
+  useEffect(() => {
+    if (!parent) return;
+    void fetch("/api/parent/centre-children")
+      .then((r) => r.json() as Promise<{ children?: CentreChild[] }>)
+      .then((b) => setChildren(b.children ?? []))
+      .catch(() => undefined);
+  }, [parent]);
+  return children;
+}
+
 export default function ParentPage() {
   const { profile, setProfile, loaded } = useProfile();
   const account = useAccount();
   const [unlocked, setUnlocked] = useState(false);
+  const centreChildren = useCentreChildren(account.user?.role === "parent");
+  const [picked, setPicked] = useState<string | null>(null);
 
   if (!loaded || !account.loaded) return null;
   // Signed-in parents have already proved who they are; the check is only for guests on a shared browser.
   if (!unlocked && (!account.user || account.user.role === "student")) return <ParentGate onPass={() => setUnlocked(true)} />;
+  // A child at a centre: picked, or the first one when the parent has none of their own.
+  const atCentre = centreChildren.find((c) => c.id === picked) ?? (profile ? undefined : centreChildren[0]);
+  const centreTabs = centreChildren.length > 0 && (
+    <div className="tabs no-print" role="tablist" aria-label="Your children at a tutoring centre">
+      {centreChildren.map((c) => (
+        <button
+          key={c.id}
+          type="button"
+          role="tab"
+          aria-selected={c.id === atCentre?.id}
+          className={`tab${c.id === atCentre?.id ? " active" : ""}`}
+          onClick={() => setPicked(c.id)}
+          title={`At ${c.centreName}`}
+        >
+          {c.name} <span className="muted small">({c.centreName})</span>
+        </button>
+      ))}
+    </div>
+  );
+  if (atCentre) {
+    const curriculum = curriculumOf(atCentre.profile.curriculum);
+    return (
+      <div className="stack">
+        <div className="row" style={{ gap: 8 }}>
+          {profile && <ChildTabs elsewhere onSelect={() => setPicked(null)} />}
+          {centreTabs}
+        </div>
+        <div className="row spread">
+          <div>
+            <h1>{atCentre.name}&apos;s progress</h1>
+            <p className="muted" style={{ margin: 0 }}>
+              {yearName(atCentre.profile.yearLevel, curriculum)} at {atCentre.centreName}. Shown against the {outcomesName(curriculum)}, as
+              of {new Date().toLocaleDateString(localeOf(curriculum))}.
+            </p>
+          </div>
+          <button className="btn secondary small no-print" onClick={() => window.print()}>
+            Print or save as PDF
+          </button>
+        </div>
+        <ProgressReport profile={atCentre.profile} />
+        <p className="small muted no-print">
+          {atCentre.centreName} pays for {atCentre.name}&apos;s lessons and looks after their sign-in. A child you add yourself
+          {profile ? "" : " with + Add a child on the Learn page"} needs a plan of their own.
+        </p>
+      </div>
+    );
+  }
   if (!profile) {
     return (
       <div className="card narrow stack">
@@ -35,7 +104,10 @@ export default function ParentPage() {
   const curriculum = curriculumOf(profile.curriculum);
   return (
     <div className="stack">
-      <ChildTabs />
+      <div className="row" style={{ gap: 8 }}>
+        <ChildTabs />
+        {centreTabs}
+      </div>
       <div className="row spread">
         <div>
           <h1>{profile.name}'s progress</h1>

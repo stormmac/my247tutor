@@ -35,6 +35,8 @@ interface Student {
   lastLoginAt: string | null;
   classIds: string[];
   learnToRead: boolean;
+  /** Parents who can see this student's work. */
+  parents: { id: string; name: string; email: string; lastLoginAt: string | null }[];
 }
 
 interface Centre {
@@ -52,6 +54,9 @@ interface Invite {
   emailed: boolean;
   emailError?: string;
 }
+
+/** A parent linked to a student: an existing account, or a new one with a set-password link. */
+type ParentInvite = { email: string; existing: true } | (Invite & { existing: false });
 
 const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short" }) : "Never");
 
@@ -153,7 +158,7 @@ export default function CentrePage() {
         <WeekCalendar classes={centre.classes} />
       </div>
       <Classes centre={centre} run={run} />
-      <Students centre={centre} run={run} />
+      <Students centre={centre} run={run} onInvited={invited} />
       <Teachers centre={centre} run={run} onInvited={invited} />
     </div>
   );
@@ -444,8 +449,9 @@ function ClassPicker({ classes, value, onChange }: { classes: CentreClass[]; val
   );
 }
 
-function Students({ centre, run }: { centre: Centre; run: Run }) {
+function Students({ centre, run, onInvited }: { centre: Centre; run: Run; onInvited: (r: Invite) => void }) {
   const [editing, setEditing] = useState<string | "new" | null>(null);
+  const [linking, setLinking] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const className = (id: string) => centre.classes.find((c) => c.id === id)?.name;
   const shown = centre.students.filter((s) => `${s.name} ${s.username ?? ""}`.toLowerCase().includes(filter.trim().toLowerCase()));
@@ -497,6 +503,7 @@ function Students({ centre, run }: { centre: Centre; run: Run }) {
                 <th>Year</th>
                 <th>Username</th>
                 <th>Classes</th>
+                <th>Parents</th>
                 <th>Last sign-in</th>
                 <th />
               </tr>
@@ -505,7 +512,7 @@ function Students({ centre, run }: { centre: Centre; run: Run }) {
               {shown.map((s) =>
                 editing === s.id ? (
                   <tr key={s.id}>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <StudentForm
                         initial={s}
                         classes={centre.classes}
@@ -527,6 +534,29 @@ function Students({ centre, run }: { centre: Centre; run: Run }) {
                     <td>
                       {s.classIds.map(className).filter(Boolean).join(", ") || <span className="muted">None</span>}
                       {s.learnToRead && <div className="small">📖 Learn to Read</div>}
+                    </td>
+                    <td>
+                      <Parents
+                        student={s}
+                        linking={linking === s.id}
+                        onLink={() => setLinking(s.id)}
+                        onDone={async (invite) => {
+                          setLinking(null);
+                          if (!invite) return;
+                          const message = invite.existing
+                            ? `${invite.email} already has an account, so ${s.name} is now on their Parents page.`
+                            : undefined;
+                          await run(Promise.resolve({ error: null, data: {} }), message);
+                          if (!invite.existing) onInvited(invite);
+                        }}
+                        onRemove={(p) => {
+                          if (confirm(`Stop ${p.name} seeing ${s.name}'s work? Their account stays.`))
+                            void run(
+                              send(`/api/centre/students/${s.id}/parents/${p.id}`, "DELETE"),
+                              `${p.name} can no longer see ${s.name}.`,
+                            );
+                        }}
+                      />
                     </td>
                     <td>{date(s.lastLoginAt)}</td>
                     <td>
@@ -551,6 +581,84 @@ function Students({ centre, run }: { centre: Centre; run: Run }) {
             </tbody>
           </table>
         </div>
+      )}
+    </div>
+  );
+}
+
+/** A student's parents, who see their work for free, and a form to add one. */
+function Parents({
+  student,
+  linking,
+  onLink,
+  onDone,
+  onRemove,
+}: {
+  student: Student;
+  linking: boolean;
+  onLink: () => void;
+  onDone: (invite: ParentInvite | null) => void;
+  onRemove: (parent: Student["parents"][number]) => void;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const { error, data } = await send(`/api/centre/students/${student.id}/parents`, "POST", { name, email });
+    setBusy(false);
+    if (error) return setError(error);
+    setName("");
+    setEmail("");
+    onDone(data as unknown as ParentInvite);
+  }
+
+  return (
+    <div className="stack" style={{ gap: 4 }}>
+      {student.parents.map((p) => (
+        <div key={p.id} className="small">
+          {p.name} <span className="muted">({p.email})</span>{" "}
+          <button className="link-button small" style={{ textDecoration: "underline" }} onClick={() => onRemove(p)}>
+            Remove
+          </button>
+        </div>
+      ))}
+      {linking ? (
+        <form className="stack" style={{ gap: 6 }} onSubmit={add}>
+          <input aria-label="Parent's name" placeholder="Parent's name" value={name} onChange={(e) => setName(e.target.value)} required />
+          <input
+            aria-label="Parent's email"
+            placeholder="Parent's email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <p className="small muted" style={{ margin: 0 }}>
+            They&apos;ll see {student.name}&apos;s progress on their Parents page. You pay for {student.name}, so they don&apos;t.
+          </p>
+          {error && (
+            <div className="feedback bad small" role="alert">
+              {error}
+            </div>
+          )}
+          <div className="row" style={{ gap: 6 }}>
+            <button className="btn small" disabled={busy}>
+              {busy ? "Adding…" : "Add parent"}
+            </button>
+            <button type="button" className="btn secondary small" onClick={() => onDone(null)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button className="btn secondary small" onClick={onLink}>
+          Add a parent
+        </button>
       )}
     </div>
   );
@@ -677,6 +785,16 @@ function Teachers({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
     onInvited(data as unknown as Invite);
   }
 
+  /** Logs in as the teacher to see their classes as they do. The banner at the top comes back here. */
+  async function logInAs(t: Teacher) {
+    const { error, data } = await send(`/api/centre/teachers/${t.id}/log-in-as`, "POST");
+    if (error) return run(Promise.resolve({ error, data }));
+    try {
+      localStorage.clear();
+    } catch {}
+    window.location.assign("/classes");
+  }
+
   async function resend(t: Teacher) {
     const { error, data } = await send(`/api/centre/teachers/${t.id}/invite`, "POST");
     if (error) await run(Promise.resolve({ error, data }));
@@ -762,6 +880,9 @@ function Teachers({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
                           Send invite again
                         </button>
                       )}
+                      <button className="btn secondary small" onClick={() => void logInAs(t)}>
+                        Log in as
+                      </button>
                       <button
                         className="btn secondary small"
                         onClick={() => {

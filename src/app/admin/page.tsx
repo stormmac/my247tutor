@@ -29,6 +29,7 @@ const PLAN: Record<Plan, { label: string; pill: string }> = {
   staff: { label: "Staff", pill: "" },
   free: { label: "Free access", pill: "good" },
   paying: { label: "Paying", pill: "good" },
+  centre: { label: "Paid by centre", pill: "good" },
   trial: { label: "Free trial", pill: "warn" },
   unpaid: { label: "Needs to pay", pill: "bad" },
 };

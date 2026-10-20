@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       child: role === "student",
       plan,
       needsPayment: needsPayment(result.user),
+      centreLinked: Boolean(result.user.centreLinked),
       trialEndsAt: plan === "trial" ? trialEndsAt : null,
       actingAdmin: actor ? actor.name : null,
       actingRole: actor ? actor.role : null,

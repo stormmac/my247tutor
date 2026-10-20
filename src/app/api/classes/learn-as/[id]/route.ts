@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { learnAsStudent } from "@/lib/auth/centres";
-import { adminReturnCookie, SESSION_COOKIE, sessionCookie } from "@/lib/auth/session";
+import { adminReturnCookie, SESSION_COOKIE, sessionCookie, verifySession } from "@/lib/auth/session";
 import { audit, requireUser } from "@/lib/auth/users";
 
 /**
@@ -13,6 +13,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if ("response" in result) return result.response;
   if (result.user.role !== "teacher" && result.user.role !== "centre")
     return Response.json({ error: "This is for tutoring centres and their teachers." }, { status: 403 });
+  // Only one way back is kept, so someone already logged in as another account goes back first.
+  if ((await verifySession(request.cookies.get(SESSION_COOKIE)?.value))?.actorId)
+    return Response.json({ error: "You're already logged in as someone else. Go back to your own account first." }, { status: 400 });
   const { id } = await params;
   const student = z.uuid().safeParse(id).success ? await learnAsStudent(result.user, id) : null;
   if (!student) return Response.json({ error: "No such student." }, { status: 404 });

@@ -1,6 +1,6 @@
 import "server-only";
-import { studentForViewer } from "./centres";
 import { ready } from "./db";
+import { canSeeLearner } from "./family";
 import { audit, type User } from "./users";
 
 export const CHAT_FLAGS = ["wellbeing", "inappropriate", "personal_info", "grown_up"] as const;
@@ -42,15 +42,9 @@ function toChat(r: Record<string, unknown>): SuniChat {
   };
 }
 
-/** Whether this person may read a child's chats: an admin, the child's parent or centre, or a teacher who has them in a class. */
+/** Whether this person may read a child's chats: a grown-up who can see the child's work (see family.ts), not the child. */
 export async function canSeeChats(viewer: User, learnerId: string): Promise<boolean> {
-  if (viewer.role === "admin") return true;
-  if (viewer.role === "parent" || viewer.role === "centre") {
-    const { rows } = await (await ready()).query(`SELECT 1 FROM learners WHERE id = $1 AND parent_id = $2`, [learnerId, viewer.id]);
-    if (rows.length) return true;
-  }
-  if (viewer.role === "teacher" || viewer.role === "centre") return (await studentForViewer(viewer, learnerId).catch(() => null)) !== null;
-  return false;
+  return viewer.role !== "student" && canSeeLearner(viewer, learnerId);
 }
 
 /**

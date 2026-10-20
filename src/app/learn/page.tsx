@@ -233,6 +233,7 @@ function Setup({
   onCreate: (name: string, year: YearLevel, curriculum: Curriculum) => void;
 }) {
   const [name, setName] = useState("");
+  const plan = useAccount().user?.plan;
   // No year is picked for them: the starting check is set from it, so a grown-up has to choose.
   const [year, setYear] = useState<YearLevel | null>(null);
   const { children } = useChildren();
@@ -253,6 +254,12 @@ function Setup({
         A grown-up should help with this step. We only need a first name or nickname and their school year.
         {children.length > 0 && ` You can have up to ${MAX_CHILDREN} children.`}
       </p>
+      {plan === "centre" && (
+        <div className="feedback warn">
+          Your child&apos;s tutoring centre pays for them, and they learn with the sign-in the centre gave them. You can see their progress
+          on the <Link href="/parent">Parents page</Link>. A child you add here is yours, so they need a plan of their own.
+        </div>
+      )}
       <div>
         <label htmlFor="name">First name or nickname</label>
         <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={20} autoComplete="off" />
