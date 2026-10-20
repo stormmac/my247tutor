@@ -32,6 +32,7 @@ import { describeTables, SPEEDS, tablesOf, trickyFacts } from "@/lib/tables/game
 import { UNITS } from "@/lib/phonics/sequence";
 import { COMPETENCY_LABELS, competency, recommendedPlan, subjectLevel, type Competency, type Standing } from "@/lib/learner/report";
 import { SuniChatsReport } from "@/components/SuniChats";
+import { SetWorkCard } from "@/components/SetWork";
 import { programFor, streamSubtopics } from "@/lib/content/program";
 import { focusStreams, PASS_MARK, STREAM_NAMES } from "@/lib/learner/program";
 
@@ -96,6 +97,8 @@ export function ProgressReport({
           <div style={{ fontSize: 32, fontWeight: 800 }}>{profile.writing.length}</div>
         </div>
       </div>
+
+      <SetWorkCard profile={profile} />
 
       <StartingReport
         profile={profile}

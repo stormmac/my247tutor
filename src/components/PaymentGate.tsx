@@ -15,7 +15,9 @@ export function PaymentGate() {
   const { user } = useAccount();
   const path = usePathname();
   const router = useRouter();
-  const blocked = Boolean(user?.needsPayment) && !OPEN_PAGES.includes(path);
+  // A parent linked to a centre student can still see that child, whom the centre pays for.
+  const open = OPEN_PAGES.includes(path) || (Boolean(user?.centreLinked) && path === "/parent");
+  const blocked = Boolean(user?.needsPayment) && !open;
   const child = Boolean(user?.child);
   useEffect(() => {
     if (blocked && !child) router.replace("/billing");

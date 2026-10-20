@@ -16,6 +16,8 @@ export interface Account {
   plan?: Plan;
   /** Payments are on and the free trial is over without a card added. */
   needsPayment?: boolean;
+  /** A parent linked to a centre student, who can always see that child's progress. */
+  centreLinked?: boolean;
   /** When the account's free trial ends, while it's on one. */
   trialEndsAt?: number | null;
   /** The admin's name when an admin is logged in as this account from Admin. */

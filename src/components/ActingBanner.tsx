@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { useProfile } from "@/components/useProfile";
 import { backToAdmin, learningAsStudent, useAccount } from "@/components/useAccount";
 
-/** Shown across the top while an admin is logged in as someone else, or a teacher is learning as a student, with the way back. */
+/**
+ * Shown across the top while an admin is logged in as someone else, a centre is logged in as a teacher, or a teacher is
+ * learning as a student, with the way back.
+ */
 export function ActingBanner() {
   const { user } = useAccount();
   const { profile } = useProfile();
@@ -29,6 +32,20 @@ export function ActingBanner() {
               Back to Admin
             </button>
           </span>
+        </div>
+      </div>
+    );
+  // A centre logged in as one of its teachers.
+  if (user.actingRole === "centre" && user.role === "teacher")
+    return (
+      <div className="acting-banner" role="status">
+        <div className="container">
+          <span>
+            You&apos;re logged in as <strong>{user.name}</strong>, one of your teachers. Their classes are shown as they see them.
+          </span>
+          <button className="btn small" onClick={() => void backToAdmin("/centre")}>
+            Back to my centre
+          </button>
         </div>
       </div>
     );

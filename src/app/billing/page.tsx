@@ -79,7 +79,17 @@ function BillingView() {
   return (
     <div className="card narrow stack" style={{ margin: "40px auto" }}>
       <h1>Your plan</h1>
-      {!billing.enabled || plan === "staff" || plan === "free" ? (
+      {plan === "centre" ? (
+        <>
+          <p style={{ margin: 0 }}>
+            Your child&apos;s tutoring centre pays for their lessons, so there&apos;s nothing to pay. If you add a child of your own,
+            they&apos;ll need a plan of their own.
+          </p>
+          <a className="btn" href="/parent">
+            See your child&apos;s progress
+          </a>
+        </>
+      ) : !billing.enabled || plan === "staff" || plan === "free" ? (
         <>
           <p style={{ margin: 0 }}>
             {plan === "staff"

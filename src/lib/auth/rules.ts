@@ -117,18 +117,21 @@ const PAYING = ["active", "trialing", "past_due"];
 export interface AccessFacts {
   role: Role;
   freeAccess: boolean;
+  /** A parent whose access a centre pays for (see users.ts). */
+  centreCovered?: boolean;
   /** Milliseconds, or null when the account never had a trial. */
   trialEndsAt: number | null;
   subscriptionStatus: string | null;
 }
 
-export type Plan = "staff" | "free" | "paying" | "trial" | "unpaid";
+export type Plan = "staff" | "free" | "paying" | "centre" | "trial" | "unpaid";
 
 /** Why an account can use the site, or "unpaid" when it needs to add a card first. */
 export function accountPlan(a: AccessFacts, now = Date.now()): Plan {
   if (a.role === "admin" || a.role === "teacher") return "staff";
   if (a.freeAccess) return "free";
   if (a.subscriptionStatus && PAYING.includes(a.subscriptionStatus)) return "paying";
+  if (a.centreCovered) return "centre";
   if (a.trialEndsAt !== null && now < a.trialEndsAt) return "trial";
   return "unpaid";
 }
@@ -149,6 +152,30 @@ export const NewUserSchema = z.object({
 export const NewTeacherSchema = z.object({
   name: z.string().trim().min(1, "Enter their name.").max(100),
   email: EmailSchema,
+});
+
+/** A centre links a parent to a student. */
+export const NewParentSchema = z.object({
+  name: z.string().trim().min(1, "Enter the parent's name.").max(100),
+  email: EmailSchema,
+});
+
+/** Work set for a child: one or more subtopics in a subject, and a note for the child. */
+export const SetWorkSchema = z.object({
+  learnerId: z.uuid(),
+  subject: z.enum(["maths", "english"]),
+  subtopicIds: z
+    .array(z.string().regex(/^[0-9a-f-]{36}$/))
+    .min(1, "Choose at least one topic.")
+    .max(5, "Choose up to 5 topics at a time."),
+  note: z.string().trim().max(200).optional(),
+});
+
+/** How a child went on a piece of set work. */
+export const FinishWorkSchema = z.object({
+  learnerId: z.uuid(),
+  right: z.number().int().min(0).max(100),
+  total: z.number().int().min(1).max(100),
 });
 
 const YearSchema = z.union(

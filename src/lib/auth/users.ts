@@ -25,6 +25,13 @@ export interface User {
   lastLoginAt: string | null;
   /** Card payments: an admin gave this account free use of the site. */
   freeAccess: boolean;
+  /**
+   * For a parent: their access is paid for by a centre, because they are linked to a centre student
+   * and have no children of their own. A child they add themselves needs their own plan.
+   */
+  centreCovered?: boolean;
+  /** For a parent: they are linked to a centre student, so they can always see that child's progress. */
+  centreLinked?: boolean;
   /** When the account's free trial ends (milliseconds), or null when it never had one. */
   trialEndsAt: number | null;
   stripeCustomerId: string | null;
@@ -81,6 +88,7 @@ async function withParentPlan(user: User): Promise<User> {
     const centre = await getUser(user.centreId);
     return { ...user, isActive: user.isActive && Boolean(centre?.isActive) };
   }
+  if (user.role === "parent") return { ...user, ...(await centreLinks(user.id)) };
   if (user.role !== "student" || !user.parentId) return user;
   const parent = await getUser(user.parentId);
   if (!parent) return { ...user, isActive: false };
@@ -92,6 +100,19 @@ async function withParentPlan(user: User): Promise<User> {
     subscriptionStatus: parent.subscriptionStatus,
     paidUntil: parent.paidUntil,
   };
+}
+
+/** Whether a parent is linked to a centre student, and whether the centre covers them (no children of their own). */
+async function centreLinks(parentId: string): Promise<{ centreLinked: boolean; centreCovered: boolean }> {
+  const { rows } = await (
+    await ready()
+  ).query(
+    `SELECT EXISTS (SELECT 1 FROM learner_parents WHERE parent_id = $1) AS linked,
+       EXISTS (SELECT 1 FROM learners WHERE parent_id = $1) AS own`,
+    [parentId],
+  );
+  const linked = Boolean(rows[0]?.linked);
+  return { centreLinked: linked, centreCovered: linked && !rows[0]?.own };
 }
 
 export async function getUser(id: string): Promise<User | null> {
@@ -184,13 +205,19 @@ export async function listUsers(): Promise<(User & { learners: number; centreNam
   ).query(
     `SELECT ${USER_COLUMNS.split(", ")
       .map((c) => `u.${c}`)
-      .join(", ")}, COUNT(l.id) AS learners, c.display_name AS centre_name
+      .join(", ")}, COUNT(l.id) AS learners, c.display_name AS centre_name,
+       EXISTS (SELECT 1 FROM learner_parents lp WHERE lp.parent_id = u.id) AS centre_linked
      FROM users u LEFT JOIN learners l ON l.parent_id = u.id LEFT JOIN users c ON c.id = u.centre_id
      -- Children's sign-ins are managed by their parents, and counted with the parent's learners.
      WHERE u.learner_id IS NULL
      GROUP BY u.id, c.display_name ORDER BY u.created_at DESC LIMIT 500`,
   );
-  return rows.map((r) => ({ ...toUser(r), learners: Number(r.learners), centreName: (r.centre_name as string | null) ?? null }));
+  return rows.map((r) => ({
+    ...toUser(r),
+    learners: Number(r.learners),
+    centreName: (r.centre_name as string | null) ?? null,
+    ...(r.role === "parent" ? { centreCovered: Boolean(r.centre_linked) && Number(r.learners) === 0 } : {}),
+  }));
 }
 
 /** A child's sign-in, as their parent sees it. */

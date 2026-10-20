@@ -33,13 +33,18 @@ export function resultColour(result: LessonResult | boolean): ResultColour {
 }
 
 export interface LessonPart {
-  kind: "review" | "activity";
+  /** A warm-up review, an activity from the work program, or work a parent, teacher or centre set. */
+  kind: "review" | "activity" | "set";
   /** What the child sees, such as "Year 2 review" or "Fractions: Equivalent fractions". */
   title: string;
   /** The year the questions come from. */
   year: YearLevel;
-  /** Set for an activity: the subtopic it practises. */
+  /** Set for an activity or set work: the subtopic it practises. */
   subtopicId?: string;
+  /** For set work: its id on the server, who set it, and their note for the child. */
+  setWorkId?: string;
+  setBy?: string;
+  note?: string;
   questionIds: string[];
   /** One entry per answered question, in order (see LessonResult). */
   results: (LessonResult | boolean)[];

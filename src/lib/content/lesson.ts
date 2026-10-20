@@ -13,7 +13,7 @@ import { focusStreams, type WorkProgram } from "../learner/program";
 import { practiseable, programFor, streamSubtopics } from "./program";
 import { Rng } from "../practice/rng";
 import { progressKey } from "./practice";
-import { questionsOf } from "./tree";
+import { questionsOf, subtopicPath } from "./tree";
 import { DIFFICULTIES, type ContentQuestion, type Difficulty, type Subtopic } from "./types";
 
 /** The warm-up is revision, so it leaves out the very easy and very hard levels. */
@@ -156,6 +156,46 @@ export function buildLesson(profile: LearnerProfile, subject: Subject, now = Dat
     (program && programActivities(profile, subject, program, rng)) ??
     weakestSubtopics(profile, subject).map(({ topic, subtopic }) => activityPart(topic, subtopic, profile.yearLevel, rng, curriculum));
   return { week, curriculum, parts: [review, ...activities].filter((p) => p.questionIds.length) };
+}
+
+/** Work set by a parent, teacher or centre, as it comes from the server. */
+export interface SetWorkItem {
+  id: string;
+  subtopicId: string;
+  setBy: string | null;
+  note: string | null;
+}
+
+/**
+ * Adds set work the lesson doesn't have yet as parts after the rest: ten questions on its
+ * subtopic, easy to hard. Work on a subtopic this curriculum doesn't have is left out.
+ */
+export function addSetWork(lesson: WeeklyLesson, items: SetWorkItem[], profile: LearnerProfile): WeeklyLesson {
+  const curriculum = curriculumOf(profile.curriculum);
+  const have = new Set(lesson.parts.map((p) => p.setWorkId).filter(Boolean));
+  const parts = items
+    .filter((w) => !have.has(w.id))
+    .flatMap((w): LessonPart[] => {
+      const path = subtopicPath(w.subtopicId, curriculum);
+      if (!path) return [];
+      const rng = new Rng(hash(`${w.id}:${lesson.week}`));
+      const { topic, subtopic } = path;
+      return [
+        {
+          kind: "set",
+          title: topic.title === subtopic.title ? topic.title : `${topic.title}: ${subtopic.title}`,
+          year: profile.yearLevel,
+          subtopicId: subtopic.id,
+          setWorkId: w.id,
+          ...(w.setBy ? { setBy: w.setBy } : {}),
+          ...(w.note ? { note: w.note } : {}),
+          questionIds: activity(subtopic, rng, curriculum),
+          results: [],
+        },
+      ];
+    })
+    .filter((p) => p.questionIds.length);
+  return parts.length ? { ...lesson, parts: [...lesson.parts, ...parts] } : lesson;
 }
 
 /**
