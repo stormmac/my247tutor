@@ -77,6 +77,8 @@ export interface LearnerProfile {
   lessons?: Partial<Record<Subject, WeeklyLesson>>;
   /** The work program from the starting assessment in each subject. Missing until the assessment. */
   programs?: Partial<Record<Subject, WorkProgram>>;
+  /** "YYYY-MM-DD", when a grown-up has entered it (see learner/birth.ts). */
+  dateOfBirth?: string;
   /** Which curriculum the child learns. Missing means NSW. On an account, the saved copy decides (see auth/learners.ts). */
   curriculum?: Curriculum;
 }

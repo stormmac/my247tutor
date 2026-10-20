@@ -3,6 +3,7 @@
  * and used from the proxy, route handlers and the browser alike.
  */
 import { z } from "zod";
+import { dateOfBirthProblem } from "@/lib/learner/birth";
 
 /** A centre is a tutoring centre's own account, run by its manager. */
 export type Role = "admin" | "teacher" | "student" | "parent" | "centre";
@@ -234,6 +235,12 @@ export const describeTime = (t: ClassTime) => `${WEEKDAYS[t.weekday - 1]} ${form
 export const MAX_CENTRE_STUDENTS = 500;
 
 /** A centre adds a student with the username and password they'll sign in with. */
+/** A date of birth, "YYYY-MM-DD", for a student aged 3 to 19. */
+export const DateOfBirthSchema = z.string().superRefine((dob, ctx) => {
+  const problem = dateOfBirthProblem(dob);
+  if (problem) ctx.addIssue({ code: "custom", message: problem });
+});
+
 export const NewStudentSchema = z.object({
   name: z.string().trim().min(1, "Enter the student's name.").max(20, "Use 20 characters or fewer."),
   yearLevel: YearSchema,
@@ -242,6 +249,7 @@ export const NewStudentSchema = z.object({
   classIds: z.array(z.uuid()).max(20).default([]),
   /** Puts the student in Learn to Read, the phonics program, without waiting for the reading check. */
   learnToRead: z.boolean().default(false),
+  dateOfBirth: DateOfBirthSchema.optional(),
 });
 
 export const StudentChangeSchema = z
@@ -252,5 +260,7 @@ export const StudentChangeSchema = z
     password: ChildPasswordSchema.optional(),
     classIds: z.array(z.uuid()).max(20).optional(),
     learnToRead: z.boolean().optional(),
+    /** Null clears it. */
+    dateOfBirth: DateOfBirthSchema.nullable().optional(),
   })
   .refine((c) => Object.values(c).some((v) => v !== undefined), "Nothing to change.");

@@ -10,6 +10,7 @@ import { removeCurrentChild, useProfile } from "@/components/useProfile";
 import type { LearnerProfile } from "@/lib/learner/model";
 import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, localeOf, outcomesName, yearName } from "@/lib/curriculum/curricula";
 import { YEARS } from "@/lib/curriculum/types";
+import { dateOfBirthProblem, today } from "@/lib/learner/birth";
 
 /** A child at a tutoring centre that this parent is linked to. The centre owns their progress. */
 interface CentreChild {
@@ -161,6 +162,27 @@ export default function ParentPage() {
                 </option>
               ))}
             </select>
+          </label>
+          <label className="row" style={{ fontWeight: 400, margin: 0 }}>
+            Date of birth
+            <input
+              key={profile.id}
+              type="date"
+              defaultValue={profile.dateOfBirth ?? ""}
+              max={today()}
+              style={{ width: "auto" }}
+              aria-label="Child's date of birth"
+              onBlur={(e) => {
+                const dob = e.target.value;
+                if (dob === (profile.dateOfBirth ?? "")) return;
+                if (dob && dateOfBirthProblem(dob)) {
+                  alert(dateOfBirthProblem(dob));
+                  e.target.value = profile.dateOfBirth ?? "";
+                  return;
+                }
+                setProfile(({ dateOfBirth: _, ...p }) => (dob ? { ...p, dateOfBirth: dob } : p));
+              }}
+            />
           </label>
           {account.user ? (
             <span className="small">
