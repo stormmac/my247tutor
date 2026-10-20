@@ -219,6 +219,7 @@ input[type="number"],
 input[type="password"],
 input[type="email"],
 input[type="search"],
+input[type="date"],
 input:not([type]),
 textarea,
 select {

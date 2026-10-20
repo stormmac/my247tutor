@@ -11,6 +11,10 @@ export const StoredProfileSchema = z
     id: z.uuid().optional(),
     name: z.string().trim().min(1).max(60),
     yearLevel: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6), z.literal(7), z.literal(8)]),
+    dateOfBirth: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
     // Only used when the child is first saved (see saveLearnerProfiles).
     curriculum: z.unknown().optional(),
   })
@@ -87,17 +91,18 @@ export async function saveLearnerProfiles(
   return withIds;
 }
 
-/** A child signed in on their own saves their progress. It can only ever change their own profile. */
+/**
+ * A child signed in on their own saves their progress. It can only ever change their own profile,
+ * and not their date of birth, which their parent or centre sets.
+ */
 export async function saveOwnProfile(parentId: string, learnerId: string, profile: StoredProfile): Promise<boolean> {
   const { rowCount } = await (
     await ready()
-  ).query(`UPDATE learners SET profile = $3, name = $4, year_level = $5, updated_at = NOW() WHERE id = $2 AND parent_id = $1`, [
-    parentId,
-    learnerId,
-    JSON.stringify({ ...profile, id: learnerId }),
-    profile.name,
-    profile.yearLevel,
-  ]);
+  ).query(
+    `UPDATE learners SET profile = ($3::jsonb - 'dateOfBirth') || jsonb_strip_nulls(jsonb_build_object('dateOfBirth', profile->'dateOfBirth')),
+       name = $4, year_level = $5, updated_at = NOW() WHERE id = $2 AND parent_id = $1`,
+    [parentId, learnerId, JSON.stringify({ ...profile, id: learnerId }), profile.name, profile.yearLevel],
+  );
   return Boolean(rowCount);
 }
 

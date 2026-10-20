@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { WeekCalendar } from "@/components/WeekCalendar";
 import { CLASS_SUBJECTS as SUBJECTS, describeTime, formatDuration, WEEKDAYS, type ClassTime } from "@/lib/auth/rules";
 import { YEARS } from "@/lib/curriculum/types";
+import { dateOfBirthProblem, describeBirth, today } from "@/lib/learner/birth";
 
 interface Teacher {
   id: string;
@@ -35,6 +36,8 @@ interface Student {
   lastLoginAt: string | null;
   classIds: string[];
   learnToRead: boolean;
+  /** "YYYY-MM-DD", when entered. */
+  dateOfBirth: string | null;
   /** Parents who can see this student's work. */
   parents: { id: string; name: string; email: string; lastLoginAt: string | null }[];
 }
@@ -528,6 +531,7 @@ function Students({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
                   <tr key={s.id}>
                     <td>
                       <strong>{s.name}</strong>
+                      {s.dateOfBirth && <div className="small muted">{describeBirth(s.dateOfBirth)}</div>}
                     </td>
                     <td>Year {s.yearLevel}</td>
                     <td>{s.username ?? <span className="muted">None</span>}</td>
@@ -671,6 +675,8 @@ interface StudentChange {
   password?: string;
   classIds?: string[];
   learnToRead?: boolean;
+  /** Null clears it. */
+  dateOfBirth?: string | null;
 }
 
 function StudentForm({
@@ -690,12 +696,17 @@ function StudentForm({
   const [password, setPassword] = useState("");
   const [classIds, setClassIds] = useState<string[]>(initial?.classIds ?? []);
   const [learnToRead, setLearnToRead] = useState(initial?.learnToRead ?? false);
+  const [dateOfBirth, setDateOfBirth] = useState(initial?.dateOfBirth ?? "");
+  const [dobError, setDobError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   return (
     <form
       className="stack student-form"
       onSubmit={async (e) => {
         e.preventDefault();
+        const problem = dateOfBirth ? dateOfBirthProblem(dateOfBirth) : null;
+        setDobError(problem);
+        if (problem) return;
         setBusy(true);
         // Only what changed, and a password only when one was typed.
         await onSave({
@@ -705,6 +716,8 @@ function StudentForm({
           ...(password ? { password } : {}),
           classIds,
           learnToRead,
+          // An empty date clears one that was there; a new student without one just has none.
+          ...(dateOfBirth ? { dateOfBirth } : initial?.dateOfBirth ? { dateOfBirth: null } : {}),
         });
         setBusy(false);
       }}
@@ -745,6 +758,25 @@ function StudentForm({
             placeholder="At least 8 characters"
             required={!initial}
           />
+        </div>
+        <div>
+          <label htmlFor="student-dob">Date of birth (optional)</label>
+          <input
+            id="student-dob"
+            type="date"
+            value={dateOfBirth}
+            max={today()}
+            onChange={(e) => {
+              setDateOfBirth(e.target.value);
+              setDobError(null);
+            }}
+            aria-invalid={Boolean(dobError)}
+          />
+          {dobError && (
+            <div className="small" role="alert" style={{ color: "var(--bad)" }}>
+              {dobError}
+            </div>
+          )}
         </div>
       </div>
       <ClassPicker classes={classes} value={classIds} onChange={setClassIds} />

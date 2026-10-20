@@ -42,6 +42,8 @@ export interface Student {
   classIds: string[];
   /** In Learn to Read, the phonics program. */
   learnToRead: boolean;
+  /** "YYYY-MM-DD", when the centre has entered it. */
+  dateOfBirth: string | null;
 }
 
 const iso = (value: unknown) => (value ? new Date(value as string).toISOString() : null);
@@ -184,7 +186,7 @@ export async function listStudents(centreId: string): Promise<Student[]> {
     await ready()
   ).query(
     `SELECT l.id, l.name, l.year_level, u.username, u.last_login_at,
-       COALESCE((l.profile->'reading'->>'enrolled')::boolean, FALSE) AS learn_to_read,
+       COALESCE((l.profile->'reading'->>'enrolled')::boolean, FALSE) AS learn_to_read, l.profile->>'dateOfBirth' AS date_of_birth,
        COALESCE(array_agg(e.class_id) FILTER (WHERE e.class_id IS NOT NULL), '{}') AS class_ids
      FROM learners l
      LEFT JOIN users u ON u.learner_id = l.id
@@ -201,6 +203,7 @@ export async function listStudents(centreId: string): Promise<Student[]> {
     lastLoginAt: iso(r.last_login_at),
     classIds: r.class_ids as string[],
     learnToRead: r.learn_to_read as boolean,
+    dateOfBirth: (r.date_of_birth as string | null) ?? null,
   }));
 }
 
@@ -233,7 +236,15 @@ const taken = (error: unknown) => (error as { code?: string }).code === "23505";
 /** A centre adds a student: a learner profile, a sign-in with this username and password, and their classes. */
 export async function addStudent(
   centre: User,
-  details: { name: string; yearLevel: YearLevel; username: string; password: string; classIds: string[]; learnToRead?: boolean },
+  details: {
+    name: string;
+    yearLevel: YearLevel;
+    username: string;
+    password: string;
+    classIds: string[];
+    learnToRead?: boolean;
+    dateOfBirth?: string;
+  },
 ): Promise<{ id: string } | { error: string; status: number }> {
   const hash = await bcrypt.hash(details.password, 12);
   try {
@@ -246,6 +257,7 @@ export async function addStudent(
         ...newProfile(details.name, details.yearLevel),
         id: randomUUID(),
         ...(details.learnToRead ? { reading: setEnrolled(newReading(), true) } : {}),
+        ...(details.dateOfBirth ? { dateOfBirth: details.dateOfBirth } : {}),
       };
       await client.query(`INSERT INTO learners (id, parent_id, name, year_level, profile) VALUES ($1, $2, $3, $4, $5)`, [
         profile.id,
@@ -276,7 +288,15 @@ export async function addStudent(
 export async function updateStudent(
   centre: User,
   learnerId: string,
-  change: { name?: string; yearLevel?: number; username?: string; password?: string; classIds?: string[]; learnToRead?: boolean },
+  change: {
+    name?: string;
+    yearLevel?: number;
+    username?: string;
+    password?: string;
+    classIds?: string[];
+    learnToRead?: boolean;
+    dateOfBirth?: string | null;
+  },
 ): Promise<{ ok: true } | { error: string; status: number }> {
   const hash = change.password ? await bcrypt.hash(change.password, 12) : null;
   try {
@@ -291,6 +311,12 @@ export async function updateStudent(
         [learnerId, centre.id, change.name ?? null, change.yearLevel ?? null],
       );
       if (!rowCount) return false;
+      if (change.dateOfBirth !== undefined)
+        await client.query(
+          `UPDATE learners SET profile = CASE WHEN $2::text IS NULL THEN profile - 'dateOfBirth'
+             ELSE jsonb_set(profile, '{dateOfBirth}', to_jsonb($2::text)) END WHERE id = $1`,
+          [learnerId, change.dateOfBirth],
+        );
       if (change.learnToRead !== undefined) {
         // The same change a parent makes from the progress report: on or off, set by a grown-up.
         const { rows } = await client.query(`SELECT profile->'reading' AS reading FROM learners WHERE id = $1`, [learnerId]);
@@ -325,6 +351,7 @@ export async function updateStudent(
     password: Boolean(change.password),
     classes: change.classIds?.length,
     learnToRead: change.learnToRead,
+    dateOfBirth: change.dateOfBirth === undefined ? undefined : Boolean(change.dateOfBirth),
   });
   return { ok: true };
 }
