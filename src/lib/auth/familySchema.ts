@@ -24,3 +24,10 @@ CREATE TABLE IF NOT EXISTS set_work (
   total       SMALLINT
 );
 CREATE INDEX IF NOT EXISTS idx_set_work_learner ON set_work(learner_id, created_at DESC);`;
+
+/**
+ * Marks work a parent added because it's what the child is doing at school now
+ * (database/019_my247tutor_school_topics.sql, kept identical by a test).
+ */
+export const SCHOOL_TOPICS_SQL = `-- Work added because it's what the child is doing at school now, so they practise it here too.
+ALTER TABLE set_work ADD COLUMN IF NOT EXISTS at_school BOOLEAN NOT NULL DEFAULT FALSE;`;

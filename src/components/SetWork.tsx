@@ -18,6 +18,10 @@ export interface SetWork {
   doneAt: string | null;
   right: number | null;
   total: number | null;
+  /** A topic the child is doing at school now, added by a parent. */
+  atSchool: boolean;
+  /** Whether this person added it. */
+  mine?: boolean;
 }
 
 /**
@@ -27,19 +31,21 @@ export interface SetWork {
 export function useSetWork(learnerId: string | undefined) {
   const [work, setWork] = useState<SetWork[]>([]);
   const [canSet, setCanSet] = useState(false);
+  const [canAddSchool, setCanAddSchool] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const load = useCallback(async () => {
     if (!learnerId) return setLoaded(true);
     const res = await fetch(`/api/set-work?learner=${learnerId}`).catch(() => null);
-    const body = (await res?.json().catch(() => null)) as { work?: SetWork[]; canSet?: boolean } | null;
+    const body = (await res?.json().catch(() => null)) as { work?: SetWork[]; canSet?: boolean; canAddSchool?: boolean } | null;
     setWork(res?.ok ? (body?.work ?? []) : []);
     setCanSet(Boolean(res?.ok && body?.canSet));
+    setCanAddSchool(Boolean(res?.ok && body?.canAddSchool));
     setLoaded(true);
   }, [learnerId]);
   useEffect(() => {
     void load();
   }, [load]);
-  return { work, canSet, loaded, reload: load };
+  return { work, canSet, canAddSchool, loaded, reload: load };
 }
 
 /** Tells the server how the child went on a piece of set work. */
@@ -107,6 +113,7 @@ export function SetWorkCard({ profile }: { profile: LearnerProfile }) {
                     {title(w)}
                     <div className="small muted">
                       {subjectName(w.subject, curriculum)}
+                      {w.atSchool && " · doing at school"}
                       {w.note && <> · &ldquo;{w.note}&rdquo;</>}
                     </div>
                   </td>

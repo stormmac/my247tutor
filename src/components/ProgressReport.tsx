@@ -36,6 +36,41 @@ import { SetWorkCard } from "@/components/SetWork";
 import { programFor, streamSubtopics } from "@/lib/content/program";
 import { focusStreams, PASS_MARK, STREAM_NAMES } from "@/lib/learner/program";
 
+/** The alert shown when something a child wrote suggests they may be upset or unsafe. */
+export function WellbeingAlert({
+  profile,
+  onChange,
+}: {
+  profile: LearnerProfile;
+  onChange?: (update: (p: LearnerProfile) => LearnerProfile) => void;
+}) {
+  if (!profile.wellbeingFlags.length) return null;
+  return (
+    <div className="card" style={{ borderColor: "var(--bad)" }}>
+      <h2>Please check in with {profile.name}</h2>
+      <p>
+        Something {profile.name} wrote suggested they may be upset or unsafe. The tutor responded kindly and shared Kids Helpline (1800 55
+        1800).
+      </p>
+      <ul>
+        {profile.wellbeingFlags
+          .slice(-5)
+          .reverse()
+          .map((f, i) => (
+            <li key={i}>
+              <span className="muted small">{new Date(f.at).toLocaleString("en-AU")}:</span> "{f.message}"
+            </li>
+          ))}
+      </ul>
+      {onChange && (
+        <button className="btn secondary small" onClick={() => onChange((p) => ({ ...p, wellbeingFlags: [] }))}>
+          I've followed up
+        </button>
+      )}
+    </div>
+  );
+}
+
 /**
  * A learner's progress report: this week's practice, the starting assessments, recent questions,
  * results by topic, where they sit against the NSW syllabus, and writing feedback. Parents see it
@@ -45,60 +80,43 @@ import { focusStreams, PASS_MARK, STREAM_NAMES } from "@/lib/learner/program";
 export function ProgressReport({
   profile,
   onChange,
+  detailOnly,
 }: {
   profile: LearnerProfile;
   onChange?: (update: (p: LearnerProfile) => LearnerProfile) => void;
+  /** Under the Parents page's summary, which already shows the alert, chats, totals and set work. */
+  detailOnly?: boolean;
 }) {
   const week = Date.now() - 7 * 86_400_000;
   const thisWeek = profile.history.filter((h) => h.at >= week);
 
   return (
     <>
-      {profile.wellbeingFlags.length > 0 && (
-        <div className="card" style={{ borderColor: "var(--bad)" }}>
-          <h2>Please check in with {profile.name}</h2>
-          <p>
-            Something {profile.name} wrote suggested they may be upset or unsafe. The tutor responded kindly and shared Kids Helpline (1800
-            55 1800).
-          </p>
-          <ul>
-            {profile.wellbeingFlags
-              .slice(-5)
-              .reverse()
-              .map((f, i) => (
-                <li key={i}>
-                  <span className="muted small">{new Date(f.at).toLocaleString("en-AU")}:</span> "{f.message}"
-                </li>
-              ))}
-          </ul>
-          {onChange && (
-            <button className="btn secondary small" onClick={() => onChange((p) => ({ ...p, wellbeingFlags: [] }))}>
-              I've followed up
-            </button>
-          )}
-        </div>
-      )}
+      {!detailOnly && (
+        <>
+          <WellbeingAlert profile={profile} onChange={onChange} />
+          <SuniChatsReport learnerId={profile.id} name={profile.name} />
 
-      <SuniChatsReport learnerId={profile.id} name={profile.name} />
-
-      <div className="grid grid-3">
-        <div className="card">
-          <div className="muted small">Questions this week</div>
-          <div style={{ fontSize: 32, fontWeight: 800 }}>{thisWeek.length}</div>
-        </div>
-        <div className="card">
-          <div className="muted small">Correct first try this week</div>
-          <div style={{ fontSize: 32, fontWeight: 800 }}>
-            {thisWeek.length ? `${Math.round((thisWeek.filter((h) => h.correct).length / thisWeek.length) * 100)}%` : "–"}
+          <div className="grid grid-3">
+            <div className="card">
+              <div className="muted small">Questions this week</div>
+              <div style={{ fontSize: 32, fontWeight: 800 }}>{thisWeek.length}</div>
+            </div>
+            <div className="card">
+              <div className="muted small">Correct first try this week</div>
+              <div style={{ fontSize: 32, fontWeight: 800 }}>
+                {thisWeek.length ? `${Math.round((thisWeek.filter((h) => h.correct).length / thisWeek.length) * 100)}%` : "–"}
+              </div>
+            </div>
+            <div className="card">
+              <div className="muted small">Writing pieces</div>
+              <div style={{ fontSize: 32, fontWeight: 800 }}>{profile.writing.length}</div>
+            </div>
           </div>
-        </div>
-        <div className="card">
-          <div className="muted small">Writing pieces</div>
-          <div style={{ fontSize: 32, fontWeight: 800 }}>{profile.writing.length}</div>
-        </div>
-      </div>
 
-      <SetWorkCard profile={profile} />
+          <SetWorkCard profile={profile} />
+        </>
+      )}
 
       <StartingReport
         profile={profile}

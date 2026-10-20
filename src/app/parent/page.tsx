@@ -5,7 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useAccount } from "@/components/useAccount";
 import { ChildLogin } from "@/components/ChildLogin";
 import { ChildTabs } from "@/components/ChildSwitcher";
-import { ProgressReport } from "@/components/ProgressReport";
+import { ParentSummary } from "@/components/ParentSummary";
+import { ProgressReport, WellbeingAlert } from "@/components/ProgressReport";
+import { SuniChatsButton } from "@/components/SuniChats";
 import { removeCurrentChild, useProfile } from "@/components/useProfile";
 import type { LearnerProfile } from "@/lib/learner/model";
 import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, localeOf, outcomesName, yearName } from "@/lib/curriculum/curricula";
@@ -77,11 +79,11 @@ export default function ParentPage() {
               of {new Date().toLocaleDateString(localeOf(curriculum))}.
             </p>
           </div>
-          <button className="btn secondary small no-print" onClick={() => window.print()}>
-            Print or save as PDF
-          </button>
+          <ReportButtons learnerId={atCentre.profile.id} name={atCentre.name} />
         </div>
-        <ProgressReport profile={atCentre.profile} />
+        <WellbeingAlert profile={atCentre.profile} />
+        <ParentSummary profile={atCentre.profile} />
+        <FullReport profile={atCentre.profile} />
         <p className="small muted no-print">
           {atCentre.centreName} pays for {atCentre.name}&apos;s lessons and looks after their sign-in. A child you add yourself
           {profile ? "" : " with + Add a child on the Learn page"} needs a plan of their own.
@@ -117,12 +119,12 @@ export default function ParentPage() {
             {new Date().toLocaleDateString(localeOf(curriculum))}.
           </p>
         </div>
-        <button className="btn secondary small no-print" onClick={() => window.print()}>
-          Print or save as PDF
-        </button>
+        <ReportButtons learnerId={profile.id} name={profile.name} />
       </div>
 
-      <ProgressReport profile={profile} onChange={setProfile} />
+      <WellbeingAlert profile={profile} onChange={setProfile} />
+      <ParentSummary profile={profile} />
+      <FullReport profile={profile} onChange={setProfile} />
 
       {account.user && profile.id && <ChildLogin key={profile.id} learnerId={profile.id} name={profile.name} />}
 
@@ -225,6 +227,36 @@ export default function ParentPage() {
 }
 
 /** A simple grown-up check, common in children's apps, so a child doesn't wander into settings. */
+/** The chats with Suni and print buttons beside a child's name. */
+function ReportButtons({ learnerId, name }: { learnerId?: string; name: string }) {
+  return (
+    <div className="row no-print" style={{ gap: 8 }}>
+      <SuniChatsButton learnerId={learnerId} name={name} />
+      <button className="btn secondary small" onClick={() => window.print()}>
+        Print or save as PDF
+      </button>
+    </div>
+  );
+}
+
+/** Everything else on the progress report, folded away under the summary. */
+function FullReport({
+  profile,
+  onChange,
+}: {
+  profile: LearnerProfile;
+  onChange?: (update: (p: LearnerProfile) => LearnerProfile) => void;
+}) {
+  return (
+    <details className="full-report">
+      <summary>Full report: starting assessments, reading, times tables and every topic</summary>
+      <div className="stack" style={{ marginTop: 12 }}>
+        <ProgressReport profile={profile} onChange={onChange} detailOnly />
+      </div>
+    </details>
+  );
+}
+
 function ParentGate({ onPass }: { onPass: () => void }) {
   const [a, b] = useMemo(() => [11 + Math.floor(Math.random() * 8), 12 + Math.floor(Math.random() * 7)], []);
   const [value, setValue] = useState("");

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { FAMILY_SQL } from "../auth/familySchema";
+import { FAMILY_SQL, SCHOOL_TOPICS_SQL } from "../auth/familySchema";
 import { accountPlan, FinishWorkSchema, NewParentSchema, SetWorkSchema } from "../auth/rules";
 import { addSetWork, buildLesson } from "../content/lesson";
 import { nextPart } from "../learner/lesson";
@@ -29,6 +29,7 @@ describe("parents of centre students", () => {
 
   it("has a migration file matching the app's own SQL", () => {
     expect(readFileSync(join(__dirname, "../../../database/018_my247tutor_parents_and_set_work.sql"), "utf8")).toContain(FAMILY_SQL);
+    expect(readFileSync(join(__dirname, "../../../database/019_my247tutor_school_topics.sql"), "utf8")).toContain(SCHOOL_TOPICS_SQL);
   });
 });
 

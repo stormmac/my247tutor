@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type ChatFlag = "wellbeing" | "inappropriate" | "personal_info" | "grown_up";
 
@@ -170,5 +170,60 @@ export function SuniChatsReport({ learnerId, name }: { learnerId?: string; name:
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * The Parents page's Chats with Suni button, showing how many messages are flagged. It opens the
+ * conversations in a popup. Hidden when there's no account to read them from.
+ */
+export function SuniChatsButton({ learnerId, name }: { learnerId?: string; name: string }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [chats, setChats] = useState<SuniChat[] | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!learnerId) return;
+    void fetch(`/api/suni/chats?learner=${learnerId}`)
+      .then((res) => (res.ok ? (res.json() as Promise<{ chats?: SuniChat[] }>) : null))
+      .then((body) => setChats(body?.chats ?? null))
+      .catch(() => undefined);
+  }, [learnerId, open]);
+  if (!chats) return null;
+  const flagged = chats.filter((c) => c.flag).length;
+  const close = () => {
+    dialog.current?.close();
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        className={`btn small no-print ${flagged ? "" : "secondary"}`}
+        onClick={() => {
+          setOpen(true);
+          dialog.current?.showModal();
+        }}
+      >
+        💬 Chats with Suni{flagged > 0 && ` · ${flagged} flagged`}
+      </button>
+      <dialog
+        ref={dialog}
+        className="preview-dialog"
+        aria-label={`${name}'s chats with Suni`}
+        onClose={() => setOpen(false)}
+        onClick={(e) => e.target === dialog.current && close()}
+      >
+        <div className="stack">
+          <div className="row spread">
+            <span />
+            <button type="button" className="btn secondary small" onClick={close}>
+              Close
+            </button>
+          </div>
+          {open && <SuniChatsReport learnerId={learnerId} name={name} />}
+        </div>
+      </dialog>
+    </>
   );
 }

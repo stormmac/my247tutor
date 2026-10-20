@@ -170,6 +170,8 @@ export const SetWorkSchema = z.object({
     .min(1, "Choose at least one topic.")
     .max(5, "Choose up to 5 topics at a time."),
   note: z.string().trim().max(200).optional(),
+  /** What the child is doing at school now, added by a parent so they practise it here too. */
+  atSchool: z.boolean().default(false),
 });
 
 /** How a child went on a piece of set work. */
