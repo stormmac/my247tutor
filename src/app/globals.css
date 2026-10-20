@@ -491,6 +491,14 @@ th {
   color: var(--good);
   font-weight: 600;
 }
+.tree .preview-link {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.feedback.preview-banner {
+  margin-top: 0;
+  background: var(--warn-tint);
+}
 
 /* Topic tree */
 .tabs {

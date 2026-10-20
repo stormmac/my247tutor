@@ -77,6 +77,7 @@ export function AccountMenu() {
           </div>
           <Link href="/account">My account</Link>
           {billing && (user.role === "parent" || user.role === "centre") && <Link href="/billing">Billing</Link>}
+          {user.role !== "student" && !user.child && <Link href="/curriculum">Curriculum</Link>}
           {user.role === "admin" && <Link href="/admin">Admin</Link>}
           <button type="button" className="link-button" onClick={() => void signOut()}>
             Log out

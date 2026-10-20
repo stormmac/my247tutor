@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { localiseQuestion } from "@/lib/curriculum/curricula";
+import { type Curriculum, localiseQuestion } from "@/lib/curriculum/curricula";
 import { answerText, checkAnswer, type Question } from "@/lib/practice";
 import type { AttemptDetails } from "@/lib/learner/model";
 import { Picture } from "./Picture";
@@ -42,6 +42,8 @@ interface Props {
   onTryAgain?: () => void;
   /** Goes before the answer is shown. */
   maxTries?: number;
+  /** Shows it for this curriculum instead of the child's, for a grown-up previewing a question. */
+  curriculum?: Curriculum;
 }
 
 const MAX_TRIES = 2;
@@ -57,9 +59,11 @@ export function QuestionView({
   onAnsweredChange,
   onTryAgain,
   maxTries = MAX_TRIES,
+  curriculum: shownIn,
 }: Props) {
   // A child on the US curriculum sees the question, and is marked, in US English.
-  const curriculum = useCurriculum();
+  const childCurriculum = useCurriculum();
+  const curriculum = shownIn ?? childCurriculum;
   const question = useMemo(() => localiseQuestion(asWritten, curriculum), [asWritten, curriculum]);
   const [input, setInput] = useState("");
   const [selected, setSelected] = useState<number | null>(null);

@@ -2587,6 +2587,12 @@ export function questionsOf(subtopicId: string, curriculum: Curriculum = DEFAULT
   return curriculum === "nsw" ? all : all.filter((q) => usableIn(q, curriculum));
 }
 
+/** A written question by id, if it's used in this curriculum. */
+export function questionById(id: string, curriculum: Curriculum = DEFAULT_CURRICULUM): ContentQuestion | null {
+  const q = QUESTIONS.find((x) => x.id === id);
+  return q && (curriculum === "nsw" || usableIn(q, curriculum)) ? q : null;
+}
+
 /** Years that have content for a subject. */
 export function yearsWithContent(subject: SubjectKey, curriculum: Curriculum = DEFAULT_CURRICULUM): YearNumber[] {
   return YEARS.filter((y) => topicsFor(subject, y, curriculum).length > 0);
