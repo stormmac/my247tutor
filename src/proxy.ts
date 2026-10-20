@@ -39,10 +39,12 @@ const PARENT_ONLY = [
   "/api/classes",
   "/api/students",
   "/api/suni",
+  // The curriculum tree shows the answers.
+  "/curriculum",
 ];
 
 /** Pages for an account holder, not for trying the site: signed out, these go to log in, not the free trial. */
-const ACCOUNT_PAGES = ["/parent", "/billing", "/centre", "/classes", "/account"];
+const ACCOUNT_PAGES = ["/parent", "/billing", "/centre", "/classes", "/account", "/curriculum"];
 
 function isUnder(pathname: string, prefixes: string[]): boolean {
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
