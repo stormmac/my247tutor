@@ -15,38 +15,39 @@ const OLDEST = 10;
  * The reading check: Suni says a word and the student picks it from four that look alike. The
  * words get harder, six for each year of reading age from 5 to 10, and each one read correctly
  * adds two months, like a graded word reading test. The order of the choices is shuffled on screen.
+ * Each word has a sentence using it, for a student who wants to hear it in context.
  */
-export const CHECK_WORDS: { word: string; options: string[] }[] = [
-  { word: "cat", options: ["cat", "cot", "cut", "can"] },
-  { word: "in", options: ["in", "on", "an", "is"] },
-  { word: "dog", options: ["dog", "dig", "bog", "log"] },
-  { word: "sun", options: ["sun", "sit", "run", "son"] },
-  { word: "big", options: ["big", "bag", "pig", "dig"] },
-  { word: "up", options: ["up", "us", "at", "it"] },
-  { word: "ship", options: ["ship", "shop", "chip", "sip"] },
-  { word: "fish", options: ["fish", "dish", "fist", "wish"] },
-  { word: "jump", options: ["jump", "bump", "junk", "lump"] },
-  { word: "frog", options: ["frog", "from", "flog", "fog"] },
-  { word: "rain", options: ["rain", "ran", "ruin", "train"] },
-  { word: "tree", options: ["tree", "three", "free", "trip"] },
-  { word: "night", options: ["night", "nice", "might", "nigh"] },
-  { word: "boat", options: ["boat", "boot", "beat", "bout"] },
-  { word: "storm", options: ["storm", "stamp", "store", "stem"] },
-  { word: "chair", options: ["chair", "cheer", "chain", "hair"] },
-  { word: "kite", options: ["kite", "kit", "knit", "bite"] },
-  { word: "turned", options: ["turned", "tuned", "trend", "burned"] },
-  { word: "should", options: ["should", "shoulder", "sound", "shout"] },
-  { word: "people", options: ["people", "purple", "pebble", "pupil"] },
-  { word: "laugh", options: ["laugh", "light", "lung", "leaf"] },
-  { word: "thought", options: ["thought", "though", "through", "taught"] },
-  { word: "island", options: ["island", "inland", "ironed", "eyelid"] },
-  { word: "wrinkle", options: ["wrinkle", "twinkle", "ankle", "wrestle"] },
-  { word: "busy", options: ["busy", "bossy", "bushy", "buses"] },
-  { word: "ocean", options: ["ocean", "often", "onion", "octagon"] },
-  { word: "science", options: ["science", "silence", "scene", "sentence"] },
-  { word: "knowledge", options: ["knowledge", "kneeling", "knowing", "college"] },
-  { word: "orchestra", options: ["orchestra", "orchard", "ostrich", "extra"] },
-  { word: "physical", options: ["physical", "physics", "special", "fiscal"] },
+export const CHECK_WORDS: { word: string; options: string[]; sentence: string }[] = [
+  { word: "cat", options: ["cat", "cot", "cut", "can"], sentence: "The cat sat on the mat." },
+  { word: "in", options: ["in", "on", "an", "is"], sentence: "The fish is in the pond." },
+  { word: "dog", options: ["dog", "dig", "bog", "log"], sentence: "My dog likes to run." },
+  { word: "sun", options: ["sun", "sit", "run", "son"], sentence: "The sun is hot today." },
+  { word: "big", options: ["big", "bag", "pig", "dig"], sentence: "An elephant is very big." },
+  { word: "up", options: ["up", "us", "at", "it"], sentence: "The bird flew up into the sky." },
+  { word: "ship", options: ["ship", "shop", "chip", "sip"], sentence: "The ship sailed across the sea." },
+  { word: "fish", options: ["fish", "dish", "fist", "wish"], sentence: "I saw a fish in the river." },
+  { word: "jump", options: ["jump", "bump", "junk", "lump"], sentence: "Can you jump over the log?" },
+  { word: "frog", options: ["frog", "from", "flog", "fog"], sentence: "The frog sat on a lily pad." },
+  { word: "rain", options: ["rain", "ran", "ruin", "train"], sentence: "Take an umbrella in the rain." },
+  { word: "tree", options: ["tree", "three", "free", "trip"], sentence: "The koala climbed the tree." },
+  { word: "night", options: ["night", "nice", "might", "nigh"], sentence: "We see the stars at night." },
+  { word: "boat", options: ["boat", "boot", "beat", "bout"], sentence: "We rowed the boat on the lake." },
+  { word: "storm", options: ["storm", "stamp", "store", "stem"], sentence: "The storm made the windows shake." },
+  { word: "chair", options: ["chair", "cheer", "chain", "hair"], sentence: "Please sit on the chair." },
+  { word: "kite", options: ["kite", "kit", "knit", "bite"], sentence: "I flew my kite at the beach." },
+  { word: "turned", options: ["turned", "tuned", "trend", "burned"], sentence: "She turned the page of her book." },
+  { word: "should", options: ["should", "shoulder", "sound", "shout"], sentence: "You should wear a hat in the sun." },
+  { word: "people", options: ["people", "purple", "pebble", "pupil"], sentence: "Lots of people came to the show." },
+  { word: "laugh", options: ["laugh", "light", "lung", "leaf"], sentence: "The joke made me laugh." },
+  { word: "thought", options: ["thought", "though", "through", "taught"], sentence: "I thought about my answer." },
+  { word: "island", options: ["island", "inland", "ironed", "eyelid"], sentence: "We sailed to a little island." },
+  { word: "wrinkle", options: ["wrinkle", "twinkle", "ankle", "wrestle"], sentence: "There is a wrinkle in my shirt." },
+  { word: "busy", options: ["busy", "bossy", "bushy", "buses"], sentence: "The shops are busy on Saturday." },
+  { word: "ocean", options: ["ocean", "often", "onion", "octagon"], sentence: "Whales swim in the ocean." },
+  { word: "science", options: ["science", "silence", "scene", "sentence"], sentence: "We did a fun experiment in science." },
+  { word: "knowledge", options: ["knowledge", "kneeling", "knowing", "college"], sentence: "Reading books gives you knowledge." },
+  { word: "orchestra", options: ["orchestra", "orchard", "ostrich", "extra"], sentence: "The orchestra played beautiful music." },
+  { word: "physical", options: ["physical", "physics", "special", "fiscal"], sentence: "Running is a good physical activity." },
 ];
 
 /** The check stops after this many wrong in a row, as the words are getting too hard. */
@@ -230,8 +231,8 @@ export type LessonStep =
   | { kind: "find"; sound: Sound; options: string[] }
   /** The student sounds out a word (tapping each sound to hear it), then picks its picture. */
   | { kind: "picture"; word: PhonicsWord; parts: string[]; options: PhonicsWord[] }
-  /** Suni says a word; the student picks it from words built from the same sounds. */
-  | { kind: "listen"; word: PhonicsWord; options: string[] }
+  /** Suni says a word; the student picks it from words built from the same sounds. A sentence using it, when there is one. */
+  | { kind: "listen"; word: PhonicsWord; options: string[]; sentence?: string }
   /** The student reads a sentence aloud. */
   | { kind: "read"; sentence: string }
   /** Suni says each new sight word; the student taps to hear them again. */
@@ -303,6 +304,7 @@ export function buildSightLesson(levelId: string, random: () => number = Math.ra
   const finds = picks.slice(0, FIND_QUESTIONS).map((w): LessonStep => ({
     kind: "listen",
     word: { word: w.word },
+    sentence: w.gap.replace("___", w.word),
     options: shuffle([w.word, ...distractors(known, w.word, (a, b) => a.toLowerCase() === b.toLowerCase(), random)], random),
   }));
   // Gap words come from the same level, so they're the words being learnt.

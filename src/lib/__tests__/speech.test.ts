@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { pickVoice, speakableText } from "../tutor/speech";
+import { describe, expect, it, vi } from "vitest";
+import { inSentence, pickVoice, speak, speakableText, TALK, WORD } from "../tutor/speech";
 
 describe("what Suni reads aloud", () => {
   it("leaves out emoji and markdown", () => {
@@ -33,5 +33,44 @@ describe("Suni's voice", () => {
 
   it("has no voice when the device has no English voices", () => {
     expect(pickVoice([v("fr-FR"), v("de-DE")])).toBeNull();
+  });
+});
+
+describe("saying a word", () => {
+  it("says the lead-in, then the word on its own, slower and at a natural pitch", () => {
+    const spoken: { text: string; rate: number; pitch: number; lang: string }[] = [];
+    class Utterance {
+      rate = 1;
+      pitch = 1;
+      lang = "";
+      voice: unknown = null;
+      constructor(public text: string) {}
+    }
+    const voices = [
+      { lang: "en-US", name: "Samantha" },
+      { lang: "en-AU", name: "Karen" },
+    ];
+    const synth = {
+      cancel() {},
+      getVoices: () => voices,
+      speak: (u: Utterance) => spoken.push(u),
+      addEventListener() {},
+      removeEventListener() {},
+    };
+    vi.stubGlobal("window", { speechSynthesis: synth, SpeechSynthesisUtterance: Utterance });
+    vi.stubGlobal("SpeechSynthesisUtterance", Utterance);
+    try {
+      speak([{ text: "Find the word." }, { text: "said", word: true }]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(spoken.map((u) => u.text)).toEqual(["Find the word.", "said"]);
+    expect(spoken[0]).toMatchObject({ ...TALK, lang: "en-AU" });
+    expect(spoken[1]).toMatchObject({ ...WORD, lang: "en-AU" });
+    expect(WORD.rate).toBeLessThan(TALK.rate);
+  });
+
+  it("says a word in a sentence between the word on its own", () => {
+    expect(inSentence("cat", "The cat sat.")).toEqual([{ text: "cat", word: true }, { text: "The cat sat." }, { text: "cat", word: true }]);
   });
 });

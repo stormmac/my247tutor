@@ -42,17 +42,26 @@ export function speechSupported(): boolean {
   return typeof window !== "undefined" && "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
 }
 
+/**
+ * Something to say. A word on its own (`word: true`), such as one a child has to find or read, is
+ * said more slowly and at Suni's natural pitch so every sound is clear.
+ */
+export interface SpeechPart {
+  text: string;
+  word?: boolean;
+}
+
 let waitedForVoices = false;
 /** Counts what Suni is asked to say, so something newer replaces a line still waiting for voices. */
 let latest = 0;
 
-/** Reads the text aloud, cutting off anything Suni was already saying. */
-export function speak(text: string) {
+/** Reads the text aloud, cutting off anything Suni was already saying. Parts are said one after another. */
+export function speak(text: string | SpeechPart[]) {
   if (!speechSupported()) return;
-  const words = speakableText(text);
+  const words = (typeof text === "string" ? [{ text }] : text).map((p) => ({ ...p, text: speakableText(p.text) })).filter((p) => p.text);
   const turn = ++latest;
   window.speechSynthesis.cancel();
-  if (!words) return;
+  if (!words.length) return;
   // Chrome loads its voices after the page, so the first thing Suni says could be in the default
   // (often American) voice. Wait for them, briefly, the first time only.
   if (!waitedForVoices && !window.speechSynthesis.getVoices().length) {
@@ -71,14 +80,24 @@ export function speak(text: string) {
   say(words);
 }
 
-function say(words: string) {
-  const utterance = new SpeechSynthesisUtterance(words);
+/** A word, a sentence using it, then the word again, as a teacher reads a spelling word. */
+export function inSentence(word: string, sentence: string): SpeechPart[] {
+  return [{ text: word, word: true }, { text: sentence }, { text: word, word: true }];
+}
+
+/** Speaking rate and pitch for talking, and for a word on its own. */
+export const TALK = { rate: 0.95, pitch: 1.15 };
+export const WORD = { rate: 0.7, pitch: 1 };
+
+function say(parts: SpeechPart[]) {
   const voice = pickVoice(window.speechSynthesis.getVoices());
-  if (voice) utterance.voice = voice;
-  utterance.lang = voice?.lang ?? "en-AU";
-  utterance.rate = 0.95;
-  utterance.pitch = 1.15;
-  window.speechSynthesis.speak(utterance);
+  for (const part of parts) {
+    const utterance = new SpeechSynthesisUtterance(part.text);
+    if (voice) utterance.voice = voice;
+    utterance.lang = voice?.lang ?? "en-AU";
+    Object.assign(utterance, part.word ? WORD : TALK);
+    window.speechSynthesis.speak(utterance);
+  }
 }
 
 export function stopSpeaking() {
