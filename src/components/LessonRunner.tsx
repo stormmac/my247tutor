@@ -8,6 +8,7 @@ import { useSuniScreen } from "@/components/SuniCompanion";
 import { useSuniVoice } from "@/components/useSuniVoice";
 import { PASS_MARK, type LessonStep } from "@/lib/phonics/progress";
 import { soundFor, type Sound } from "@/lib/phonics/sequence";
+import { inSentence, type SpeechPart } from "@/lib/tutor/speech";
 
 const PRAISE = ["Yes!", "Great!", "Well done!", "That's it!", "Brilliant!"];
 
@@ -20,7 +21,7 @@ export interface LessonResult {
 }
 
 /** What Suni says as each step appears. */
-function instruction(step: LessonStep): [string, boolean] {
+function instruction(step: LessonStep): [string | SpeechPart[], boolean] {
   switch (step.kind) {
     case "meet":
       return ["Let's learn some sounds. Tap each one to hear it.", false];
@@ -31,7 +32,7 @@ function instruction(step: LessonStep): [string, boolean] {
     case "picture":
       return ["Sound out the word, then find its picture.", false];
     case "listen":
-      return [`Find the word ${step.word.word}`, true];
+      return [[{ text: "Find the word." }, { text: step.word.word, word: true }], true];
     case "gap":
       return [step.sentence.replace("___", step.word), true];
     case "read":
@@ -188,7 +189,7 @@ function Step({
   picked: string | null;
   onAnswer: (choice: string, correct: string) => void;
   onNext: (extra?: { readIt: boolean }) => void;
-  say: (text: string, force?: boolean) => void;
+  say: (text: string | SpeechPart[], force?: boolean) => void;
 }) {
   const nextButton = picked && (
     <div className="row" style={{ justifyContent: "center" }}>
@@ -300,7 +301,7 @@ function Step({
           </div>
           {picked && (
             <div className="row" style={{ justifyContent: "center" }}>
-              <button className="btn secondary small" onClick={() => say(step.word.word, true)}>
+              <button className="btn secondary small" onClick={() => say([{ text: step.word.word, word: true }], true)}>
                 🔊 Hear {step.word.word}
               </button>
             </div>
@@ -313,9 +314,14 @@ function Step({
         <>
           <h1 style={{ margin: 0, textAlign: "center" }}>Find the word</h1>
           <div className="row" style={{ justifyContent: "center" }}>
-            <button className="btn secondary" onClick={() => say(step.word.word, true)}>
+            <button className="btn secondary" onClick={() => say([{ text: step.word.word, word: true }], true)}>
               🔊 Hear the word
             </button>
+            {step.sentence && (
+              <button className="btn secondary" onClick={() => say(inSentence(step.word.word, step.sentence!), true)}>
+                💬 Hear it in a sentence
+              </button>
+            )}
           </div>
           <div className="tile-choices words">
             {step.options.map((o) => (
@@ -333,7 +339,12 @@ function Step({
           <h1 style={{ margin: 0, textAlign: "center" }}>New words</h1>
           <div className="sound-cards">
             {step.words.map((w) => (
-              <button key={w} className="sound-card word-card" onClick={() => say(w, true)} aria-label={`${w}. Tap to hear it.`}>
+              <button
+                key={w}
+                className="sound-card word-card"
+                onClick={() => say([{ text: w, word: true }], true)}
+                aria-label={`${w}. Tap to hear it.`}
+              >
                 <span className="sound-grapheme">{w}</span>
               </button>
             ))}

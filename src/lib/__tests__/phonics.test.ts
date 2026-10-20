@@ -72,6 +72,10 @@ describe("the reading check", () => {
     }
   });
 
+  it("has a sentence using each word", () => {
+    for (const item of CHECK_WORDS) expect(item.sentence.toLowerCase().split(/[^a-z]+/), item.word).toContain(item.word);
+  });
+
   it("adds two months of reading age for each word read", () => {
     expect(readingAge(0)).toBe(5);
     expect(readingAge(15)).toBe(7.5);
@@ -169,6 +173,7 @@ describe("sight words", () => {
     for (const q of questions) {
       if (q.kind !== "listen" && q.kind !== "gap") throw new Error(q.kind);
       const word = q.kind === "listen" ? q.word.word : q.word;
+      if (q.kind === "listen") expect(q.sentence).toContain(word);
       expect(words).toContain(word);
       expect(q.options).toContain(word);
       expect(new Set(q.options).size).toBe(4);

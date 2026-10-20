@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { speak, speechSupported, stopSpeaking } from "@/lib/tutor/speech";
+import { prepareVoice, speak, speechSupported, stopSpeaking, type SpeechPart } from "@/lib/tutor/speech";
 
 const KEY = "my247tutor.suni-voice";
 const CHANGED = "my247tutor-suni-voice";
@@ -24,6 +24,8 @@ export function useSuniVoice() {
     setOnState(readOn());
     // Some browsers load their voices after the page; asking early gets them ready.
     if (speechSupported()) window.speechSynthesis.getVoices();
+    // The Australian cloud voice, when the site has it, works on devices without their own.
+    void prepareVoice().then((cloud) => cloud && setSupported(true));
     const sync = () => setOnState(readOn());
     window.addEventListener(CHANGED, sync);
     return () => window.removeEventListener(CHANGED, sync);
@@ -40,11 +42,19 @@ export function useSuniVoice() {
 
   /** Says it aloud when the voice is on. `force` is for the replay button, which always speaks. */
   const say = useCallback(
-    (text: string, force = false) => {
+    (text: string | SpeechPart[], force = false) => {
       if (supported && (on || force)) speak(text);
     },
     [supported, on],
   );
 
-  return { supported, on: supported && on, setOn, say, stop: stopSpeaking };
+  /** Says one word slowly and clearly, after an optional lead-in such as "Find the word." Always speaks. */
+  const sayWord = useCallback(
+    (word: string, lead?: string) => {
+      if (supported) speak([...(lead ? [{ text: lead }] : []), { text: word, word: true }]);
+    },
+    [supported],
+  );
+
+  return { supported, on: supported && on, setOn, say, sayWord, stop: stopSpeaking };
 }

@@ -6,6 +6,7 @@ import { Suni } from "@/components/Suni";
 import { useSuniScreen } from "@/components/SuniCompanion";
 import { useProfile } from "@/components/useProfile";
 import { useSuniVoice } from "@/components/useSuniVoice";
+import { inSentence } from "@/lib/tutor/speech";
 import {
   answerCheck,
   CHECK_WORDS,
@@ -36,15 +37,15 @@ export default function ReadingCheckPage() {
   const item = CHECK_WORDS[state.index];
   const options = useMemo(() => (item ? shuffled(item.options) : []), [item]);
 
-  const { say } = voice;
+  const { sayWord } = voice;
   useSuniScreen(
     started && item && !state.done
       ? { screen: `The reading check: Suni says a word and they tap it. Word ${state.index + 1} of ${CHECK_WORDS.length}.`, noHelp: true }
       : { screen: result ? "The reading check, finished, showing their reading age." : "The start of the reading check." },
   );
   useEffect(() => {
-    if (started && item && !state.done) say(`Find the word: ${item.word}`, true);
-  }, [started, item, state.done, say]);
+    if (started && item && !state.done) sayWord(item.word, "Find the word.");
+  }, [started, item, state.done, sayWord]);
 
   if (!loaded) return null;
   if (!profile) {
@@ -137,8 +138,11 @@ export default function ReadingCheckPage() {
       <h1 style={{ margin: 0 }}>Find the word</h1>
       {!voice.supported && <p style={{ fontSize: 22, margin: 0 }}>Grown-up, say: &ldquo;{item?.word}&rdquo;</p>}
       <div className="row" style={{ justifyContent: "center" }}>
-        <button className="btn secondary" onClick={() => item && voice.say(item.word, true)} aria-label="Hear the word again">
+        <button className="btn secondary" onClick={() => item && voice.sayWord(item.word)} aria-label="Hear the word again">
           🔊 Hear it again
+        </button>
+        <button className="btn secondary" onClick={() => item && voice.say(inSentence(item.word, item.sentence), true)}>
+          💬 Hear it in a sentence
         </button>
       </div>
       <div className="word-choices">
