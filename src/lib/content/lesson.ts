@@ -142,10 +142,9 @@ export function buildLesson(profile: LearnerProfile, subject: Subject, now = Dat
   const curriculum = curriculumOf(profile.curriculum);
   const program = programFor(profile, subject);
   const focus = program ? focusStreams(program, profile.yearLevel) : [];
-  // A child working at their own year warms up on it. One the program has working on an earlier
-  // year warms up on the year below that work.
+  // The warm-up is the year below the work: the child's own year, or the lowest year the program is at.
   const workYear = focus.length ? Math.min(profile.yearLevel, ...focus.map((s) => s.year)) : profile.yearLevel;
-  const reviewYear = (workYear < profile.yearLevel ? Math.max(1, workYear - 1) : profile.yearLevel) as YearLevel;
+  const reviewYear = Math.max(1, workYear - 1) as YearLevel;
   const review: LessonPart = {
     kind: "review",
     title: `${yearName(reviewYear, curriculum)} review`,

@@ -26,7 +26,7 @@ import {
   type LessonResult,
 } from "@/lib/learner/lesson";
 import { recordAttempt, type LearnerProfile } from "@/lib/learner/model";
-import { focusStreams, moveUpMessage, PASS_MARK, STREAM_NAMES, type MoveUp } from "@/lib/learner/program";
+import { focusStreams, MOVE_UP_MARK, moveUpMessage, STREAM_NAMES, type MoveUp } from "@/lib/learner/program";
 import { answerText } from "@/lib/practice";
 import { Rng, randomSeed } from "@/lib/practice/rng";
 
@@ -42,7 +42,7 @@ function describe(part: LessonPart, curriculum: Curriculum): string {
     return `${part.questionIds.length} questions, easy to hard, set by ${part.setBy ?? "your teacher"}.${part.note ? ` "${part.note}"` : ""}`;
   return part.kind === "review"
     ? `${part.questionIds.length} questions from ${yearName(part.year, curriculum)} to keep earlier skills sharp.`
-    : `${part.questionIds.length} questions, easy to hard, on something to work on. Get over ${PASS_MARK * 100}% right first go to pass it.`;
+    : `${part.questionIds.length} questions, easy to hard, on something to work on. Get over ${MOVE_UP_MARK * 100}% right first go to move up a level.`;
 }
 
 /** The streams the lessons are working on, and how far through each year's work the child is. */
@@ -189,7 +189,11 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
       {moved.map((m) => (
         <div key={`${m.stream}-${m.year}`} className="feedback good">
           <strong>{moveUpMessage(m, subject, (y) => yearName(y, curriculum))}</strong>{" "}
-          {m.caughtUp ? "Next week's lesson moves on to something new." : "Next week's lesson has the new work."}
+          {m.caughtUp
+            ? "Next week's lesson moves on to something new."
+            : m.down
+              ? "Next week's lesson has work to build you back up."
+              : "Next week's lesson has the new work."}
         </div>
       ))}
       <div className="progress" aria-label={`${done} of ${total} questions done`}>

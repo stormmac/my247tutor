@@ -203,7 +203,7 @@ describe("a child on the US curriculum", () => {
   it("gets a weekly lesson from the US tree", () => {
     const lesson = buildLesson(child, "maths");
     expect(lesson.curriculum).toBe("us");
-    expect(lesson.parts[0].title).toBe("Grade 3 review");
+    expect(lesson.parts[0].title).toBe("Grade 2 review");
     const usTitles = topicsFor("maths", 3, "us").map((t) => t.title);
     for (const part of lesson.parts.slice(1)) expect(usTitles.some((t) => part.title.startsWith(t))).toBe(true);
     // A lesson made before the switch is replaced.
@@ -352,7 +352,7 @@ describe("a child on the UK curriculum", () => {
   it("gets a weekly lesson and starting check from the UK tree", () => {
     const lesson = buildLesson(child, "maths");
     expect(lesson.curriculum).toBe("uk");
-    expect(lesson.parts[0].title).toBe("Year 4 review");
+    expect(lesson.parts[0].title).toBe("Year 3 review");
     const ukTitles = topicsFor("maths", 4, "uk").map((t) => t.title);
     for (const part of lesson.parts.slice(1)) expect(ukTitles.some((t) => part.title.startsWith(t))).toBe(true);
     const state = startAssessment("maths", 5, "uk");
@@ -400,7 +400,7 @@ describe("Years 7 and 8", () => {
     for (const curriculum of ["nsw", "us", "uk"] as const) {
       const child = { ...newProfile("Kai", 7, Date.now(), curriculum), id: "33333333-3333-3333-3333-333333333333" };
       const lesson = buildLesson(child, "maths");
-      expect(lesson.parts[0].title).toBe(`${yearName(7, curriculum)} review`);
+      expect(lesson.parts[0].title).toBe(`${yearName(6, curriculum)} review`);
       const titles = topicsFor("maths", 7, curriculum).map((t) => t.title);
       for (const part of lesson.parts.slice(1)) expect(titles.some((t) => part.title.startsWith(t))).toBe(true);
     }

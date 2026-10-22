@@ -7,7 +7,7 @@ import { YEARS, type Subject, type YearLevel } from "../curriculum/types";
 import { applyAssessment, type AssessmentAnswer, type AssessmentRecord } from "../learner/assessment";
 import { saveLesson, type LessonResult } from "../learner/lesson";
 import { newProfile, type LearnerProfile } from "../learner/model";
-import { focusStreams, passedPart, type StreamKey } from "../learner/program";
+import { focusStreams, moveUpMessage, passedPart, type StreamKey } from "../learner/program";
 
 const T0 = Date.UTC(2026, 9, 19);
 const sub = (n: number) => `51000000-0000-0000-0000-0000000${String(n).padStart(5, "0")}`;
@@ -106,7 +106,7 @@ describe("work program", () => {
     expect(passedPart({ ...profile.lessons!.maths!.parts[1], results: later })).toBe(false);
   });
 
-  it("moves a stream up a year once all of its year is passed, then catches it up", () => {
+  it("moves a stream up a year on over 80%, then catches it up", () => {
     let profile = year6Behind();
     let week = T0;
     const moves: string[] = [];
@@ -124,12 +124,39 @@ describe("work program", () => {
     expect(focusStreams(programFor(profile, "maths")!, 6).map((s) => s.stream)).toEqual(["measurement", "fractions"]);
   });
 
-  it("doesn't pass or move anything on a score of 75% or less", () => {
+  it("doesn't pass or move anything on a score from 30% to 75%", () => {
     let profile = year6Behind();
     profile = saveLesson(profile, "maths", buildLesson(profile, "maths", T0));
-    const { profile: after, moved } = advanceProgram(finishActivity(profile, "maths", 1, 7), "maths");
+    for (const right of [3, 7]) {
+      const { profile: after, moved } = advanceProgram(finishActivity(profile, "maths", 1, right), "maths");
+      expect(moved).toEqual([]);
+      expect(programFor(after, "maths")!.streams.every((s) => s.passed.length === 0)).toBe(true);
+    }
+  });
+
+  it("passes the subtopic on 80% without moving the stream", () => {
+    let profile = year6Behind();
+    profile = saveLesson(profile, "maths", buildLesson(profile, "maths", T0));
+    const { profile: after, moved } = advanceProgram(finishActivity(profile, "maths", 1, 8), "maths");
     expect(moved).toEqual([]);
-    expect(programFor(after, "maths")!.streams.every((s) => s.passed.length === 0)).toBe(true);
+    const stream = streamOf("maths", profile.lessons!.maths!.parts[1].subtopicId!);
+    const s = programFor(after, "maths")!.streams.find((x) => x.stream === stream)!;
+    expect([s.year, s.passed]).toEqual([4, [profile.lessons!.maths!.parts[1].subtopicId]]);
+  });
+
+  it("moves a stream down a year on under 30%, once", () => {
+    let profile = year6Behind();
+    profile = saveLesson(profile, "maths", buildLesson(profile, "maths", T0));
+    const stream = streamOf("maths", profile.lessons!.maths!.parts[1].subtopicId!);
+    const first = advanceProgram(finishActivity(profile, "maths", 1, 2), "maths");
+    expect(first.moved).toEqual([{ stream, year: 3, caughtUp: false, down: true }]);
+    expect(programFor(first.profile, "maths")!.streams.find((s) => s.stream === stream)!.year).toBe(3);
+    expect(moveUpMessage(first.moved[0], "maths", (y) => `Year ${y}`)).toMatch(/^Let's practise Year 3 .+ for a bit\.$/);
+    // Called again after the next answer, the activity is no longer at the stream's year.
+    expect(advanceProgram(first.profile, "maths").moved).toEqual([]);
+    // The next week's activity is at Year 3.
+    const next = saveLesson(first.profile, "maths", buildLesson(first.profile, "maths", T0 + 7 * 86_400_000));
+    expect(next.lessons!.maths!.parts.find((p) => p.subtopicId && streamOf("maths", p.subtopicId) === stream)!.year).toBe(3);
   });
 
   it("works on English as one stream at the working year", () => {
@@ -146,7 +173,7 @@ describe("work program", () => {
     const answers = [answer("number", 5, true), answer("fractions", 5, false)];
     const profile = applyAssessment(newProfile("Cy", 5, T0), record("maths", 5, { year: 5, level: 5 }, answers));
     const lesson = buildLesson(profile, "maths", T0);
-    expect(lesson.parts[0].title).toBe("Year 5 review");
+    expect(lesson.parts[0].title).toBe("Year 4 review");
     expect(lesson.parts.slice(1).every((p) => p.year === 5 && !/\(Year/.test(p.title))).toBe(true);
     expect(streamOf("maths", lesson.parts[1].subtopicId!)).toBe("fractions");
   });

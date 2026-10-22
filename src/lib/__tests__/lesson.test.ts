@@ -34,10 +34,10 @@ describe("weekly lesson", () => {
 
   for (const subject of ["maths", "english"] as const)
     for (const year of YEARS)
-      it(`has 20 review questions from their own year and two 10-question activities: ${subject}, Year ${year}`, () => {
+      it(`has 20 review questions from the year below and two 10-question activities: ${subject}, Year ${year}`, () => {
         const lesson = buildLesson(newProfile("Ava", year, NOW), subject, NOW);
         const [review, ...activities] = lesson.parts;
-        const reviewYear = year;
+        const reviewYear = Math.max(1, year - 1);
 
         expect(review.kind).toBe("review");
         expect(review.questionIds).toHaveLength(REVIEW_QUESTIONS);

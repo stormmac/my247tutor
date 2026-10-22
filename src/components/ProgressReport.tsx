@@ -35,7 +35,7 @@ import { SuniChatsReport } from "@/components/SuniChats";
 import { SuniNotes } from "@/components/SuniNotes";
 import { SetWorkCard } from "@/components/SetWork";
 import { programFor, streamSubtopics } from "@/lib/content/program";
-import { focusStreams, PASS_MARK, STREAM_NAMES } from "@/lib/learner/program";
+import { focusStreams, MOVE_DOWN_MARK, MOVE_UP_MARK, PASS_MARK, STREAM_NAMES } from "@/lib/learner/program";
 
 /** The alert shown when something a child wrote suggests they may be upset or unsafe. */
 export function WellbeingAlert({
@@ -511,8 +511,9 @@ function WorkProgramReport({ profile, subject }: { profile: LearnerProfile; subj
         {subject === "maths"
           ? `The lessons work on the two areas ${profile.name} found hardest in the check.`
           : `The lessons work on ${profile.name}'s weakest English topics.`}{" "}
-        An activity is passed with over {PASS_MARK * 100}% right first go, and an area moves up a {yearWord(curriculum)} once all its topics
-        for that {yearWord(curriculum)} are passed.
+        Over {MOVE_UP_MARK * 100}% right first go in an activity moves that area up a {yearWord(curriculum)}, and under{" "}
+        {MOVE_DOWN_MARK * 100}% moves it down a {yearWord(curriculum)}. An activity is passed with over {PASS_MARK * 100}%, and an area also
+        moves up once all its topics for that {yearWord(curriculum)} are passed.
       </p>
       <div className="table-scroll">
         <table className="results-table">
