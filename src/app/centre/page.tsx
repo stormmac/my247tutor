@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanButton } from "@/components/PlanButton";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { StudentReport } from "@/components/StudentReport";
@@ -577,6 +578,7 @@ function Students({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
                         <button className="btn secondary small" onClick={() => setEditing(s.id)}>
                           Edit
                         </button>
+                        <PlanButton learnerId={s.id} onSaved={() => void run(Promise.resolve({ error: null, data: {} }))} />
                         <button
                           className="btn secondary small"
                           onClick={() => {

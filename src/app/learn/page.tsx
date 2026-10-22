@@ -1,5 +1,6 @@
 "use client";
 
+import { doesSubject, sessionTimes } from "@/lib/learner/plan";
 import Link from "next/link";
 import { useState } from "react";
 import { AdminLearnPicker } from "@/components/AdminLearnPicker";
@@ -35,6 +36,10 @@ export default function LearnPage() {
       />
     );
   const curriculum = curriculumOf(profile.curriculum);
+  // A grown-up's plan can leave out a subject; Learn to Read and writing are English, times tables are Maths.
+  const maths = doesSubject(profile.plan, "maths");
+  const english = doesSubject(profile.plan, "english");
+  const session = profile.plan?.session;
 
   return (
     <div className="stack">
@@ -45,27 +50,34 @@ export default function LearnPage() {
           <p className="muted" style={{ margin: 0 }}>
             {yearName(profile.yearLevel, curriculum)}. Pick a subject to keep going, and ask Suni if you get stuck.
           </p>
-        </div>
-      </div>
-      <ReadingCard profile={profile} />
-      <div className="grid grid-2">
-        <SubjectCard profile={profile} subject="maths" title={subjectName("maths", curriculum)} />
-        <SubjectCard profile={profile} subject="english" title="English" />
-      </div>
-      <TablesCard profile={profile} />
-      <div className="card">
-        <div className="row spread">
-          <div>
-            <h2>Writing</h2>
-            <p className="muted" style={{ margin: 0 }}>
-              Write a story, an argument or a report, and get feedback on it.
+          {session && (
+            <p className="small" style={{ margin: "4px 0 0" }}>
+              🧑‍🏫 Learning with {session.teacherName ?? "your teacher"}: {sessionTimes(session)}
             </p>
-          </div>
-          <Link href="/learn/writing" className="btn secondary">
-            Start writing
-          </Link>
+          )}
         </div>
       </div>
+      {english && <ReadingCard profile={profile} />}
+      <div className={maths && english ? "grid grid-2" : "grid"}>
+        {maths && <SubjectCard profile={profile} subject="maths" title={subjectName("maths", curriculum)} />}
+        {english && <SubjectCard profile={profile} subject="english" title="English" />}
+      </div>
+      {maths && <TablesCard profile={profile} />}
+      {english && (
+        <div className="card">
+          <div className="row spread">
+            <div>
+              <h2>Writing</h2>
+              <p className="muted" style={{ margin: 0 }}>
+                Write a story, an argument or a report, and get feedback on it.
+              </p>
+            </div>
+            <Link href="/learn/writing" className="btn secondary">
+              Start writing
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

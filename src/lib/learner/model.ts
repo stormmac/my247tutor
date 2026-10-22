@@ -7,6 +7,7 @@ import type { ReadingProgress } from "../phonics/progress";
 import type { TablesRecord } from "../tables/game";
 import type { WeeklyLesson } from "./lesson";
 import type { WorkProgram } from "./program";
+import type { LearningPlan } from "./plan";
 
 export interface SkillState {
   /** Estimated probability the student can do this skill unaided, 0–1. */
@@ -81,6 +82,8 @@ export interface LearnerProfile {
   dateOfBirth?: string;
   /** Which curriculum the child learns. Missing means NSW. On an account, the saved copy decides (see auth/learners.ts). */
   curriculum?: Curriculum;
+  /** Which subjects the child does, and their teacher's session. The saved copy decides; missing means both, on their own. */
+  plan?: LearningPlan;
 }
 
 export const MASTERY_THRESHOLD = 0.8;

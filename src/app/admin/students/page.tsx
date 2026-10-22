@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanButton } from "@/components/PlanButton";
 import { useCallback, useEffect, useState } from "react";
 import { AdminTabs } from "@/components/AdminTabs";
 import { SetupStatus } from "@/components/SetupStatus";
@@ -157,6 +158,7 @@ function Students() {
                 <th>{kind === "parent" ? "Family" : "Centre"} and students</th>
                 <th>Year</th>
                 <th>Curriculum</th>
+                <th>Plan</th>
               </tr>
             </thead>
             <tbody>
@@ -170,6 +172,7 @@ function Students() {
                   <td>
                     <CurriculumSelect value={o.curriculum} label={`Curriculum for ${o.name}`} onChange={(c) => setOwner(o, c)} />
                   </td>
+                  <td />
                 </tr>,
                 ...o.learners.map((l) => (
                   <tr key={l.id}>
@@ -184,6 +187,9 @@ function Students() {
                         label={`Curriculum for ${l.name}`}
                         onChange={(c) => void save(`/api/admin/learners/${l.id}`, c, `${l.name} now learns ${CURRICULUM_NAMES[c]}.`)}
                       />
+                    </td>
+                    <td>
+                      <PlanButton learnerId={l.id} />
                     </td>
                   </tr>
                 )),

@@ -17,6 +17,8 @@ export const StoredProfileSchema = z
       .optional(),
     // Only used when the child is first saved (see saveLearnerProfiles).
     curriculum: z.unknown().optional(),
+    // Read from the account (CHILD_PLAN); a browser's copy is ignored.
+    plan: z.unknown().optional(),
   })
   .loose();
 
@@ -30,16 +32,31 @@ export const MAX_PROFILE_BYTES = 512 * 1024;
  */
 export const CHILD_CURRICULUM = `COALESCE(l.curriculum, (SELECT o.curriculum FROM users o WHERE o.id = l.parent_id), 'nsw')`;
 
+/**
+ * A child's learning plan as JSON, in SQL over `learners l`: their subjects, and the session they're
+ * in with its teacher and times. Like the curriculum, the account decides it, not the browser's copy.
+ */
+export const CHILD_PLAN = `json_build_object('subjects', l.subjects, 'session', (
+  SELECT json_build_object('id', c.id, 'name', c.name, 'teacherName', t.display_name, 'times',
+    (SELECT COALESCE(json_agg(json_build_object('weekday', ct.weekday, 'start', to_char(ct.starts_at, 'HH24:MI'), 'minutes', ct.minutes)
+       ORDER BY ct.weekday, ct.starts_at), '[]') FROM class_times ct WHERE ct.class_id = c.id))
+  FROM centre_classes c LEFT JOIN users t ON t.id = c.teacher_id WHERE c.id = l.session_class_id))`;
+
 /** Every child on the parent's account, oldest first. Each profile carries its row id as its own id, and its curriculum. */
 export async function getLearnerProfiles(parentId: string, onlyId?: string): Promise<Record<string, unknown>[]> {
   const { rows } = await (
     await ready()
   ).query(
-    `SELECT l.id, l.profile, ${CHILD_CURRICULUM} AS curriculum FROM learners l
+    `SELECT l.id, l.profile, ${CHILD_CURRICULUM} AS curriculum, ${CHILD_PLAN} AS plan FROM learners l
      WHERE l.parent_id = $1 AND ($2::uuid IS NULL OR l.id = $2) ORDER BY l.created_at LIMIT ${MAX_CHILDREN}`,
     [parentId, onlyId ?? null],
   );
-  return rows.map((r) => ({ ...(r.profile as Record<string, unknown>), id: r.id as string, curriculum: r.curriculum as string }));
+  return rows.map((r) => ({
+    ...(r.profile as Record<string, unknown>),
+    id: r.id as string,
+    curriculum: r.curriculum as string,
+    plan: r.plan,
+  }));
 }
 
 /**
