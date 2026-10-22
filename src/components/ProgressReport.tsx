@@ -23,6 +23,7 @@ import {
   formatReadingAge,
   READING_AGE_CUTOFF,
   readingOf,
+  readingYear,
   setEnrolled,
   sightLevelsDone,
   unitsDone,
@@ -151,7 +152,7 @@ export function ProgressReport({
         onRedo={onChange && (() => onChange((p) => ({ ...p, placementDone: { ...p.placementDone, english: false } })))}
       />
 
-      <ReadingReport profile={profile} onChange={onChange} />
+      {readingYear(profile.yearLevel) && <ReadingReport profile={profile} onChange={onChange} />}
       <TablesReport profile={profile} />
       <RecentQuestions profile={profile} />
       <TopicResults profile={profile} />

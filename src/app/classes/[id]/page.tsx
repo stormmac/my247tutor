@@ -9,7 +9,7 @@ import { StudentReport } from "@/components/StudentReport";
 import { CLASS_SUBJECTS, describeTime, type ClassTime } from "@/lib/auth/rules";
 import type { Standing } from "@/lib/learner/report";
 import type { StudentSummary } from "@/lib/learner/summary";
-import { formatReadingAge, READING_AGE_CUTOFF } from "@/lib/phonics/progress";
+import { formatReadingAge, READING_AGE_CUTOFF, readingYear } from "@/lib/phonics/progress";
 import { UNITS } from "@/lib/phonics/sequence";
 import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
 
@@ -137,7 +137,9 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
                     </td>
                   )}
                   <td>
-                    {s.summary.reading.age === null ? (
+                    {!readingYear(s.yearLevel) ? (
+                      <span className="muted small">Not needed</span>
+                    ) : s.summary.reading.age === null ? (
                       <span className="muted small">No check yet</span>
                     ) : (
                       <span className={s.summary.reading.age < READING_AGE_CUTOFF ? "warn-text" : ""}>

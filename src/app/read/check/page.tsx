@@ -13,6 +13,7 @@ import {
   formatReadingAge,
   READING_AGE_CUTOFF,
   readingOf,
+  readingYear,
   recordCheck,
   startCheck,
   type ReadingProgress,
@@ -55,6 +56,20 @@ export default function ReadingCheckPage() {
         <p>Set up a learner first.</p>
         <Link className="btn" href="/learn">
           Set up
+        </Link>
+      </div>
+    );
+  }
+
+  if (!readingYear(profile.yearLevel)) {
+    return (
+      <div className="card narrow stack">
+        <h1>Reading check</h1>
+        <p>
+          The reading check is for students up to Year 5. {profile.name} is in Year {profile.yearLevel}, so they don&apos;t need it.
+        </p>
+        <Link className="btn" href="/learn">
+          Back to Learn
         </Link>
       </div>
     );

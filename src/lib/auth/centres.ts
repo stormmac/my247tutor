@@ -5,7 +5,7 @@ import type { PoolClient } from "pg";
 import type { YearLevel } from "@/lib/curriculum/types";
 import { newProfile, type LearnerProfile } from "@/lib/learner/model";
 import { summarise, type StudentSummary } from "@/lib/learner/summary";
-import { newReading, setEnrolled } from "@/lib/phonics/progress";
+import { newReading, readingOf, readingYear, setEnrolled } from "@/lib/phonics/progress";
 import { ready } from "./db";
 import { CHILD_CURRICULUM, CHILD_PLAN } from "./learners";
 import { MAX_CENTRE_STUDENTS, type ClassTime } from "./rules";
@@ -186,7 +186,7 @@ export async function listStudents(centreId: string): Promise<Student[]> {
     await ready()
   ).query(
     `SELECT l.id, l.name, l.year_level, u.username, u.last_login_at,
-       COALESCE((l.profile->'reading'->>'enrolled')::boolean, FALSE) AS learn_to_read, l.profile->>'dateOfBirth' AS date_of_birth,
+       l.profile->'reading' AS reading, l.profile->>'dateOfBirth' AS date_of_birth,
        COALESCE(array_agg(e.class_id) FILTER (WHERE e.class_id IS NOT NULL), '{}') AS class_ids
      FROM learners l
      LEFT JOIN users u ON u.learner_id = l.id
@@ -202,7 +202,7 @@ export async function listStudents(centreId: string): Promise<Student[]> {
     username: (r.username as string | null) ?? null,
     lastLoginAt: iso(r.last_login_at),
     classIds: r.class_ids as string[],
-    learnToRead: r.learn_to_read as boolean,
+    learnToRead: readingOf({ reading: r.reading ?? undefined, yearLevel: Number(r.year_level) }).enrolled,
     dateOfBirth: (r.date_of_birth as string | null) ?? null,
   }));
 }
@@ -256,7 +256,7 @@ export async function addStudent(
       const profile = {
         ...newProfile(details.name, details.yearLevel),
         id: randomUUID(),
-        ...(details.learnToRead ? { reading: setEnrolled(newReading(), true) } : {}),
+        ...(details.learnToRead && readingYear(details.yearLevel) ? { reading: setEnrolled(newReading(), true) } : {}),
         ...(details.dateOfBirth ? { dateOfBirth: details.dateOfBirth } : {}),
       };
       await client.query(`INSERT INTO learners (id, parent_id, name, year_level, profile) VALUES ($1, $2, $3, $4, $5)`, [
