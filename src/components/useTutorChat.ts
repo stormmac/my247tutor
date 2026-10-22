@@ -33,7 +33,8 @@ export function useTutorChat(
     setConversationId(newConversationId());
   }
 
-  async function send(text: string) {
+  /** Sends a message, with a picture of the whiteboard when the student has drawn on it. */
+  async function send(text: string, boardImage?: string) {
     if (!text || busy || !context) return;
     setBusy(true);
 
@@ -56,7 +57,13 @@ export function useTutorChat(
       const res = await fetch("/api/tutor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ context, messages: turns, conversationId, ...(learnerId ? { learnerId } : {}) }),
+        body: JSON.stringify({
+          context,
+          messages: turns,
+          conversationId,
+          ...(learnerId ? { learnerId } : {}),
+          ...(boardImage ? { boardImage } : {}),
+        }),
       });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
 
