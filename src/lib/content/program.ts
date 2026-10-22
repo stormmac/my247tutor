@@ -9,7 +9,17 @@ import { questionsOf, subtopicsOf, topicsFor } from "./tree";
 import type { Subtopic, Topic } from "./types";
 import type { AssessmentRecord } from "../learner/assessment";
 import type { LearnerProfile } from "../learner/model";
-import { MATHS_STREAMS, passedPart, type MoveUp, type StreamKey, type WorkProgram } from "../learner/program";
+import {
+  firstGoShare,
+  MATHS_STREAMS,
+  MOVE_DOWN_MARK,
+  MOVE_UP_MARK,
+  PASS_MARK,
+  type MoveUp,
+  type StreamKey,
+  type StreamProgress,
+  type WorkProgram,
+} from "../learner/program";
 
 const FIRST_YEAR = 1;
 const LAST_YEAR = 8;
@@ -65,6 +75,12 @@ function yearWithWork(subject: Subject, stream: StreamKey, from: number, last: n
   return last + 1;
 }
 
+/** The first year from `from` down to Year 1 with work in the stream, or null when there's none. */
+function yearBelowWithWork(subject: Subject, stream: StreamKey, from: number, curriculum: Curriculum): number | null {
+  for (let year = from; year >= FIRST_YEAR; year--) if (streamSubtopics(subject, stream, year, curriculum).length) return year;
+  return null;
+}
+
 /**
  * The year the child is working at: the year whose medium questions they passed, never below where
  * the check started, and never above their own year.
@@ -117,28 +133,48 @@ export function ensureProgram(profile: LearnerProfile, subject: Subject): Learne
 }
 
 /**
- * Passes the subtopics of this week's finished activities that went over 75%, and moves a stream
- * up a year once all of its year is passed. Safe to call after every answer.
+ * Moves streams on from this week's finished activities at the stream's year: over 80% right first
+ * go moves the stream up a year and under 30% moves it down a year. Over 75% passes the subtopic,
+ * and passing all of a year moves the stream up too. Safe to call after every answer: once a
+ * stream has moved, the activity is no longer at its year.
  */
 export function advanceProgram(profile: LearnerProfile, subject: Subject): { profile: LearnerProfile; moved: MoveUp[] } {
   const program = programFor(profile, subject);
   const lesson = profile.lessons?.[subject];
   if (!program || !lesson) return { profile, moved: [] };
   const curriculum = curriculumOf(profile.curriculum);
-  const passedNow = lesson.parts.filter((p) => p.kind === "activity" && p.subtopicId && passedPart(p)).map((p) => p.subtopicId!);
+  const finished = lesson.parts.flatMap((p) => {
+    const share = p.kind === "activity" && p.subtopicId ? firstGoShare(p) : null;
+    return share === null ? [] : [{ subtopicId: p.subtopicId!, year: p.year, share }];
+  });
   const moved: MoveUp[] = [];
   let changed = false;
   const streams = program.streams.map((s) => {
     if (s.year > profile.yearLevel) return s;
     const inYear = streamSubtopics(subject, s.stream, s.year, curriculum).map((x) => x.subtopic.id);
-    const fresh = passedNow.filter((id) => inYear.includes(id) && !s.passed.includes(id));
+    const mine = finished.filter((f) => f.year === s.year && inYear.includes(f.subtopicId));
+    const up = (): StreamProgress => {
+      const year = yearWithWork(subject, s.stream, s.year + 1, profile.yearLevel, curriculum);
+      moved.push({ stream: s.stream, year, caughtUp: year > profile.yearLevel });
+      return { ...s, year, passed: [] };
+    };
+    if (mine.some((f) => f.share > MOVE_UP_MARK)) {
+      changed = true;
+      return up();
+    }
+    if (mine.some((f) => f.share < MOVE_DOWN_MARK)) {
+      const year = yearBelowWithWork(subject, s.stream, s.year - 1, curriculum);
+      if (year === null) return s;
+      changed = true;
+      moved.push({ stream: s.stream, year, caughtUp: false, down: true });
+      return { ...s, year, passed: [] };
+    }
+    const fresh = mine.filter((f) => f.share > PASS_MARK && !s.passed.includes(f.subtopicId)).map((f) => f.subtopicId);
     if (!fresh.length) return s;
     changed = true;
     const passed = [...s.passed, ...fresh];
     if (!inYear.every((id) => passed.includes(id))) return { ...s, passed };
-    const year = yearWithWork(subject, s.stream, s.year + 1, profile.yearLevel, curriculum);
-    moved.push({ stream: s.stream, year, caughtUp: year > profile.yearLevel });
-    return { ...s, year, passed: [] };
+    return up();
   });
   if (!changed) return { profile, moved };
   return { profile: { ...profile, programs: { ...profile.programs, [subject]: { ...program, streams } } }, moved };
