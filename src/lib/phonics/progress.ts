@@ -562,13 +562,23 @@ export function wordsHeard(sentence: string, heard: string): { words: string[]; 
       .replace(/[^a-z' ]/g, " ")
       .split(/\s+/)
       .filter(Boolean);
-  const said = new Set(clean(heard));
+  // Each word said counts once, in order, so "the" said once doesn't cover both "the"s in a sentence.
+  const said = clean(heard);
   const words = clean(sentence);
-  return { words, heard: words.map((w) => said.has(w)) };
+  let from = 0;
+  return {
+    words,
+    heard: words.map((w) => {
+      const at = said.indexOf(w, from);
+      if (at < 0) return false;
+      from = at + 1;
+      return true;
+    }),
+  };
 }
 
-/** Read aloud well enough: most of the words were heard. */
+/** Read aloud right: every word was heard. One word wrong and Suni reads it to them. */
 export function readWell(sentence: string, heard: string): boolean {
   const { words, heard: got } = wordsHeard(sentence, heard);
-  return words.length > 0 && got.filter(Boolean).length / words.length >= 0.7;
+  return words.length > 0 && got.every(Boolean);
 }

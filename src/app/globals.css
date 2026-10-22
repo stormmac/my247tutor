@@ -1413,7 +1413,7 @@ ul.tight {
   text-decoration: underline;
   text-decoration-thickness: 3px;
 }
-/* Suni next to the sentence, big enough for a child to watch Suni read it. */
+/* Suni to the right of the sentence, big enough for a child to watch Suni read it. */
 .read-along {
   display: flex;
   align-items: center;
@@ -1429,11 +1429,11 @@ body:has(.read-along) .suni-fly {
 }
 @media (max-width: 560px) {
   .read-along {
-    flex-direction: column;
+    gap: 8px;
   }
   .read-along .suni {
-    width: 150px !important;
-    height: 150px !important;
+    width: 110px !important;
+    height: 110px !important;
   }
   .read-sentence {
     font-size: 1.6rem;
