@@ -22,7 +22,7 @@ import {
   startCheck,
   startingUnitIndex,
 } from "../phonics/progress";
-import { graphemesOf, SOUND_IPA, soundAt, soundFor, soundsUpTo, UNITS } from "../phonics/sequence";
+import { graphemesOf, soundAt, soundFor, soundsUpTo, speakableIpa, UNITS } from "../phonics/sequence";
 import { SIGHT_LEVELS } from "../phonics/sightWords";
 
 /** A repeatable random number generator, so lessons come out the same each run. */
@@ -73,8 +73,9 @@ describe("the phonics sequence", () => {
       expect(["ck", "th", "ng", "ch", "qu", "x"].includes(sound.say), sound.grapheme).toBe(false);
       expect(sound.ipa, sound.grapheme).toMatch(/^[a-zæɪɒʌɹʃθŋʊɑɔɜəʒɡːeɪ]+$/u);
     }
-    expect(SOUND_IPA.has("æ")).toBe(true);
-    expect(SOUND_IPA.has("<break/>")).toBe(false);
+    expect(UNITS.flatMap((u) => u.sounds).every((x) => speakableIpa(x.ipa))).toBe(true);
+    expect(speakableIpa("fæ")).toBe(true);
+    expect(speakableIpa("<break/>")).toBe(false);
   });
 });
 
@@ -145,6 +146,17 @@ describe("Learn to Read lessons", () => {
         if (q.kind === "picture") expect(new Set(q.options.map((o) => o.emoji)).size).toBe(q.options.length);
       }
     }
+  });
+
+  it("never offers another spelling of the same sound in find the sound", () => {
+    for (const unit of UNITS)
+      for (let seed = 1; seed < 20; seed++)
+        for (const q of buildLesson(unit.id, seeded(seed)))
+          if (q.kind === "find") {
+            const others = q.options.filter((o) => o !== q.sound.grapheme);
+            const alike = soundsUpTo(unit.id).filter((s) => s.ipa === q.sound.ipa && s.grapheme !== q.sound.grapheme);
+            expect(others.filter((o) => alike.some((s) => s.grapheme === o))).toEqual([]);
+          }
   });
 
   it("marks a unit done with 7 of 8, and opens the next", () => {

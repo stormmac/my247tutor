@@ -3,8 +3,10 @@
  * joins the Learn to Read program; a grown-up can also add or remove them. Pure functions, kept
  * apart from React so they can be tested.
  */
-import { getUnit, graphemesOf, soundsUpTo, UNITS, type PhonicsWord, type Sound, type Unit } from "./sequence";
+import { weekOf } from "../learner/lesson";
+import { getUnit, graphemesOf, soundAt, soundsUpTo, UNITS, type PhonicsWord, type Sound, type Unit } from "./sequence";
 import { getSightLevel, SIGHT_LEVELS, sightWordsUpTo, type SightLevel } from "./sightWords";
+import { storyFor, type Story } from "./stories";
 
 /** Students below this reading age (in years) join Learn to Read. */
 export const READING_AGE_CUTOFF = 7.5;
@@ -110,6 +112,23 @@ export interface ReadingProgress {
   readAloud: number;
   /** Sound It Out practice: sessions done, and words read right out of those asked. */
   blending: { sessions: number; right: number; asked: number };
+  /** This week's reading lesson, made at the start of the week for their reading age. */
+  weekly?: WeeklyReading | null;
+  /** Lessons passed since their reading age last went up. Every third one adds a month. */
+  toward?: number;
+}
+
+/** The weekly Learn to Read lesson: one unit of sounds, one sight word level and the unit's story. */
+export interface WeeklyReading {
+  /** The Monday it's for, as yyyy-mm-dd. */
+  week: string;
+  unitId: string;
+  levelId: string;
+  /** Times done this week, and times passed. */
+  done: number;
+  passed: number;
+  /** Best score this week, from 0 to 1. */
+  best: number;
 }
 
 export const newReading = (): ReadingProgress => ({
@@ -143,7 +162,8 @@ export function recordCheck(reading: ReadingProgress, right: number, now = Date.
   for (const unit of [...UNITS.slice(0, startingUnitIndex(age)), ...levels]) {
     if (!units[unit.id]?.mastered) units[unit.id] = { lessons: units[unit.id]?.lessons ?? 0, best: 1, mastered: true, at: now };
   }
-  return { ...reading, age, checkedAt: now, enrolled, enrolledBy, units };
+  // A new reading age starts the count to the next month again, and next week's lesson is at the new level.
+  return { ...reading, age, checkedAt: now, enrolled, enrolledBy, units, toward: 0, weekly: null };
 }
 
 /** A grown-up adds the student to Learn to Read or takes them out. */
@@ -222,6 +242,48 @@ export function recordBlending(reading: ReadingProgress, right: number, asked: n
   return { ...reading, blending: { sessions: b.sessions + 1, right: b.right + right, asked: b.asked + asked } };
 }
 
+// ---------- The weekly lesson ----------
+
+/** Passing this many weekly lessons adds a month to the reading age. */
+export const LESSONS_PER_MONTH = 3;
+
+/** The sounds and sight words that fit a reading age, from the start of the program to the 7.5 cut-off. */
+export function levelForAge(age: number): { unit: Unit; level: SightLevel } {
+  return { unit: UNITS[startingIndex(age, UNITS.length)], level: SIGHT_LEVELS[startingIndex(age, SIGHT_LEVELS.length)] };
+}
+
+/**
+ * This week's lesson: the one already made this week, or a new one for their reading age. Null
+ * until they've done the reading check, since the lesson is set at the age it finds.
+ */
+export function weeklyReading(reading: ReadingProgress, now = Date.now()): WeeklyReading | null {
+  const week = weekOf(now);
+  if (reading.weekly?.week === week && getUnit(reading.weekly.unitId) && getSightLevel(reading.weekly.levelId)) return reading.weekly;
+  if (reading.age === null) return null;
+  const { unit, level } = levelForAge(reading.age);
+  return { week, unitId: unit.id, levelId: level.id, done: 0, passed: 0, best: 0 };
+}
+
+/**
+ * Saves a weekly lesson. Every pass counts towards the next month of reading age; the third adds
+ * it. The unit and sight level are marked practised too, so the rest of Learn to Read keeps up.
+ */
+export function recordWeekly(reading: ReadingProgress, right: number, total: number, now = Date.now()): ReadingProgress {
+  const weekly = weeklyReading(reading, now);
+  if (!weekly) return reading;
+  const score = total ? right / total : 0;
+  const passed = score >= PASS_MARK;
+  let next = recordLesson(recordLesson(reading, weekly.unitId, right, total, now), weekly.levelId, right, total, now);
+  next = {
+    ...next,
+    weekly: { ...weekly, done: weekly.done + 1, passed: weekly.passed + (passed ? 1 : 0), best: Math.max(weekly.best, score) },
+  };
+  if (!passed || next.age === null) return next;
+  const toward = (reading.toward ?? 0) + 1;
+  if (toward < LESSONS_PER_MONTH) return { ...next, toward };
+  return { ...next, toward: 0, age: Math.round((next.age! + 1 / 12) * 12) / 12 };
+}
+
 // ---------- Lessons ----------
 
 export type LessonStep =
@@ -238,7 +300,27 @@ export type LessonStep =
   /** Suni says each new sight word; the student taps to hear them again. */
   | { kind: "meetWords"; words: string[] }
   /** Suni reads a sentence aloud; the student picks the word that fills its gap. */
-  | { kind: "gap"; sentence: string; word: string; options: string[] };
+  | { kind: "gap"; sentence: string; word: string; options: string[] }
+  /** Words with each new sound in them, to tap and hear. */
+  | { kind: "soundWords"; groups: { sound: Sound; words: PhonicsWord[] }[] }
+  /** Blending practice, like "f, a, fa, fat, fa, fan": two sounds, the two together, then words that start that way. */
+  | { kind: "drill"; parts: Sound[]; syllable: Syllable; words: string[] }
+  /** The week's story to read, with Suni reading it too if they want. */
+  | { kind: "story"; story: Story }
+  /** A question about the story. */
+  | { kind: "question"; story: Story; question: string; answer: string; options: string[] }
+  /** The story's picture to colour in. */
+  | { kind: "colour"; story: Story };
+
+/** Two sounds blended, like "fa": how it's written, a respelling for a device's voice, and its IPA for the cloud voice. */
+export interface Syllable {
+  shown: string;
+  say: string;
+  ipa: string;
+}
+
+/** The steps that are questions, which make up the score. */
+export const SCORED: LessonStep["kind"][] = ["find", "picture", "listen", "gap", "question"];
 
 export const FIND_QUESTIONS = 4;
 export const WORD_QUESTIONS = 4;
@@ -267,7 +349,14 @@ export function buildLesson(unitId: string, random: () => number = Math.random):
   const graphemes = [...new Set(known.map((s) => s.grapheme))];
   const finds = Array.from({ length: FIND_QUESTIONS }, (_, i) => {
     const sound = shuffle(unit.sounds, random)[0] ?? unit.sounds[i % unit.sounds.length];
-    const others = distractors(graphemes, sound.grapheme, (a, b) => a === b, random);
+    // Other spellings of the same sound (s and ss, c and k) would both be right, so they're left out.
+    const alike = new Set(known.filter((s) => s.ipa === sound.ipa).map((s) => s.grapheme));
+    const others = distractors(
+      graphemes.filter((g) => !alike.has(g)),
+      sound.grapheme,
+      (a, b) => a === b,
+      random,
+    );
     return { kind: "find" as const, sound, options: shuffle([sound.grapheme, ...others], random) };
   });
 
@@ -293,6 +382,129 @@ function wordQuestion(word: PhonicsWord, pool: PhonicsWord[], random: () => numb
     random,
   );
   return { kind: "listen", word, options: shuffle([word.word, ...others], random) };
+}
+
+const VOWEL_IPA = new Set([
+  "æ",
+  "e",
+  "ɪ",
+  "ɒ",
+  "ʌ",
+  "eɪ",
+  "iː",
+  "aɪ",
+  "oʊ",
+  "uː",
+  "ʊ",
+  "ɑː",
+  "ɔː",
+  "ɜː",
+  "aʊ",
+  "ɔɪ",
+  "ɪə",
+  "eə",
+  "ə",
+  "juː",
+]);
+const isVowel = (s: Sound) => VOWEL_IPA.has(s.ipa);
+
+/** A consonant and vowel blended, like "fa" in fat. A split vowel is written with its e, like "ca–e" in cake. */
+export function syllableOf(onset: Sound, vowel: Sound, word: string): Syllable {
+  const parts = graphemesOf(word);
+  const split = vowel.grapheme.includes("_");
+  return {
+    shown: `${parts[0]}${parts[1]}${split ? "–e" : ""}`,
+    // "tuh" + "ah" would run together as "tuhah", so the consonant loses its "uh" and any held letters ("sss").
+    say: onset.say.replace(/uh$/, "").replace(/(.)\1+$/, "$1") + vowel.say,
+    ipa: onset.ipa.replace(/ə$/, "") + vowel.ipa,
+  };
+}
+
+/**
+ * Blending drills for a unit: words from the program so far that start with a consonant and a vowel
+ * (fat, fan), grouped by that start, putting first the groups that use this unit's new sounds.
+ */
+export function buildDrills(unitId: string, count = 2, random: () => number = Math.random): LessonStep[] {
+  const unit = getUnit(unitId);
+  if (!unit) return [];
+  const fresh = new Set(unit.sounds.map((s) => s.grapheme));
+  const words = UNITS.slice(0, UNITS.findIndex((u) => u.id === unitId) + 1).flatMap((u) => u.words.map((w) => w.word));
+  const groups = new Map<string, { parts: Sound[]; syllable: Syllable; words: string[]; fresh: boolean }>();
+  for (const word of shuffle([...new Set(words)], random)) {
+    const parts = graphemesOf(word);
+    if (parts.length < 3) continue;
+    const onset = soundAt(word, 0, parts);
+    const vowel = soundAt(word, 1, parts);
+    if (!onset || !vowel || isVowel(onset) || !isVowel(vowel)) continue;
+    const syllable = syllableOf(onset, vowel, word);
+    const key = `${syllable.shown}|${syllable.ipa}`;
+    const group = groups.get(key) ?? { parts: [onset, vowel], syllable, words: [], fresh: false };
+    group.words.push(word);
+    group.fresh ||= fresh.has(onset.grapheme) || fresh.has(vowel.grapheme);
+    groups.set(key, group);
+  }
+  // One blend with this week's new sounds, then the blends with the most words to read (fa, fat, fa, fan).
+  const all = [...groups.values()];
+  const most = (a: { words: string[] }, b: { words: string[] }) => Math.min(b.words.length, 3) - Math.min(a.words.length, 3);
+  const first = all.filter((g) => g.fresh).sort(most)[0];
+  const rest = all.filter((g) => g !== first).sort((a, b) => most(a, b) || Number(b.fresh) - Number(a.fresh));
+  return [...(first ? [first] : []), ...rest]
+    .slice(0, count)
+    .map((g) => ({ kind: "drill" as const, parts: g.parts, syllable: g.syllable, words: g.words.slice(0, 3) }));
+}
+
+/** Words from the unit with each of its new sounds in, up to three for each, pictured ones first. */
+export function soundWordGroups(unitId: string): { sound: Sound; words: PhonicsWord[] }[] {
+  const unit = getUnit(unitId);
+  if (!unit) return [];
+  return unit.sounds.map((sound) => {
+    // Two sounds written the same way (the oo in moon and in book) can't be told apart in a word, so they get their own example.
+    const shared = unit.sounds.filter((x) => x.grapheme === sound.grapheme).length > 1;
+    const has = shared
+      ? []
+      : unit.words.filter((w) => graphemesOf(w.word).some((_, i, parts) => soundAt(w.word, i, parts)?.grapheme === sound.grapheme));
+    const words = [...has].sort((a, b) => Number(Boolean(b.emoji)) - Number(Boolean(a.emoji))).slice(0, 3);
+    return { sound, words: words.length ? words : [{ word: sound.example, emoji: sound.emoji }] };
+  });
+}
+
+/** Questions on a story, with their answers shuffled. */
+export function storyQuestions(story: Story, random: () => number = Math.random): LessonStep[] {
+  return story.questions.map((q) => ({
+    kind: "question",
+    story,
+    question: q.question,
+    answer: q.options[0],
+    options: shuffle(q.options, random),
+  }));
+}
+
+/**
+ * The weekly Learn to Read lesson, in three parts: the sounds (meet them, hear them in words, blend
+ * them, find them, read words), the sight words (meet them, fill gaps), then the story (read it,
+ * answer five questions, colour its picture).
+ */
+export function buildWeeklyLesson(weekly: WeeklyReading, random: () => number = Math.random): LessonStep[] {
+  const unit = getUnit(weekly.unitId);
+  const level = getSightLevel(weekly.levelId);
+  if (!unit || !level) return [];
+  const sounds = buildLesson(unit.id, random).filter((s) => s.kind !== "read");
+  const [meet, ...rest] = sounds;
+  const finds = rest.filter((s) => s.kind === "find").slice(0, 2);
+  const words = rest.filter((s) => s.kind === "picture" || s.kind === "listen");
+  const sight = buildSightLesson(level.id, random);
+  const gaps = sight.filter((s) => s.kind === "gap").slice(0, 3);
+  const story = storyFor(unit.id);
+  return [
+    meet,
+    { kind: "soundWords", groups: soundWordGroups(unit.id) },
+    ...buildDrills(unit.id, 2, random),
+    ...finds,
+    ...words,
+    sight[0],
+    ...gaps,
+    ...(story ? [{ kind: "story" as const, story }, ...storyQuestions(story, random), { kind: "colour" as const, story }] : []),
+  ];
 }
 
 /** A sight word lesson: meet the words, find each when Suni says it, fill gaps in sentences, then read a sentence aloud. */

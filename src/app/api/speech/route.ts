@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SOUND_IPA } from "@/lib/phonics/sequence";
+import { speakableIpa } from "@/lib/phonics/sequence";
 import { azureSpeechConfigured, MAX_SPEECH_LENGTH, synthesize } from "@/lib/tutor/azureSpeech";
 
 /**
@@ -13,9 +13,9 @@ export async function GET(request: NextRequest) {
   if (!azureSpeechConfigured()) return NextResponse.json({ error: "The cloud voice isn't set up." }, { status: 503 });
   const clean = text.trim();
   if (!clean || clean.length > MAX_SPEECH_LENGTH) return NextResponse.json({ error: "Nothing to say." }, { status: 400 });
-  // Only the sounds the phonics program teaches, so the route can't be fed any SSML.
+  // Only the letters of the phonics program's sounds, so the route can't be fed any SSML.
   const ipa = request.nextUrl.searchParams.get("ipa") ?? undefined;
-  if (ipa !== undefined && !SOUND_IPA.has(ipa)) return NextResponse.json({ error: "Not a sound we teach." }, { status: 400 });
+  if (ipa !== undefined && !speakableIpa(ipa)) return NextResponse.json({ error: "Not a sound we teach." }, { status: 400 });
   const audio = await synthesize(clean, request.nextUrl.searchParams.get("word") === "1", ipa);
   if (!audio) return NextResponse.json({ error: "The voice didn't work." }, { status: 502 });
   return new NextResponse(audio, {

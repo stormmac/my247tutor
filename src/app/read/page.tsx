@@ -9,14 +9,17 @@ import {
   formatReadingAge,
   isOpen,
   isSightOpen,
+  LESSONS_PER_MONTH,
   openUnits,
   READING_AGE_CUTOFF,
   readingOf,
   sightLevelsDone,
   unitsDone,
+  weeklyReading,
 } from "@/lib/phonics/progress";
-import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
-import { UNITS } from "@/lib/phonics/sequence";
+import { getSightLevel, SIGHT_LEVELS } from "@/lib/phonics/sightWords";
+import { getUnit, UNITS } from "@/lib/phonics/sequence";
+import { storyFor } from "@/lib/phonics/stories";
 
 /** The Learn to Read program: the sounds in order, sight words in levels, and Sound It Out practice. */
 export default function ReadPage() {
@@ -81,16 +84,8 @@ export default function ReadPage() {
       <div className="progress" aria-label={`${done + sightDone} of ${UNITS.length + SIGHT_LEVELS.length} parts done`}>
         <div style={{ width: `${((done + sightDone) / (UNITS.length + SIGHT_LEVELS.length)) * 100}%` }} />
       </div>
-      {next && (
-        <Link className="btn big-start" href={`/read/${next.id}`}>
-          Start: {next.title.replace(/_/g, "–")}
-        </Link>
-      )}
-      {!next && nextSight && (
-        <Link className="btn big-start" href={`/read/words/${nextSight.id}`}>
-          Start: sight words {nextSight.title}
-        </Link>
-      )}
+      <WeeklyCard reading={reading} />
+      <h2 style={{ marginBottom: 0 }}>Extra practice</h2>
       <section className="stack" style={{ gap: 12 }}>
         <h2>Sounds</h2>
         {[...new Set(UNITS.map((u) => u.group))].map((group) => (
@@ -174,6 +169,57 @@ export default function ReadPage() {
           Reading check
         </Link>
         {reading.age !== null && <span className="muted small">Reading age at the last check: {formatReadingAge(reading.age)}</span>}
+      </div>
+    </div>
+  );
+}
+
+/** This week's reading lesson at their reading age, and how close they are to the next month. */
+function WeeklyCard({ reading }: { reading: ReturnType<typeof readingOf> }) {
+  const weekly = weeklyReading(reading);
+  if (!weekly || reading.age === null) {
+    return (
+      <div className="card stack">
+        <h2 style={{ margin: 0 }}>This week&apos;s reading lesson</h2>
+        <p style={{ margin: 0 }}>Do the reading check first, so the lesson is at the right level.</p>
+        <div>
+          <Link className="btn big-start" href="/read/check">
+            Do the reading check
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  const unit = getUnit(weekly.unitId)!;
+  const level = getSightLevel(weekly.levelId)!;
+  const story = storyFor(unit.id);
+  const toward = reading.toward ?? 0;
+  return (
+    <div className="card stack weekly-reading">
+      <div className="row spread">
+        <h2 style={{ margin: 0 }}>This week&apos;s reading lesson</h2>
+        {weekly.passed > 0 && <span className="pill good">Done this week ⭐</span>}
+      </div>
+      <ol className="weekly-parts">
+        <li>
+          <strong>Sounds:</strong> {unit.title.replace(/_/g, "–")}, with words and blending
+        </li>
+        <li>
+          <strong>Sight words:</strong> {level.title}
+        </li>
+        {story && (
+          <li>
+            <strong>Story:</strong> {story.title}, with 5 questions and a picture to colour
+          </li>
+        )}
+      </ol>
+      <p className="muted small" style={{ margin: 0 }}>
+        Reading age {formatReadingAge(reading.age)}. {toward} of {LESSONS_PER_MONTH} lessons towards the next month.
+      </p>
+      <div>
+        <Link className="btn big-start" href="/read/week">
+          {weekly.passed ? "Do it again" : weekly.done ? "Try again" : "Start this week's lesson"}
+        </Link>
       </div>
     </div>
   );

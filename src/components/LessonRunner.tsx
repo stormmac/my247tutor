@@ -6,8 +6,9 @@ import { ReadAloud } from "@/components/ReadAloud";
 import { Suni } from "@/components/Suni";
 import { useSuniScreen } from "@/components/SuniCompanion";
 import { useSuniVoice } from "@/components/useSuniVoice";
-import { PASS_MARK, type LessonStep } from "@/lib/phonics/progress";
-import { soundAt, type Sound } from "@/lib/phonics/sequence";
+import { PASS_MARK, SCORED, type LessonStep, type Syllable } from "@/lib/phonics/progress";
+import { ColourIn } from "@/components/ColourIn";
+import { graphemesOf, soundAt, type Sound } from "@/lib/phonics/sequence";
 import { inSentence, type SpeechPart } from "@/lib/tutor/speech";
 
 const PRAISE = ["Yes!", "Great!", "Well done!", "That's it!", "Brilliant!"];
@@ -22,6 +23,17 @@ export interface LessonResult {
 
 /** A phonics sound on its own, said as the sound it makes rather than the letter's name. */
 const soundPart = (s: Sound): SpeechPart => ({ text: s.say, ipa: s.ipa, word: true });
+const syllablePart = (s: Syllable): SpeechPart => ({ text: s.say, ipa: s.ipa, word: true });
+const wordPart = (word: string): SpeechPart => ({ text: word, word: true });
+
+/** A blending drill said the way a teacher says it: f, a, fa, fat, fa, fan. */
+function drillSpeech(step: Extract<LessonStep, { kind: "drill" }>): SpeechPart[] {
+  return [
+    ...step.parts.map(soundPart),
+    syllablePart(step.syllable),
+    ...step.words.flatMap((w, i) => [...(i ? [syllablePart(step.syllable)] : []), wordPart(w)]),
+  ];
+}
 
 /** What Suni says as each step appears. */
 function instruction(step: LessonStep): [string | SpeechPart[], boolean] {
@@ -40,6 +52,16 @@ function instruction(step: LessonStep): [string | SpeechPart[], boolean] {
       return [step.sentence.replace("___", step.word), true];
     case "read":
       return ["Now read this sentence out loud.", false];
+    case "soundWords":
+      return ["Here are some words with our new sounds. Tap each one to hear it.", false];
+    case "drill":
+      return [[{ text: "Listen, then say it with me." }, ...drillSpeech(step)], false];
+    case "story":
+      return ["Story time! Read the story, or tap to hear me read it.", false];
+    case "question":
+      return [step.question, true];
+    case "colour":
+      return ["Now colour in the picture from the story.", false];
   }
 }
 
@@ -63,6 +85,16 @@ export function describeStep(step: LessonStep, answered: boolean): string {
       return `Filling the gap in "${step.sentence}" from: ${step.options.join(", ")}. The missing word is "${step.word}". ${reveal}`;
     case "read":
       return `Reading this sentence out loud: "${step.sentence}".`;
+    case "soundWords":
+      return `Hearing words with the new sounds: ${step.groups.map((g) => `${g.sound.grapheme} (${g.words.map((w) => w.word).join(", ")})`).join("; ")}.`;
+    case "drill":
+      return `Blending practice: ${step.parts.map((p) => p.grapheme).join(" + ")} makes "${step.syllable.shown}", in ${step.words.join(", ")}.`;
+    case "story":
+      return `Reading the story "${step.story.title}": ${step.story.sentences.join(" ")}`;
+    case "question":
+      return `A question about the story "${step.story.title}" (${step.story.sentences.join(" ")}): ${step.question} Choices: ${step.options.join(", ")}. The answer is "${step.answer}". ${reveal}`;
+    case "colour":
+      return `Colouring in the picture for the story "${step.story.title}".`;
   }
 }
 
@@ -97,7 +129,7 @@ export function LessonRunner({
   const [right, setRight] = useState(0);
   const [result, setResult] = useState<LessonResult | null>(null);
   const step = steps[index];
-  const total = steps.filter((s) => s.kind !== "meet" && s.kind !== "meetWords" && s.kind !== "read").length;
+  const total = steps.filter((s) => SCORED.includes(s.kind)).length;
   useSuniScreen(
     step && !result
       ? { screen: `Learn to Read: ${title}, step ${index + 1} of ${steps.length}. ${describeStep(step, picked !== null)}` }
@@ -396,5 +428,148 @@ function Step({
           <ReadAloud sentence={step.sentence} onDone={(readIt) => onNext({ readIt })} />
         </>
       );
+    case "soundWords":
+      return (
+        <>
+          <h1 style={{ margin: 0, textAlign: "center" }}>Words with our sounds</h1>
+          <div className="sound-words">
+            {step.groups.map((g, i) => (
+              <div key={`${g.sound.grapheme}-${i}`} className="sound-word-row">
+                <button
+                  className="sound-chip"
+                  onClick={() => say([soundPart(g.sound)], true)}
+                  aria-label={`Hear the sound ${g.sound.grapheme}`}
+                >
+                  {g.sound.grapheme.replace("_", "–")}
+                </button>
+                {g.words.map((w) => (
+                  <button key={w.word} className="word-chip" onClick={() => say([wordPart(w.word)], true)}>
+                    {w.emoji && <span aria-hidden>{w.emoji} </span>}
+                    <Highlighted word={w.word} grapheme={g.sound.grapheme} />
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+          <p className="muted" style={{ textAlign: "center", margin: 0 }}>
+            Tap a word to hear it, then read it with Suni.
+          </p>
+          <div className="row" style={{ justifyContent: "center" }}>
+            <button className="btn" onClick={() => onNext()}>
+              Next
+            </button>
+          </div>
+        </>
+      );
+    case "drill":
+      return (
+        <>
+          <h1 style={{ margin: 0, textAlign: "center" }}>Blend it</h1>
+          <div className="drill">
+            <div className="row" style={{ justifyContent: "center", gap: 8 }}>
+              {step.parts.map((p, i) => (
+                <button key={i} className="blend-tile" onClick={() => say([soundPart(p)], true)} aria-label={`Hear ${p.grapheme}`}>
+                  {p.grapheme.replace("_e", "")}
+                </button>
+              ))}
+              <span className="drill-arrow" aria-hidden>
+                →
+              </span>
+              <button className="blend-tile drill-syllable" onClick={() => say([syllablePart(step.syllable)], true)}>
+                {step.syllable.shown}
+              </button>
+            </div>
+            <div className="row" style={{ justifyContent: "center", gap: 8 }}>
+              {step.words.map((w) => (
+                <button key={w} className="word-chip big" onClick={() => say([syllablePart(step.syllable), wordPart(w)], true)}>
+                  {w}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="row" style={{ justifyContent: "center" }}>
+            <button className="btn secondary" onClick={() => say(drillSpeech(step), true)}>
+              🔊 Hear it all again
+            </button>
+            <button className="btn" onClick={() => onNext()}>
+              Next
+            </button>
+          </div>
+        </>
+      );
+    case "story":
+      return (
+        <>
+          <h1 style={{ margin: 0, textAlign: "center" }}>{step.story.title}</h1>
+          <div className="story-text">
+            {step.story.sentences.map((line, i) => (
+              <p key={i} className="read-sentence">
+                {line}
+              </p>
+            ))}
+          </div>
+          <div className="row" style={{ justifyContent: "center" }}>
+            <button className="btn secondary" onClick={() => say(step.story.sentences.join(" "), true)}>
+              🔊 Read it to me
+            </button>
+            <button className="btn" onClick={() => onNext()}>
+              I&apos;ve read it
+            </button>
+          </div>
+        </>
+      );
+    case "question":
+      return (
+        <>
+          <details className="story-peek">
+            <summary>Read the story again</summary>
+            {step.story.sentences.map((line, i) => (
+              <p key={i} style={{ margin: "4px 0" }}>
+                {line}
+              </p>
+            ))}
+          </details>
+          <h1 style={{ margin: 0, textAlign: "center" }}>{step.question}</h1>
+          <div className="row" style={{ justifyContent: "center" }}>
+            <button className="btn secondary small" onClick={() => say(step.question, true)}>
+              🔊 Hear the question
+            </button>
+          </div>
+          <div className="tile-choices words answers">
+            {step.options.map((o) => (
+              <button key={o} className={choiceClass(o, step.answer)} onClick={() => onAnswer(o, step.answer)} disabled={!!picked}>
+                {o}
+              </button>
+            ))}
+          </div>
+          {nextButton}
+        </>
+      );
+    case "colour":
+      return (
+        <>
+          <h1 style={{ margin: 0, textAlign: "center" }}>Colour it in</h1>
+          <ColourIn regions={step.story.picture} title={step.story.title} />
+          <div className="row" style={{ justifyContent: "center" }}>
+            <button className="btn" onClick={() => onNext()}>
+              I&apos;m finished
+            </button>
+          </div>
+        </>
+      );
   }
+}
+
+/** A word with the letters for a sound in bold, like the "sh" in "ship". */
+function Highlighted({ word, grapheme }: { word: string; grapheme: string }) {
+  const parts = graphemesOf(word);
+  const split = grapheme.includes("_");
+  return (
+    <>
+      {parts.map((p, i) => {
+        const strong = split ? i === 1 || (i === parts.length - 1 && p === "e") : p === grapheme;
+        return strong ? <strong key={i}>{p}</strong> : <span key={i}>{p}</span>;
+      })}
+    </>
+  );
 }

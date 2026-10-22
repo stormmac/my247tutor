@@ -380,5 +380,7 @@ export function soundFor(word: string, index: number, parts = graphemesOf(word))
   return soundAt(word, index, parts)?.say ?? parts[index];
 }
 
-/** Every sound's IPA, so the speech route only says sounds the program teaches. */
-export const SOUND_IPA = new Set(UNITS.flatMap((u) => u.sounds.map((x) => x.ipa)));
+/** Whether text is a short run of the IPA letters the program's sounds use, so the speech route takes nothing else. */
+export function speakableIpa(ipa: string): boolean {
+  return /^[a-zæɪɒʌɹʃθŋʊɑɔɜəʒɡː]{1,8}$/u.test(ipa);
+}
