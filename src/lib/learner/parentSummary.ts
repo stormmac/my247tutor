@@ -10,6 +10,7 @@ import { currentLesson } from "./lesson";
 import type { LearnerProfile } from "./model";
 import { focusStreams, STREAM_NAMES } from "./program";
 import { describeTables } from "../tables/game";
+import { readingOf, weeklyReading } from "../phonics/progress";
 import { formatReadingAge } from "../phonics/progress";
 import { UNITS } from "../phonics/sequence";
 import { SIGHT_LEVELS } from "../phonics/sightWords";
@@ -71,6 +72,22 @@ export function stillToDo(profile: LearnerProfile, work: SetWorkSummary[], now =
         detail: `${left.length} of ${parts.length} parts to finish: ${left.map((p) => p.title).join(", ")}.`,
       });
   }
+  const reading = readingOf(profile);
+  const weekly = reading.enrolled ? weeklyReading(reading, now) : null;
+  if (reading.enrolled && !weekly)
+    items.push({
+      key: "reading-check",
+      kind: "assessment",
+      title: "Reading check",
+      detail: "Not done yet. It sets the level of their weekly reading lesson.",
+    });
+  else if (weekly && !weekly.passed)
+    items.push({
+      key: "reading-week",
+      kind: "lesson",
+      title: "This week's reading lesson",
+      detail: weekly.done ? `Tried ${weekly.done === 1 ? "once" : `${weekly.done} times`}, not passed yet.` : "Not started yet.",
+    });
   for (const w of work.filter((w) => !w.doneAt))
     items.push({
       key: w.id,

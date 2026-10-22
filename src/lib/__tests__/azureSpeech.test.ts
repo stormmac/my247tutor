@@ -11,4 +11,9 @@ describe("Azure speech", () => {
     expect(line).toContain("Tom &amp; &quot;Ann&quot; &lt;3");
     expect(speechSsml("cat", true)).toContain(`rate="-25%"`);
   });
+
+  it("says a phonics sound exactly, from its IPA", () => {
+    expect(speechSsml("ah", true, "æ")).toContain(`<phoneme alphabet="ipa" ph="æ">ah</phoneme>`);
+    expect(speechSsml("ah", true)).not.toContain("phoneme");
+  });
 });

@@ -1925,3 +1925,105 @@ ul.tight {
   font-weight: 700;
   padding: 12px 0;
 }
+
+/* Weekly reading lesson */
+.sound-words {
+  display: grid;
+  gap: 10px;
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+}
+.sound-word-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.sound-chip,
+.word-chip {
+  font: inherit;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 1.4rem;
+}
+.sound-chip {
+  min-width: 64px;
+  font-size: 1.8rem;
+  font-weight: 800;
+  border-color: var(--brand);
+  background: var(--brand-tint);
+}
+.word-chip strong {
+  color: var(--brand);
+}
+.word-chip.big {
+  font-size: 2rem;
+  font-weight: 800;
+  padding: 10px 18px;
+}
+.drill {
+  display: grid;
+  gap: 16px;
+}
+.drill-arrow {
+  font-size: 2rem;
+  color: var(--muted);
+}
+.drill-syllable {
+  background: var(--warn-tint);
+  border-color: var(--accent);
+}
+.story-text {
+  display: grid;
+  gap: 6px;
+}
+.story-text .read-sentence {
+  font-size: 1.6rem;
+}
+.story-peek {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.story-peek summary {
+  cursor: pointer;
+}
+.tile-choices.answers .tile-choice {
+  font-size: 1.25rem;
+}
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+}
+.swatch.picked {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
+}
+.colour-picture {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: block;
+  background: #fff;
+  border-radius: 12px;
+  touch-action: manipulation;
+}
+.weekly-parts {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+}

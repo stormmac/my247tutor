@@ -22,7 +22,7 @@ import {
   startCheck,
   startingUnitIndex,
 } from "../phonics/progress";
-import { graphemesOf, soundFor, soundsUpTo, UNITS } from "../phonics/sequence";
+import { graphemesOf, soundAt, soundFor, soundsUpTo, speakableIpa, UNITS } from "../phonics/sequence";
 import { SIGHT_LEVELS } from "../phonics/sightWords";
 
 /** A repeatable random number generator, so lessons come out the same each run. */
@@ -59,8 +59,23 @@ describe("the phonics sequence", () => {
     expect(graphemesOf("cake")).toEqual(["c", "a", "k", "e"]);
     expect(soundFor("cake", 1)).toBe("ay");
     expect(soundFor("cake", 3)).toBe("");
-    expect(soundFor("cat", 1)).toBe("a");
-    expect(soundFor("ten", 1)).toBe("e");
+    expect(soundFor("cat", 1)).toBe("ah");
+    expect(soundFor("ten", 1)).toBe("eh");
+    expect(soundAt("cake", 1)?.ipa).toBe("eɪ");
+    expect(soundAt("cake", 3)).toBeNull();
+  });
+
+  it("says each sound, never a letter's name", () => {
+    for (const sound of UNITS.flatMap((u) => u.sounds)) {
+      // A device's voice reads a lone letter (or two, like "ck") as letter names.
+      expect(sound.say.length, sound.grapheme).toBeGreaterThan(1);
+      expect(sound.say, sound.grapheme).not.toBe(sound.grapheme.length === 1 ? sound.grapheme : "");
+      expect(["ck", "th", "ng", "ch", "qu", "x"].includes(sound.say), sound.grapheme).toBe(false);
+      expect(sound.ipa, sound.grapheme).toMatch(/^[a-zæɪɒʌɹʃθŋʊɑɔɜəʒɡːeɪ]+$/u);
+    }
+    expect(UNITS.flatMap((u) => u.sounds).every((x) => speakableIpa(x.ipa))).toBe(true);
+    expect(speakableIpa("fæ")).toBe(true);
+    expect(speakableIpa("<break/>")).toBe(false);
   });
 });
 
@@ -131,6 +146,17 @@ describe("Learn to Read lessons", () => {
         if (q.kind === "picture") expect(new Set(q.options.map((o) => o.emoji)).size).toBe(q.options.length);
       }
     }
+  });
+
+  it("never offers another spelling of the same sound in find the sound", () => {
+    for (const unit of UNITS)
+      for (let seed = 1; seed < 20; seed++)
+        for (const q of buildLesson(unit.id, seeded(seed)))
+          if (q.kind === "find") {
+            const others = q.options.filter((o) => o !== q.sound.grapheme);
+            const alike = soundsUpTo(unit.id).filter((s) => s.ipa === q.sound.ipa && s.grapheme !== q.sound.grapheme);
+            expect(others.filter((o) => alike.some((s) => s.grapheme === o))).toEqual([]);
+          }
   });
 
   it("marks a unit done with 7 of 8, and opens the next", () => {
