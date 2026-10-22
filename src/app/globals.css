@@ -555,78 +555,51 @@ a.tab {
   border-top: 1px solid var(--border);
 }
 
-/* Suni, the robot bee tutor */
-.suni-holder {
+/* Suni, the robot bee tutor: footage of Suni hovering, bobbing gently as it plays. */
+.suni {
   position: relative;
   display: block;
   flex-shrink: 0;
 }
-.suni-3d {
-  position: absolute;
-  inset: 0;
-}
-.suni-3d canvas {
+.suni picture,
+.suni img {
   display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
 }
-.suni {
-  display: block;
-  flex-shrink: 0;
-  overflow: visible;
-}
-.suni .suni-wing {
-  transform-box: fill-box;
-}
-/* Wings turn about where they join the back. */
-.suni .suni-wing-left {
-  transform-origin: 100% 100%;
-}
-.suni .suni-wing-right {
-  transform-origin: 0% 100%;
-}
-.suni .suni-arm-right {
-  transform-box: fill-box;
-  transform-origin: 0% 100%;
-}
-.suni .suni-eyes {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-}
-.suni .suni-palm {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-}
-/* Suni hovers and flaps everywhere. With reduced motion asked for, it's slower and smaller. */
 .suni-animated .suni-hover {
   animation: suni-hover 2.4s ease-in-out infinite;
 }
-.suni-animated .suni-wing-left {
-  animation: suni-flap-left 0.12s ease-in-out infinite alternate;
+.suni-waving .suni-hover {
+  animation: suni-wave 0.6s ease-in-out 4;
 }
-.suni-animated .suni-wing-right {
-  animation: suni-flap-right 0.12s ease-in-out infinite alternate;
+/* A thumbs up or a high five pops up beside Suni's raised hand. */
+.suni-cheer {
+  position: absolute;
+  top: 2%;
+  right: -4%;
+  font-size: calc(var(--suni-cheer, 1) * 2rem);
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.25));
 }
-.suni-animated .suni-eyes {
-  animation: suni-blink 5s infinite;
+.suni-pose-thumbsUp {
+  animation:
+    suni-cheer-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both,
+    suni-thumb 0.6s ease-in-out 0.45s 3;
 }
-.suni-waving .suni-arm-right {
-  animation: suni-wave 1.2s ease-in-out 3;
+.suni-pose-highFive {
+  animation:
+    suni-cheer-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both,
+    suni-palm 0.8s ease-in-out 0.45s infinite alternate;
 }
-.suni .suni-pose-thumbsUp {
-  animation: suni-thumb 0.6s ease-out 2;
-}
-.suni .suni-pose-highFive {
-  animation: suni-high-five 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both;
-}
-.suni .suni-pose-highFive .suni-palm {
-  animation: suni-palm 0.8s ease-in-out 0.5s infinite alternate;
+.suni[data-pose] .suni-hover {
+  animation: suni-cheer 0.5s ease-out 2;
 }
 @media (prefers-reduced-motion: reduce) {
   .suni-animated .suni-hover {
     animation-duration: 4s;
-  }
-  .suni-animated .suni-wing-left,
-  .suni-animated .suni-wing-right {
-    animation-duration: 0.5s;
   }
 }
 @keyframes suni-hover {
@@ -635,63 +608,39 @@ a.tab {
     transform: translateY(0) rotate(0);
   }
   25% {
-    transform: translateY(-5px) rotate(-1.5deg);
+    transform: translateY(-4px) rotate(-1deg);
   }
   50% {
-    transform: translateY(-9px) rotate(0);
+    transform: translateY(-8px) rotate(0);
   }
   75% {
-    transform: translateY(-4px) rotate(1.5deg);
-  }
-}
-@keyframes suni-flap-left {
-  from {
-    transform: rotate(10deg);
-  }
-  to {
-    transform: rotate(-22deg) scaleY(0.9);
-  }
-}
-@keyframes suni-flap-right {
-  from {
-    transform: rotate(-10deg);
-  }
-  to {
-    transform: rotate(22deg) scaleY(0.9);
-  }
-}
-@keyframes suni-blink {
-  0%,
-  94%,
-  100% {
-    transform: scaleY(1);
-  }
-  97% {
-    transform: scaleY(0.1);
+    transform: translateY(-3px) rotate(1deg);
   }
 }
 @keyframes suni-wave {
   50% {
-    transform: rotate(-18deg);
+    transform: rotate(-5deg) translateY(-4px);
+  }
+}
+@keyframes suni-cheer {
+  40% {
+    transform: translateY(-10px) scale(1.04);
+  }
+}
+@keyframes suni-cheer-pop {
+  from {
+    transform: scale(0) rotate(-30deg);
+    opacity: 0;
   }
 }
 @keyframes suni-thumb {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-6px) rotate(-6deg);
-  }
-}
-@keyframes suni-high-five {
-  from {
-    transform: rotate(40deg) scale(0.7);
+  50% {
+    transform: translateY(-6px) rotate(-10deg);
   }
 }
 @keyframes suni-palm {
   to {
-    transform: rotate(-8deg);
+    transform: rotate(-12deg) scale(1.1);
   }
 }
 /* A burst of stars when a child taps Suni's hand for a high five. */
@@ -822,9 +771,6 @@ a.tab {
   }
   .suni-companion.open .suni-fly {
     animation: none;
-  }
-  .suni-fly.thinking .suni-wing {
-    animation-duration: 0.08s;
   }
   .suni-bubble,
   .suni-chat {
