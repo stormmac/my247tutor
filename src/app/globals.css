@@ -721,7 +721,7 @@ a.tab {
 /* Suni flying over the page */
 .suni-companion {
   position: fixed;
-  right: 20px;
+  right: 16px;
   bottom: 16px;
   z-index: 50;
   display: flex;
@@ -735,6 +735,7 @@ a.tab {
 }
 .suni-fly {
   position: relative;
+  touch-action: none;
   border: 0;
   background: none;
   padding: 0;
@@ -846,8 +847,13 @@ a.tab {
       suni-arrive 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) both,
       suni-roam 14s ease-in-out 1.4s infinite;
   }
-  .suni-companion.open .suni-fly {
+  .suni-companion.open .suni-fly,
+  .suni-companion.dragging .suni-fly {
     animation: none;
+  }
+  /* No room to fly about without covering the question, or put somewhere by hand: hover in place. */
+  .suni-companion.still .suni-fly {
+    animation: suni-arrive 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   }
   .suni-bubble,
   .suni-chat {
@@ -889,15 +895,12 @@ a.tab {
     color: #fff6c7;
   }
 }
-@media (max-width: 640px) {
-  .suni-companion {
-    right: 8px;
-    bottom: 8px;
-  }
+.suni-companion.dragging .suni-fly {
+  cursor: grabbing;
 }
 /* Leave room so Suni never covers the last thing on the page. */
 main {
-  padding-bottom: 120px;
+  padding-bottom: var(--suni-room, 120px);
 }
 
 /* Parent report */

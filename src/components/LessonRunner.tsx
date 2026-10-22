@@ -214,7 +214,7 @@ export function LessonRunner({
       <div className="progress" aria-hidden>
         <div style={{ width: `${(index / steps.length) * 100}%` }} />
       </div>
-      <div className="card stack lesson-card">{step && <Step step={step} picked={picked} onAnswer={answer} onNext={next} say={say} />}</div>
+      <div className="card stack lesson-card" data-suni-avoid>{step && <Step step={step} picked={picked} onAnswer={answer} onNext={next} say={say} />}</div>
       {!voice.supported && (
         <p className="muted small">This device can&apos;t speak, so a grown-up will need to say the sounds and words.</p>
       )}
