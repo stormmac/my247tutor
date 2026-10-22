@@ -2509,3 +2509,21 @@ body:has(.read-along) .suni-fly {
     height: min(300px, 36vh);
   }
 }
+
+/* The reward program */
+.reward-total {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+.reward-total-card {
+  border: 2px solid #ffd21f;
+}
+.reward-list {
+  margin: 0;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 4px;
+}
+.rewards-link {
+  flex-shrink: 0;
+}

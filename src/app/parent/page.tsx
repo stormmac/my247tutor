@@ -6,6 +6,7 @@ import { useAccount } from "@/components/useAccount";
 import { ChildLogin } from "@/components/ChildLogin";
 import { ChildTabs } from "@/components/ChildSwitcher";
 import { PlanButton, PlanSummary } from "@/components/PlanButton";
+import { RewardsButton } from "@/components/RewardsButton";
 import { ParentSummary } from "@/components/ParentSummary";
 import { FullReport, WellbeingAlert } from "@/components/ProgressReport";
 import { SuniChatsButton } from "@/components/SuniChats";
@@ -115,6 +116,7 @@ export default function ParentPage() {
         <ChildTabs />
         {centreTabs}
         {account.user && profile.id && <PlanButton learnerId={profile.id} />}
+        {account.user && profile.id && <RewardsButton learnerId={profile.id} />}
       </div>
       <div className="row spread">
         <div>

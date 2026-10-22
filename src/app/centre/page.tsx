@@ -1,6 +1,7 @@
 "use client";
 
 import { PlanButton } from "@/components/PlanButton";
+import { RewardsButton } from "@/components/RewardsButton";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { StudentReport } from "@/components/StudentReport";
@@ -579,6 +580,7 @@ function Students({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
                           Edit
                         </button>
                         <PlanButton learnerId={s.id} onSaved={() => void run(Promise.resolve({ error: null, data: {} }))} />
+                        <RewardsButton learnerId={s.id} />
                         <button
                           className="btn secondary small"
                           onClick={() => {

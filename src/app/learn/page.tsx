@@ -45,7 +45,7 @@ export default function LearnPage() {
     <div className="stack">
       <div className="row" style={{ gap: 16, flexWrap: "nowrap" }}>
         <Suni size={84} wave />
-        <div>
+        <div style={{ flex: 1 }}>
           <h1>Hi {profile.name}! What shall we learn?</h1>
           <p className="muted" style={{ margin: 0 }}>
             {yearName(profile.yearLevel, curriculum)}. Pick a subject to keep going, and ask Suni if you get stuck.
@@ -56,6 +56,11 @@ export default function LearnPage() {
             </p>
           )}
         </div>
+        {account.user && profile.id && (
+          <Link href="/rewards" className="btn rewards-link">
+            🏆 Rewards
+          </Link>
+        )}
       </div>
       {english && <ReadingCard profile={profile} />}
       <div className={maths && english ? "grid grid-2" : "grid"}>
