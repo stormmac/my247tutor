@@ -4,12 +4,13 @@
  */
 import { TUTOR_NAME } from "./persona";
 
-export const MOODS = ["happy", "okay", "tired", "worried", "sad"] as const;
+export const MOODS = ["great", "happy", "okay", "tired", "worried", "sad"] as const;
 export type Mood = (typeof MOODS)[number];
 
 export const MOOD_FACES: Record<Mood, { face: string; label: string }> = {
-  happy: { face: "😄", label: "Happy" },
-  okay: { face: "🙂", label: "Okay" },
+  great: { face: "😄", label: "Great" },
+  happy: { face: "🙂", label: "Happy" },
+  okay: { face: "😐", label: "Okay" },
   tired: { face: "😴", label: "Tired" },
   worried: { face: "😟", label: "Worried" },
   sad: { face: "😢", label: "Sad" },
@@ -21,7 +22,8 @@ export const LOW_MOODS: readonly Mood[] = ["worried", "sad"];
 /** What Suni says back when a child says how they feel. */
 export function moodReply(mood: Mood): string {
   return {
-    happy: "Yay! I love that. Let's make today a great learning day.",
+    great: "Yay! I love that. Let's make today a great learning day.",
+    happy: "That's lovely to hear. Let's have a good time learning.",
     okay: "Thanks for telling me. Let's have a good time learning.",
     tired: "Thanks for telling me. We'll keep things short and fun today.",
     worried:
@@ -30,8 +32,16 @@ export function moodReply(mood: Mood): string {
   }[mood];
 }
 
+/** The five faces a child picks from to rate how they feel, worst to best. "Tired" is from before the rating. */
+export const RATING_MOODS: readonly Mood[] = ["sad", "worried", "okay", "happy", "great"];
+
+/** The name Suni calls a child: their first name. */
+export function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? name;
+}
+
 /** Suni asks again once this long has passed since the last check-in. */
-export const CHECKIN_GAP_HOURS = 8;
+export const CHECKIN_GAP_HOURS = 1;
 
 export function checkinDue(lastAt: number | null, now = Date.now()): boolean {
   return lastAt === null || now - lastAt >= CHECKIN_GAP_HOURS * 3_600_000;

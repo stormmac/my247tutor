@@ -7,12 +7,8 @@ import type { Subject } from "../curriculum/types";
 import { currentLesson, lessonProgress } from "../learner/lesson";
 import type { LearnerProfile } from "../learner/model";
 import { doesSubject } from "../learner/plan";
-import type { Mood } from "./memory";
 
 const SUBJECTS: Subject[] = ["maths", "english"];
-
-/** How a child rates their feeling, from 1 (sad) to 5 (happy). */
-export const MOOD_RATING: Record<Mood, number> = { sad: 1, worried: 2, tired: 3, okay: 4, happy: 5 };
 
 /** One subject still to do this week, with a button to start it. */
 export interface ProgramStep {

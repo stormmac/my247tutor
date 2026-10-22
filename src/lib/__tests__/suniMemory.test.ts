@@ -1,15 +1,42 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { SUNI_NOTES_SQL } from "../auth/suniNotesSchema";
-import { addGrownUpNotes, checkinDue, MAX_GROWN_UP_NOTES, memoryPrompt, moodNote, moodReply, MOODS } from "../tutor/memory";
+import { CHECKIN_GREAT_SQL, SUNI_NOTES_SQL } from "../auth/suniNotesSchema";
+import {
+  addGrownUpNotes,
+  checkinDue,
+  firstName,
+  MAX_GROWN_UP_NOTES,
+  memoryPrompt,
+  MOOD_FACES,
+  moodNote,
+  moodReply,
+  MOODS,
+  RATING_MOODS,
+} from "../tutor/memory";
 
 describe("Suni's check-in", () => {
-  it("asks at the start of a visit, and not again for a while", () => {
+  it("calls a child by their first name", () => {
+    expect(firstName("Rod")).toBe("Rod");
+    expect(firstName("  Rod  Smith ")).toBe("Rod");
+  });
+
+  it("rates feelings with five different faces, worst to best", () => {
+    expect(RATING_MOODS).toEqual(["sad", "worried", "okay", "happy", "great"]);
+    expect(new Set(RATING_MOODS.map((m) => MOOD_FACES[m].face)).size).toBe(5);
+    expect(RATING_MOODS.every((m) => MOODS.includes(m))).toBe(true);
+  });
+
+  it("keeps the top face with a migration matching the app's schema", () => {
+    expect(readFileSync(join(__dirname, "../../../database/026_my247tutor_checkin_great.sql"), "utf8")).toContain(CHECKIN_GREAT_SQL);
+    expect(CHECKIN_GREAT_SQL).toContain(`mood IN (${MOODS.map((m) => `'${m}'`).join(", ")})`);
+  });
+
+  it("asks at the start of a visit, and at most once an hour", () => {
     const now = Date.parse("2026-10-22T09:00:00Z");
     expect(checkinDue(null, now)).toBe(true);
-    expect(checkinDue(now - 2 * 3_600_000, now)).toBe(false);
-    expect(checkinDue(now - 9 * 3_600_000, now)).toBe(true);
+    expect(checkinDue(now - 30 * 60_000, now)).toBe(false);
+    expect(checkinDue(now - 61 * 60_000, now)).toBe(true);
   });
 
   it("has a kind answer for every feeling", () => {
@@ -28,7 +55,14 @@ describe("Suni's check-in", () => {
 describe("Suni's notes", () => {
   it("adds new notes for grown-ups, dropping empty ones and keeping the newest", () => {
     const old = Array.from({ length: MAX_GROWN_UP_NOTES }, (_, i) => ({ at: i, kind: "progress" as const, text: `note ${i}` }));
-    const next = addGrownUpNotes(old, [{ kind: "learning", text: "  Finds fractions tricky.  " }, { kind: "progress", text: " " }], 999);
+    const next = addGrownUpNotes(
+      old,
+      [
+        { kind: "learning", text: "  Finds fractions tricky.  " },
+        { kind: "progress", text: " " },
+      ],
+      999,
+    );
     expect(next).toHaveLength(MAX_GROWN_UP_NOTES);
     expect(next.at(-1)).toEqual({ at: 999, kind: "learning", text: "Finds fractions tricky." });
     expect(next[0].text).toBe("note 1");

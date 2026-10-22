@@ -823,8 +823,25 @@ a.tab {
   font-size: 0.8rem;
   cursor: pointer;
 }
-.suni-mood strong {
-  font-size: 1.1rem;
+/* The five-face feelings rating */
+.suni-rating {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+.suni-face {
+  flex: 1;
+  font-size: 2rem;
+  line-height: 1;
+  padding: 8px 0;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.suni-face:hover,
+.suni-face:focus-visible {
+  border-color: #ffd21f;
+  transform: scale(1.08);
 }
 .suni-program {
   margin: 0;

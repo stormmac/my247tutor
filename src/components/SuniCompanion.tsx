@@ -12,9 +12,9 @@ import { parseAlgorithm } from "@/lib/tutor/algorithm";
 import { fitSuni, SUNI_EDGE, type SuniFit, suniMax } from "@/lib/tutor/suniFit";
 import { CHECKING_MESSAGE, splitBoard, STILL_WORKING_MESSAGE, wantsHelp } from "@/lib/tutor/board";
 import { CELEBRATE_EVENT } from "@/lib/tutor/celebrate";
-import { FOCUS_CHOICES, MOOD_FACES, MOODS, moodReply, type Mood } from "@/lib/tutor/memory";
+import { firstName, FOCUS_CHOICES, MOOD_FACES, moodReply, RATING_MOODS, type Mood } from "@/lib/tutor/memory";
 import { TUTOR_NAME } from "@/lib/tutor/persona";
-import { MOOD_RATING, programAhead, programText } from "@/lib/tutor/program";
+import { programAhead, programText } from "@/lib/tutor/program";
 import type { TutorContext } from "@/lib/tutor/prompt";
 import type { YearLevel } from "@/lib/curriculum/types";
 
@@ -121,9 +121,12 @@ export function screenForPath(pathname: string): string {
 
 const HIDDEN_ON = ["/parent", "/login", "/signup", "/forgot-password", "/set-password", "/private"];
 
+/** How long nothing is tapped before Suni offers help. */
+const IDLE_HELP_MS = 60_000;
+
 /** How Suni starts the day's first chat. */
 function checkinQuestion(name: string): string {
-  return `Hi ${name}! How are you today? Rate how you're feeling from 1 to 5.`;
+  return `How are you today, ${firstName(name)}?`;
 }
 
 /** The size Suni shows at while the chat is open. */
@@ -318,7 +321,7 @@ export function SuniCompanion() {
     focus?.greeting ??
     (profile && screen?.greeting) ??
     (profile
-      ? `Hi ${profile.name}! I'm ${TUTOR_NAME}. Ask me anything about maths or English, or pick something to practise and I'll help you with it.`
+      ? `Hi ${firstName(profile.name)}! I'm ${TUTOR_NAME}. Ask me anything about maths or English, or pick something to practise and I'll help you with it.`
       : `Hi! I'm ${TUTOR_NAME}, your robot bee tutor. Press Start learning and I'll help you along the way.`);
   const onWellbeing =
     focus?.onWellbeingConcern ??
@@ -378,13 +381,29 @@ export function SuniCompanion() {
     if (bubble && !open) voice.say(bubble);
   }, [bubble, said]);
 
-  // Say hello once, shortly after arriving, unless Suni is about to ask how they feel (below).
-  const hello = () => setBubble(profile ? `Hi ${profile.name}! Tap me if you get stuck.` : "Hi! I'm Suni. Tap me to say hello.");
+  // Suni only offers help when nothing has been tapped, clicked or typed for a minute, then waits
+  // for the next tap before it can offer again.
+  const helpOffer = profile ? `Would you like some help, ${firstName(profile.name)}?` : "Would you like some help?";
+  const quiet = useRef({ open, bubble, helpOffer });
+  quiet.current = { open, bubble, helpOffer };
   useEffect(() => {
-    if (!loaded || profile?.id) return;
-    const t = setTimeout(hello, 1500);
-    return () => clearTimeout(t);
-  }, [loaded]);
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const arm = () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        const { open, bubble, helpOffer } = quiet.current;
+        if (!open && !bubble) setBubble(helpOffer);
+      }, IDLE_HELP_MS);
+    };
+    arm();
+    window.addEventListener("pointerdown", arm);
+    window.addEventListener("keydown", arm);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("keydown", arm);
+    };
+  }, [setBubble]);
 
   // At the start of a visit, Suni flies in and asks how they're feeling and what they'd like to work on.
   const hidden = HIDDEN_ON.some((p) => pathname.startsWith(p));
@@ -397,10 +416,7 @@ export function SuniCompanion() {
       .then((res) => (res.ok ? (res.json() as Promise<{ due?: boolean }>) : null))
       .catch(() => null)
       .then((body) => {
-        if (!body?.due) {
-          t = setTimeout(hello, 1500);
-          return;
-        }
+        if (!body?.due) return;
         t = setTimeout(() => {
           setBubble(null);
           setCheckin("mood");
@@ -608,20 +624,23 @@ export function SuniCompanion() {
                 <div className="suni-checkin">
                   <div className="msg assistant">{checkinQuestion(profile.name)}</div>
                   {checkin === "mood" ? (
-                    <div className="suni-choices suni-rating" role="group" aria-label="How are you feeling, from 1 to 5?">
-                      {[...MOODS]
-                        .sort((a, b) => MOOD_RATING[a] - MOOD_RATING[b])
-                        .map((m) => (
-                          <button key={m} type="button" className="suni-mood" onClick={() => pickMood(m)}>
-                            <strong>{MOOD_RATING[m]}</strong>
-                            <span aria-hidden>{MOOD_FACES[m].face}</span>
-                            {MOOD_FACES[m].label}
-                          </button>
-                        ))}
+                    <div className="suni-choices suni-rating" role="group" aria-label="How are you feeling?">
+                      {RATING_MOODS.map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          className="suni-face"
+                          onClick={() => pickMood(m)}
+                          aria-label={MOOD_FACES[m].label}
+                          title={MOOD_FACES[m].label}
+                        >
+                          {MOOD_FACES[m].face}
+                        </button>
+                      ))}
                     </div>
                   ) : checkin === "program" && program ? (
                     <>
-                      <div className="msg user">{mood && `${MOOD_RATING[mood]} ${MOOD_FACES[mood].face} ${MOOD_FACES[mood].label}`}</div>
+                      <div className="msg user">{mood && MOOD_FACES[mood].face}</div>
                       <div className="msg assistant">
                         {mood && <p style={{ margin: "0 0 6px" }}>{moodReply(mood)}</p>}
                         <p style={{ margin: "0 0 4px" }}>Here&apos;s your program this week:</p>
@@ -654,7 +673,7 @@ export function SuniCompanion() {
                     </>
                   ) : (
                     <>
-                      <div className="msg user">{mood && `${MOOD_RATING[mood]} ${MOOD_FACES[mood].face} ${MOOD_FACES[mood].label}`}</div>
+                      <div className="msg user">{mood && MOOD_FACES[mood].face}</div>
                       <div className="msg assistant">
                         {mood && !program?.lines.length && `${moodReply(mood)} `}What would you like to work on today? Is there anything
                         you&apos;d like to practise?
@@ -815,7 +834,7 @@ export function questionFocus(args: {
 }): SuniFocus {
   const { profile, setProfile, question } = args;
   return {
-    greeting: `Hi ${profile.name}! I'm ${TUTOR_NAME}. Stuck on ${args.title.charAt(0).toLowerCase() + args.title.slice(1)}? Ask me and we'll work it out together.`,
+    greeting: `Hi ${firstName(profile.name)}! I'm ${TUTOR_NAME}. Stuck on ${args.title.charAt(0).toLowerCase() + args.title.slice(1)}? Ask me and we'll work it out together.`,
     context: {
       studentName: profile.name,
       yearLevel: profile.yearLevel,

@@ -22,3 +22,18 @@ CREATE TABLE IF NOT EXISTS suni_notes (
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE suni_notes ENABLE ROW LEVEL SECURITY;`;
+
+/**
+ * Adds "great" to the feelings a check-in can keep, for the five-face rating
+ * (database/026_my247tutor_checkin_great.sql, kept identical by a test).
+ */
+export const CHECKIN_GREAT_SQL = `DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'suni_checkins_mood_check' AND pg_get_constraintdef(oid) LIKE '%great%'
+  ) THEN
+    ALTER TABLE suni_checkins DROP CONSTRAINT IF EXISTS suni_checkins_mood_check;
+    ALTER TABLE suni_checkins ADD CONSTRAINT suni_checkins_mood_check
+      CHECK (mood IN ('great', 'happy', 'okay', 'tired', 'worried', 'sad'));
+  END IF;
+END $$;`;
