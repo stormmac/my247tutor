@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { normalise, trimSilence } from "@/lib/phonics/clips";
 import { mfcc, rank, saidSound } from "@/lib/phonics/match";
+import { celebrate } from "@/lib/tutor/celebrate";
 import type { Sound } from "@/lib/phonics/sequence";
 import { audioContext, recordedClips, recordedSound, type SpeechPart } from "@/lib/tutor/speech";
 
@@ -84,6 +85,7 @@ export function SayTheSound({
       const result = await check(s, new Blob(chunks, { type: rec.mimeType })).catch((): Result => "quiet");
       setChecking(null);
       setResults((r) => ({ ...r, [s.ipa]: result }));
+      if (result === "yes") celebrate();
       if (result === "yes") say([{ text: PRAISE[Math.floor(Math.random() * PRAISE.length)] }, sound(s)], true);
       else if (result === "no") say([{ text: "Not quite. Listen:" }, sound(s), { text: "Now you try." }], true);
       else say("I didn't hear that. Hold the microphone, say the sound, then let go.", true);

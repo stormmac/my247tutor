@@ -10,6 +10,7 @@ import { useSuniVoice } from "@/components/useSuniVoice";
 import { PASS_MARK, SCORED, type LessonStep, type Syllable } from "@/lib/phonics/progress";
 import { ColourIn } from "@/components/ColourIn";
 import { graphemesOf, soundAt, type Sound } from "@/lib/phonics/sequence";
+import { celebrate } from "@/lib/tutor/celebrate";
 import { inSentence, type SpeechPart } from "@/lib/tutor/speech";
 
 const PRAISE = ["Yes!", "Great!", "Well done!", "That's it!", "Brilliant!"];
@@ -153,7 +154,10 @@ export function LessonRunner({
     if (picked) return;
     setPicked(choice);
     const ok = choice === correct;
-    if (ok) setRight((r) => r + 1);
+    if (ok) {
+      setRight((r) => r + 1);
+      celebrate();
+    }
     say(ok ? PRAISE[Math.floor(Math.random() * PRAISE.length)] : `Not quite. It's ${correct}.`, true);
   }
 
@@ -182,7 +186,7 @@ export function LessonRunner({
     return (
       <div className="card narrow stack" style={{ textAlign: "center" }}>
         <div style={{ display: "grid", placeItems: "center" }}>
-          <Suni size={110} wave />
+          <Suni size={110} wave pose={result.passed ? "thumbsUp" : null} />
         </div>
         <div className="stars" aria-label={`${stars} of 3 stars`}>
           {"⭐".repeat(stars)}

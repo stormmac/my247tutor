@@ -555,66 +555,111 @@ a.tab {
   border-top: 1px solid var(--border);
 }
 
-/* Suni, the robot bee tutor */
+/* Suni, the robot bee tutor: footage of Suni hovering, bobbing gently as it plays. */
 .suni {
+  position: relative;
   display: block;
   flex-shrink: 0;
-  overflow: visible;
 }
-.suni .suni-wing {
-  transform-box: fill-box;
+.suni picture,
+.suni img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
 }
-.suni .suni-wing-left {
-  transform-origin: 100% 80%;
+.suni-animated .suni-hover {
+  animation: suni-hover 2.4s ease-in-out infinite;
 }
-.suni .suni-wing-right {
-  transform-origin: 0% 80%;
+.suni-waving .suni-hover {
+  animation: suni-wave 0.6s ease-in-out 4;
 }
-.suni .suni-arm-right {
-  transform-box: fill-box;
-  transform-origin: 0% 100%;
+/* A thumbs up or a high five pops up beside Suni's raised hand. */
+.suni-cheer {
+  position: absolute;
+  top: 2%;
+  left: -4%;
+  font-size: calc(var(--suni-cheer, 1) * 2rem);
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.25));
 }
-.suni .suni-eyes {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
+.suni-pose-thumbsUp {
+  animation:
+    suni-cheer-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both,
+    suni-thumb 0.6s ease-in-out 0.45s 3;
 }
-@media (prefers-reduced-motion: no-preference) {
+.suni-pose-highFive {
+  animation:
+    suni-cheer-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both,
+    suni-palm 0.8s ease-in-out 0.45s infinite alternate;
+}
+.suni[data-pose] .suni-hover {
+  animation: suni-cheer 0.5s ease-out 2;
+}
+@media (prefers-reduced-motion: reduce) {
   .suni-animated .suni-hover {
-    animation: suni-hover 3s ease-in-out infinite;
-  }
-  .suni-animated .suni-wing {
-    animation: suni-flutter 0.18s ease-in-out infinite alternate;
-  }
-  .suni-animated .suni-eyes {
-    animation: suni-blink 5s infinite;
-  }
-  .suni-waving .suni-arm-right {
-    animation: suni-wave 1.2s ease-in-out 3;
+    animation-duration: 4s;
   }
 }
 @keyframes suni-hover {
-  50% {
-    transform: translateY(-6px);
-  }
-}
-@keyframes suni-flutter {
-  to {
-    transform: scaleY(0.82) rotate(-3deg);
-  }
-}
-@keyframes suni-blink {
   0%,
-  94%,
   100% {
-    transform: scaleY(1);
+    transform: translateY(0) rotate(0);
   }
-  97% {
-    transform: scaleY(0.1);
+  25% {
+    transform: translateY(-4px) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0);
+  }
+  75% {
+    transform: translateY(-3px) rotate(1deg);
   }
 }
 @keyframes suni-wave {
   50% {
-    transform: rotate(-18deg);
+    transform: rotate(-5deg) translateY(-4px);
+  }
+}
+@keyframes suni-cheer {
+  40% {
+    transform: translateY(-10px) scale(1.04);
+  }
+}
+@keyframes suni-cheer-pop {
+  from {
+    transform: scale(0) rotate(-30deg);
+    opacity: 0;
+  }
+}
+@keyframes suni-thumb {
+  50% {
+    transform: translateY(-6px) rotate(-10deg);
+  }
+}
+@keyframes suni-palm {
+  to {
+    transform: rotate(-12deg) scale(1.1);
+  }
+}
+/* A burst of stars when a child taps Suni's hand for a high five. */
+.suni-slap {
+  position: absolute;
+  top: 0;
+  right: 10px;
+  font-size: 2rem;
+  pointer-events: none;
+  animation: suni-slap 0.9s ease-out forwards;
+}
+@keyframes suni-slap {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6) translateY(-20px);
+    opacity: 0;
   }
 }
 .hero-with-suni {
@@ -646,6 +691,7 @@ a.tab {
   pointer-events: auto;
 }
 .suni-fly {
+  position: relative;
   border: 0;
   background: none;
   padding: 0;
@@ -725,9 +771,6 @@ a.tab {
   }
   .suni-companion.open .suni-fly {
     animation: none;
-  }
-  .suni-fly.thinking .suni-wing {
-    animation-duration: 0.08s;
   }
   .suni-bubble,
   .suni-chat {

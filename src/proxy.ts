@@ -117,6 +117,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except Next.js build files and the site icon.
-  matcher: ["/((?!_next/static|_next/image|icon.svg|favicon.ico).*)"],
+  // Everything except Next.js build files, the site icon and Suni's pictures.
+  matcher: ["/((?!_next/static|_next/image|icon.svg|favicon.ico|suni/).*)"],
 };
