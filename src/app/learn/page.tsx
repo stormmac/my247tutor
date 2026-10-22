@@ -12,7 +12,7 @@ import { MAX_CHILDREN, newProfile, skillState, type LearnerProfile } from "@/lib
 import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, subjectName, yearName, yearWord } from "@/lib/curriculum/curricula";
 import { skillsFor } from "@/lib/curriculum/skills";
 import { hasSkillPath, YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
-import { currentSightLevel, currentUnit, readingOf, sightLevelsDone, unitsDone } from "@/lib/phonics/progress";
+import { currentSightLevel, currentUnit, readingOf, readingYear, sightLevelsDone, unitsDone } from "@/lib/phonics/progress";
 import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
 import { UNITS } from "@/lib/phonics/sequence";
 import { describeTables, tablesOf } from "@/lib/tables/game";
@@ -60,7 +60,7 @@ export default function LearnPage() {
           </Link>
         )}
       </div>
-      {english && <ReadingCard profile={profile} />}
+      {english && readingYear(profile.yearLevel) && <ReadingCard profile={profile} />}
       <div className={maths && english ? "grid grid-2" : "grid"}>
         {maths && <SubjectCard profile={profile} subject="maths" title={subjectName("maths", curriculum)} />}
         {english && <SubjectCard profile={profile} subject="english" title="English" />}
@@ -86,8 +86,9 @@ export default function LearnPage() {
 }
 
 /**
- * Learn to Read, the phonics program, comes first for a student in it. Everyone else is asked to do
- * the reading check once, which puts them in the program if their reading age is below 7.5.
+ * Learn to Read, the phonics program, comes first for a student in it. Everyone else up to Year 5 is
+ * asked to do the reading check once, which puts them in the program if their reading age is below 9.5.
+ * From Year 6 on there's no card at all.
  */
 function ReadingCard({ profile }: { profile: LearnerProfile }) {
   const reading = readingOf(profile);

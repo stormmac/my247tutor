@@ -10,6 +10,7 @@ import { CLASS_SUBJECTS as SUBJECTS, describeTime, formatDuration, WEEKDAYS, typ
 import { YEARS } from "@/lib/curriculum/types";
 import { SuniStudentNotes } from "@/components/SuniNotes";
 import { dateOfBirthProblem, describeBirth, today } from "@/lib/learner/birth";
+import { LAST_READING_YEAR, READING_AGE_CUTOFF, readingYear } from "@/lib/phonics/progress";
 
 interface Teacher {
   id: string;
@@ -737,7 +738,7 @@ function StudentForm({
           username: username.trim().toLowerCase(),
           ...(password ? { password } : {}),
           classIds,
-          learnToRead,
+          learnToRead: learnToRead && readingYear(yearLevel),
           // An empty date clears one that was there; a new student without one just has none.
           ...(dateOfBirth ? { dateOfBirth } : initial?.dateOfBirth ? { dateOfBirth: null } : {}),
         });
@@ -802,10 +803,13 @@ function StudentForm({
         </div>
       </div>
       <ClassPicker classes={classes} value={classIds} onChange={setClassIds} />
-      <label className="row" style={{ fontWeight: 400, margin: 0, gap: 8 }}>
-        <input type="checkbox" style={{ width: "auto" }} checked={learnToRead} onChange={(e) => setLearnToRead(e.target.checked)} />
-        Learn to Read (phonics, for a reading age below 7.5). Students are also put in it by the reading check on their Student page.
-      </label>
+      {readingYear(yearLevel) && (
+        <label className="row" style={{ fontWeight: 400, margin: 0, gap: 8 }}>
+          <input type="checkbox" style={{ width: "auto" }} checked={learnToRead} onChange={(e) => setLearnToRead(e.target.checked)} />
+          Learn to Read (phonics, for a reading age below {READING_AGE_CUTOFF}, up to Year {LAST_READING_YEAR}). Students are also put in it
+          by the reading check on their Student page.
+        </label>
+      )}
       <div className="row">
         <button className="btn" disabled={busy}>
           {busy ? "Saving…" : initial ? "Save student" : "Add student"}

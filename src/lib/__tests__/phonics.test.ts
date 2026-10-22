@@ -13,6 +13,7 @@ import {
   newReading,
   openUnits,
   readingOf,
+  readingYear,
   readingAge,
   readWell,
   recordBlending,
@@ -120,13 +121,31 @@ describe("the reading check", () => {
     expect(isOpen(r, UNITS[start + 1].id)).toBe(false);
   });
 
-  it("takes them out at 7.5 or above, unless a grown-up put them in", () => {
+  it("takes them out at 9.5 or above, and a grown-up's choice stands", () => {
     const inByCheck = recordCheck(newReading(), 3);
-    expect(recordCheck(inByCheck, 20)).toMatchObject({ enrolled: false, enrolledBy: null });
+    expect(recordCheck(inByCheck, 20)).toMatchObject({ enrolled: true, enrolledBy: "check" });
+    expect(recordCheck(inByCheck, 27)).toMatchObject({ enrolled: false, enrolledBy: null });
     const inByGrownUp = setEnrolled(newReading(), true);
-    expect(recordCheck(inByGrownUp, 20)).toMatchObject({ enrolled: true, enrolledBy: "grown-up" });
+    expect(recordCheck(inByGrownUp, 30)).toMatchObject({ enrolled: true, enrolledBy: "grown-up" });
     expect(recordCheck(inByGrownUp, 2)).toMatchObject({ enrolled: true, enrolledBy: "grown-up" });
-    expect(setEnrolled(inByGrownUp, false)).toMatchObject({ enrolled: false, enrolledBy: null });
+    const outByGrownUp = setEnrolled(inByCheck, false);
+    expect(outByGrownUp).toMatchObject({ enrolled: false, enrolledBy: "grown-up" });
+    expect(recordCheck(outByGrownUp, 3)).toMatchObject({ enrolled: false, enrolledBy: "grown-up" });
+  });
+
+  it("is only for students up to Year 5", () => {
+    expect(readingYear(5)).toBe(true);
+    expect(readingYear(6)).toBe(false);
+    expect(readingYear(12)).toBe(false);
+    const low = recordCheck(newReading(), 3);
+    expect(readingOf({ reading: low, yearLevel: 5 }).enrolled).toBe(true);
+    expect(readingOf({ reading: low, yearLevel: 6 }).enrolled).toBe(false);
+    expect(readingOf({ reading: setEnrolled(newReading(), true), yearLevel: 9 }).enrolled).toBe(false);
+  });
+
+  it("puts in an earlier check that came out under 9.5", () => {
+    const old = { ...newReading(), age: 8.5, enrolled: false, enrolledBy: null };
+    expect(readingOf({ reading: old, yearLevel: 4 })).toMatchObject({ enrolled: true, enrolledBy: "check" });
   });
 });
 

@@ -1,6 +1,7 @@
 /**
- * The reading check and Learn to Read progress. A student whose reading age comes out below 7.5
- * joins the Learn to Read program; a grown-up can also add or remove them. Pure functions, kept
+ * The reading check and Learn to Read progress. A student up to Year 5 whose reading age comes out
+ * below 9.5 joins the Learn to Read program; a grown-up can also add or remove them. From Year 6 on
+ * there's no Learn to Read. Pure functions, kept
  * apart from React so they can be tested.
  */
 import { weekOf } from "../learner/lesson";
@@ -9,7 +10,16 @@ import { getSightLevel, SIGHT_LEVELS, sightWordsUpTo, type SightLevel } from "./
 import { storyFor, type Story } from "./stories";
 
 /** Students below this reading age (in years) join Learn to Read. */
-export const READING_AGE_CUTOFF = 7.5;
+export const READING_AGE_CUTOFF = 9.5;
+/** The phonics sounds and sight words are spread from 5 years to this reading age; older readers start at the top. */
+const PHONICS_TOP = 7.5;
+/** Learn to Read is for students up to this year. */
+export const LAST_READING_YEAR = 5;
+
+/** Whether a student's year has Learn to Read at all. */
+export function readingYear(yearLevel: number): boolean {
+  return yearLevel <= LAST_READING_YEAR;
+}
 const YOUNGEST = 5;
 const OLDEST = 10;
 
@@ -141,22 +151,37 @@ export const newReading = (): ReadingProgress => ({
   blending: { sessions: 0, right: 0, asked: 0 },
 });
 
-/** Older profiles have no reading record, and ones saved by older pages may miss fields. */
-export function readingOf(profile: { reading?: Partial<ReadingProgress> }): ReadingProgress {
+/**
+ * A student's reading record. Older profiles have no reading record, and ones saved by older pages
+ * may miss fields. From Year 6 on, nobody is in Learn to Read. A check from when the cut-off was 7.5
+ * that came out between 7.5 and 9.5 puts the student in now, unless a grown-up has decided.
+ */
+export function readingOf(profile: { reading?: Partial<ReadingProgress>; yearLevel?: number }): ReadingProgress {
   const r = profile.reading;
-  return { ...newReading(), ...(r ?? {}), units: { ...(r?.units ?? {}) }, blending: { ...newReading().blending, ...(r?.blending ?? {}) } };
+  const reading = {
+    ...newReading(),
+    ...(r ?? {}),
+    units: { ...(r?.units ?? {}) },
+    blending: { ...newReading().blending, ...(r?.blending ?? {}) },
+  };
+  if (profile.yearLevel !== undefined && !readingYear(profile.yearLevel)) return { ...reading, enrolled: false };
+  if (!reading.enrolled && reading.enrolledBy === null && reading.age !== null && reading.age < READING_AGE_CUTOFF)
+    return { ...reading, enrolled: true, enrolledBy: "check" };
+  return reading;
 }
 
 /**
- * Records a reading check. Below 7.5 the student joins Learn to Read; at 7.5 or above they leave it,
- * unless a grown-up put them in. Units below their reading level count as done, so they start where
+ * Records a reading check. Below 9.5 the student joins Learn to Read; at 9.5 or above they leave it,
+ * unless a grown-up has put them in or taken them out. Units below their reading level count as done, so they start where
  * the check found them and can still go back.
  */
 export function recordCheck(reading: ReadingProgress, right: number, now = Date.now()): ReadingProgress {
   const age = readingAge(right);
   const below = age < READING_AGE_CUTOFF;
-  const enrolled = below || (reading.enrolled && reading.enrolledBy === "grown-up");
-  const enrolledBy = below ? (reading.enrolledBy === "grown-up" ? "grown-up" : "check") : enrolled ? reading.enrolledBy : null;
+  // A grown-up's choice stands; otherwise the check decides.
+  const byGrownUp = reading.enrolledBy === "grown-up";
+  const enrolled = byGrownUp ? reading.enrolled : below;
+  const enrolledBy = byGrownUp ? "grown-up" : below ? "check" : null;
   const units = { ...reading.units };
   const levels = SIGHT_LEVELS.slice(0, startingIndex(age, SIGHT_LEVELS.length));
   for (const unit of [...UNITS.slice(0, startingUnitIndex(age)), ...levels]) {
@@ -166,19 +191,19 @@ export function recordCheck(reading: ReadingProgress, right: number, now = Date.
   return { ...reading, age, checkedAt: now, enrolled, enrolledBy, units, toward: 0, weekly: null };
 }
 
-/** A grown-up adds the student to Learn to Read or takes them out. */
+/** A grown-up adds the student to Learn to Read or takes them out. Either way a later check doesn't undo it. */
 export function setEnrolled(reading: ReadingProgress, enrolled: boolean): ReadingProgress {
-  return { ...reading, enrolled, enrolledBy: enrolled ? "grown-up" : null };
+  return { ...reading, enrolled, enrolledBy: "grown-up" };
 }
 
-/** Which unit a reading age starts at: the units spread evenly from 5 years to the 7.5 cut-off. */
+/** Which unit a reading age starts at: the units spread evenly from 5 years to 7.5. */
 export function startingUnitIndex(age: number): number {
   return startingIndex(age, UNITS.length);
 }
 
 /** Where a reading age starts in a list of steps spread evenly from 5 years to the cut-off. */
 function startingIndex(age: number, count: number): number {
-  const fraction = (age - YOUNGEST) / (READING_AGE_CUTOFF - YOUNGEST);
+  const fraction = (age - YOUNGEST) / (PHONICS_TOP - YOUNGEST);
   return Math.max(0, Math.min(count - 1, Math.floor(fraction * count)));
 }
 
@@ -247,7 +272,7 @@ export function recordBlending(reading: ReadingProgress, right: number, asked: n
 /** Passing this many weekly lessons adds a month to the reading age. */
 export const LESSONS_PER_MONTH = 3;
 
-/** The sounds and sight words that fit a reading age, from the start of the program to the 7.5 cut-off. */
+/** The sounds and sight words that fit a reading age, from the start of the program at 5 to 7.5. */
 export function levelForAge(age: number): { unit: Unit; level: SightLevel } {
   return { unit: UNITS[startingIndex(age, UNITS.length)], level: SIGHT_LEVELS[startingIndex(age, SIGHT_LEVELS.length)] };
 }

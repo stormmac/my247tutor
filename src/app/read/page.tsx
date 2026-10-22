@@ -12,6 +12,7 @@ import {
   openUnits,
   READING_AGE_CUTOFF,
   readingOf,
+  readingYear,
   sightLevelsDone,
   unitsDone,
   weeklyReading,
@@ -32,6 +33,23 @@ export default function ReadPage() {
         <Link className="btn" href="/learn">
           Set up
         </Link>
+      </div>
+    );
+  }
+
+  if (!readingYear(profile.yearLevel)) {
+    return (
+      <div className="card narrow stack">
+        <h1>Learn to Read</h1>
+        <p>
+          Learn to Read is for students up to Year 5. {profile.name} is in Year {profile.yearLevel}, so their reading practice is in
+          English.
+        </p>
+        <div className="row">
+          <Link className="btn" href="/learn">
+            Back to Learn
+          </Link>
+        </div>
       </div>
     );
   }
