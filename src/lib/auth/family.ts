@@ -3,7 +3,7 @@ import type { LearnerProfile } from "@/lib/learner/model";
 import { studentForViewer } from "./centres";
 import { ready } from "./db";
 import { sendInvite, type InviteResult } from "./invites";
-import { CHILD_CURRICULUM } from "./learners";
+import { CHILD_CURRICULUM, CHILD_PLAN } from "./learners";
 import { addUser, audit, type User } from "./users";
 
 /**
@@ -130,7 +130,7 @@ export async function centreChildren(parentId: string): Promise<CentreChild[]> {
   const { rows } = await (
     await ready()
   ).query(
-    `SELECT l.id, l.name, l.year_level, l.profile, c.display_name AS centre_name, ${CHILD_CURRICULUM} AS curriculum
+    `SELECT l.id, l.name, l.year_level, l.profile, c.display_name AS centre_name, ${CHILD_CURRICULUM} AS curriculum, ${CHILD_PLAN} AS plan
      FROM learner_parents lp JOIN learners l ON l.id = lp.learner_id JOIN users c ON c.id = l.parent_id
      WHERE lp.parent_id = $1 ORDER BY l.name`,
     [parentId],
@@ -140,7 +140,12 @@ export async function centreChildren(parentId: string): Promise<CentreChild[]> {
     name: r.name as string,
     yearLevel: Number(r.year_level),
     centreName: r.centre_name as string,
-    profile: { ...(r.profile as LearnerProfile), id: r.id as string, curriculum: r.curriculum as LearnerProfile["curriculum"] },
+    profile: {
+      ...(r.profile as LearnerProfile),
+      id: r.id as string,
+      curriculum: r.curriculum as LearnerProfile["curriculum"],
+      plan: r.plan as LearnerProfile["plan"],
+    },
   }));
 }
 

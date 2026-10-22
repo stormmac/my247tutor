@@ -11,6 +11,7 @@ import { PRAISE_SQL } from "./praiseSchema";
 import { SUNI_CHAT_SQL } from "./suniChatSchema";
 import { SUNI_NOTES_SQL } from "./suniNotesSchema";
 import { QUESTION_HINTS_SQL } from "./hintSchema";
+import { LEARNING_PLAN_SQL } from "./planSchema";
 import { connectionString, databaseUrl } from "./dburl";
 
 let pool: Pool | null = null;
@@ -41,9 +42,10 @@ ${FAMILY_SQL}
 ${SCHOOL_TOPICS_SQL}
 ${PHONICS_CLIPS_SQL}
 ${SUNI_NOTES_SQL}
-${QUESTION_HINTS_SQL}`;
+${QUESTION_HINTS_SQL}
+${LEARNING_PLAN_SQL}`;
 
-/** The pool, once the card-payment columns, invite table, child sign-in columns, centre tables, class times, praise phrases, Suni chats, curriculum columns, centre parents, set work, recorded phonics sounds, Suni's notes and question hints exist. Tried again on the next call if it fails. */
+/** The pool, once the card-payment columns, invite table, child sign-in columns, centre tables, class times, praise phrases, Suni chats, curriculum columns, centre parents, set work, recorded phonics sounds, Suni's notes, question hints and learning plans exist. Tried again on the next call if it fails. */
 export function ready(): Promise<Pool> {
   schema ??= db()
     .query(LATER_SQL)

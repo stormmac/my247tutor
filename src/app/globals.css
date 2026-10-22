@@ -2371,3 +2371,21 @@ body:has(.read-along) .suni-fly {
     gap: 8px;
   }
 }
+
+/* Learning plan */
+.plan-dialog {
+  width: min(520px, calc(100vw - 32px));
+}
+.plan-choice {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+.plan-choice legend {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.plan-choice .tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

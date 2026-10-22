@@ -1,5 +1,6 @@
 "use client";
 
+import { doesSubject } from "@/lib/learner/plan";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
@@ -59,6 +60,8 @@ function SubjectLearning() {
       </div>
     );
   }
+  if (!doesSubject(profile.plan, subject))
+    return <NotInPlan name={profile.name} subject={subjectName(subject, curriculumOf(profile.curriculum))} />;
   if (thanks) return <AssessmentThanks name={profile.name} record={thanks} onContinue={() => setThanks(null)} />;
   if (!profile.placementDone[subject]) {
     return (
@@ -333,6 +336,21 @@ function Practice({
           : `Skill from the NSW syllabus, ${outcome.focusArea}: ${outcome.summary}.`}{" "}
         <Link href="/learn">Change subject</Link>
       </p>
+    </div>
+  );
+}
+
+/** A subject the child's grown-up has left out of their plan. */
+function NotInPlan({ name, subject }: { name: string; subject: string }) {
+  return (
+    <div className="card narrow stack">
+      <h1>
+        {subject} isn&apos;t in {name}&apos;s plan
+      </h1>
+      <p style={{ margin: 0 }}>A grown-up can add it with the Learning plan button on their page.</p>
+      <Link className="btn" href="/learn">
+        Back to the Student page
+      </Link>
     </div>
   );
 }

@@ -2,6 +2,7 @@
  * The Parents page at a glance: what's still to do, what's been done and how well, and the topics
  * that need attention. Kept apart from React so it can be tested.
  */
+import { doesSubject } from "./plan";
 import { programFor } from "../content/program";
 import { subtopicPath } from "../content/tree";
 import { curriculumOf, subjectName, yearName } from "../curriculum/curricula";
@@ -48,7 +49,8 @@ export function topicTitle(subtopicId: string, profile: LearnerProfile): string 
 export function stillToDo(profile: LearnerProfile, work: SetWorkSummary[], now = Date.now()): ToDo[] {
   const curriculum = curriculumOf(profile.curriculum);
   const items: ToDo[] = [];
-  for (const subject of SUBJECTS) {
+  // Subjects left out of the child's plan have nothing to do.
+  for (const subject of SUBJECTS.filter((s) => doesSubject(profile.plan, s))) {
     const name = subjectName(subject, curriculum);
     if (!profile.placementDone[subject]) {
       items.push({
@@ -73,8 +75,9 @@ export function stillToDo(profile: LearnerProfile, work: SetWorkSummary[], now =
       });
   }
   const reading = readingOf(profile);
-  const weekly = reading.enrolled ? weeklyReading(reading, now) : null;
-  if (reading.enrolled && !weekly)
+  const english = doesSubject(profile.plan, "english");
+  const weekly = english && reading.enrolled ? weeklyReading(reading, now) : null;
+  if (english && reading.enrolled && !weekly)
     items.push({
       key: "reading-check",
       kind: "assessment",

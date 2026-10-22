@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAccount } from "@/components/useAccount";
 import { ChildLogin } from "@/components/ChildLogin";
 import { ChildTabs } from "@/components/ChildSwitcher";
+import { PlanButton, PlanSummary } from "@/components/PlanButton";
 import { ParentSummary } from "@/components/ParentSummary";
 import { FullReport, WellbeingAlert } from "@/components/ProgressReport";
 import { SuniChatsButton } from "@/components/SuniChats";
@@ -79,6 +80,7 @@ export default function ParentPage() {
               {yearName(atCentre.profile.yearLevel, curriculum)} at {atCentre.centreName}. Shown against the {outcomesName(curriculum)}, as
               of {new Date().toLocaleDateString(localeOf(curriculum))}.
             </p>
+            <PlanSummary plan={atCentre.profile.plan} />
           </div>
           <ReportButtons learnerId={atCentre.profile.id} name={atCentre.name} />
         </div>
@@ -112,6 +114,7 @@ export default function ParentPage() {
       <div className="row" style={{ gap: 8 }}>
         <ChildTabs />
         {centreTabs}
+        {account.user && profile.id && <PlanButton learnerId={profile.id} />}
       </div>
       <div className="row spread">
         <div>
@@ -120,6 +123,7 @@ export default function ParentPage() {
             {yearName(profile.yearLevel, curriculum)}. Shown against the {outcomesName(curriculum)}, as of{" "}
             {new Date().toLocaleDateString(localeOf(curriculum))}.
           </p>
+          <PlanSummary plan={profile.plan} />
         </div>
         <ReportButtons learnerId={profile.id} name={profile.name} />
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanButton } from "@/components/PlanButton";
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useAccount } from "@/components/useAccount";
@@ -155,9 +156,12 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
                   </td>
                   <td>{when(s.summary.lastPractisedAt)}</td>
                   <td className="no-print">
-                    <button className="btn secondary small" onClick={() => show(s.id)}>
-                      {open === s.id ? "Hide progress" : "Full progress"}
-                    </button>
+                    <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+                      <button className="btn secondary small" onClick={() => show(s.id)}>
+                        {open === s.id ? "Hide progress" : "Full progress"}
+                      </button>
+                      <PlanButton learnerId={s.id} />
+                    </div>
                   </td>
                 </tr>
               ))}
