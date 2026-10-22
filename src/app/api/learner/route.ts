@@ -1,6 +1,14 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { getLearnerProfiles, MAX_PROFILE_BYTES, saveLearnerProfiles, saveOwnProfile, StoredProfileSchema } from "@/lib/auth/learners";
+import {
+  getLearnerProfiles,
+  MAX_PROFILE_BYTES,
+  saveLearnerProfiles,
+  saveOwnProfile,
+  type StoredProfile,
+  StoredProfileSchema,
+} from "@/lib/auth/learners";
+import { recordRewards } from "@/lib/auth/rewards";
 import { requireUser } from "@/lib/auth/users";
 import { MAX_CHILDREN } from "@/lib/learner/model";
 
@@ -29,6 +37,15 @@ const SaveSchema = z.union([
   z.object({ profile: StoredProfileSchema.nullable() }),
 ]);
 
+/** Points and rewards from the saved children's lessons. A failure never stops their progress being saved. */
+async function reward(ownerId: string, profiles: StoredProfile[]) {
+  for (const p of profiles)
+    if (p.id)
+      await recordRewards(p.id, ownerId, p as Parameters<typeof recordRewards>[2]).catch((err) =>
+        console.error("Couldn't record rewards", err),
+      );
+}
+
 export async function PUT(request: NextRequest) {
   const result = await requireUser(request);
   if ("response" in result) return result.response;
@@ -49,7 +66,7 @@ export async function PUT(request: NextRequest) {
     const own = "changed" in data ? data.changed : "profile" in data ? data.profile : data.profiles[0];
     if (!own || !user.parentId || !user.learnerId) return Response.json({ ok: true });
     if (own.id && own.id !== user.learnerId) return Response.json({ error: "That isn't your profile." }, { status: 403 });
-    await saveOwnProfile(user.parentId, user.learnerId, own);
+    if (await saveOwnProfile(user.parentId, user.learnerId, own)) await reward(user.parentId, [{ ...own, id: user.learnerId }]);
     return Response.json({ ok: true });
   }
 
@@ -57,6 +74,7 @@ export async function PUT(request: NextRequest) {
     if (data.changed && !(data.changed.id && data.ids.includes(data.changed.id)))
       return Response.json({ error: "The child being saved must be in the list." }, { status: 400 });
     await saveLearnerProfiles(user.id, data.changed ? [data.changed] : [], { keep: data.ids });
+    if (data.changed) await reward(user.id, [data.changed]);
     return Response.json({ ok: true });
   }
   if ("profile" in data) {
@@ -66,11 +84,13 @@ export async function PUT(request: NextRequest) {
     const first = (await getLearnerProfiles(user.id))[0];
     const id = profile.id ?? (first?.id as string | undefined);
     await saveLearnerProfiles(user.id, [{ ...profile, id }], { keep: "all" });
+    await reward(user.id, [{ ...profile, id }]);
     return Response.json({ ok: true });
   }
   const { profiles } = data;
   if (new Set(profiles.map((p) => p.id).filter(Boolean)).size < profiles.filter((p) => p.id).length)
     return Response.json({ error: "Two children have the same id." }, { status: 400 });
   const saved = await saveLearnerProfiles(user.id, profiles);
+  await reward(user.id, saved);
   return Response.json({ ok: true, ids: saved.map((p) => p.id) });
 }

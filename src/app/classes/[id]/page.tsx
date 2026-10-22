@@ -1,6 +1,7 @@
 "use client";
 
 import { PlanButton } from "@/components/PlanButton";
+import { RewardsButton } from "@/components/RewardsButton";
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useAccount } from "@/components/useAccount";
@@ -161,6 +162,7 @@ export default function ClassPage({ params }: { params: Promise<{ id: string }> 
                         {open === s.id ? "Hide progress" : "Full progress"}
                       </button>
                       <PlanButton learnerId={s.id} />
+                      <RewardsButton learnerId={s.id} />
                     </div>
                   </td>
                 </tr>

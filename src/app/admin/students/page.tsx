@@ -1,6 +1,7 @@
 "use client";
 
 import { PlanButton } from "@/components/PlanButton";
+import { RewardsButton } from "@/components/RewardsButton";
 import { useCallback, useEffect, useState } from "react";
 import { AdminTabs } from "@/components/AdminTabs";
 import { SetupStatus } from "@/components/SetupStatus";
@@ -190,6 +191,7 @@ function Students() {
                     </td>
                     <td>
                       <PlanButton learnerId={l.id} />
+                      <RewardsButton learnerId={l.id} />
                     </td>
                   </tr>
                 )),
