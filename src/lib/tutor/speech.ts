@@ -50,6 +50,8 @@ export function speechSupported(): boolean {
 export interface SpeechPart {
   text: string;
   word?: boolean;
+  /** A phonics sound in IPA. The cloud voice says exactly that sound; a device's voice reads `text`, its respelling. */
+  ipa?: string;
 }
 
 let waitedForVoices = false;
@@ -154,7 +156,8 @@ async function playCloud(parts: SpeechPart[], turn: number): Promise<boolean> {
   try {
     const buffers = await Promise.all(
       lines.map(async (line) => {
-        const res = await fetch(`/api/speech?text=${encodeURIComponent(line.text!)}${line.word ? "&word=1" : ""}`);
+        const ipa = line.ipa ? `&ipa=${encodeURIComponent(line.ipa)}` : "";
+        const res = await fetch(`/api/speech?text=${encodeURIComponent(line.text!)}${line.word ? "&word=1" : ""}${ipa}`);
         if (!res.ok) throw new Error(`Speech ${res.status}`);
         return ctx.decodeAudioData(await res.arrayBuffer());
       }),

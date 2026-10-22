@@ -22,7 +22,7 @@ import {
   startCheck,
   startingUnitIndex,
 } from "../phonics/progress";
-import { graphemesOf, soundFor, soundsUpTo, UNITS } from "../phonics/sequence";
+import { graphemesOf, SOUND_IPA, soundAt, soundFor, soundsUpTo, UNITS } from "../phonics/sequence";
 import { SIGHT_LEVELS } from "../phonics/sightWords";
 
 /** A repeatable random number generator, so lessons come out the same each run. */
@@ -59,8 +59,22 @@ describe("the phonics sequence", () => {
     expect(graphemesOf("cake")).toEqual(["c", "a", "k", "e"]);
     expect(soundFor("cake", 1)).toBe("ay");
     expect(soundFor("cake", 3)).toBe("");
-    expect(soundFor("cat", 1)).toBe("a");
-    expect(soundFor("ten", 1)).toBe("e");
+    expect(soundFor("cat", 1)).toBe("ah");
+    expect(soundFor("ten", 1)).toBe("eh");
+    expect(soundAt("cake", 1)?.ipa).toBe("eɪ");
+    expect(soundAt("cake", 3)).toBeNull();
+  });
+
+  it("says each sound, never a letter's name", () => {
+    for (const sound of UNITS.flatMap((u) => u.sounds)) {
+      // A device's voice reads a lone letter (or two, like "ck") as letter names.
+      expect(sound.say.length, sound.grapheme).toBeGreaterThan(1);
+      expect(sound.say, sound.grapheme).not.toBe(sound.grapheme.length === 1 ? sound.grapheme : "");
+      expect(["ck", "th", "ng", "ch", "qu", "x"].includes(sound.say), sound.grapheme).toBe(false);
+      expect(sound.ipa, sound.grapheme).toMatch(/^[a-zæɪɒʌɹʃθŋʊɑɔɜəʒɡːeɪ]+$/u);
+    }
+    expect(SOUND_IPA.has("æ")).toBe(true);
+    expect(SOUND_IPA.has("<break/>")).toBe(false);
   });
 });
 

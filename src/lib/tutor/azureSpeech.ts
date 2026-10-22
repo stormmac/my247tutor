@@ -17,17 +17,21 @@ export function azureSpeechConfigured(): boolean {
 const escapeXml = (text: string) =>
   text.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" })[c]!);
 
-/** The SSML for a line, or for a word on its own, said more slowly so every sound is clear. */
-export function speechSsml(text: string, word: boolean): string {
+/**
+ * The SSML for a line, or for a word on its own, said more slowly so every sound is clear. With
+ * `ipa`, a phonics sound said exactly as written in IPA, since a letter on its own is read as its name.
+ */
+export function speechSsml(text: string, word: boolean, ipa?: string): string {
   const rate = word ? "-25%" : "-5%";
+  const body = ipa ? `<phoneme alphabet="ipa" ph="${escapeXml(ipa)}">${escapeXml(text)}</phoneme>` : escapeXml(text);
   return (
     `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-AU">` +
-    `<voice name="${AZURE_VOICE}"><prosody rate="${rate}">${escapeXml(text)}</prosody></voice></speak>`
+    `<voice name="${AZURE_VOICE}"><prosody rate="${rate}">${body}</prosody></voice></speak>`
   );
 }
 
 /** The line as MP3, or null if Azure couldn't say it. */
-export async function synthesize(text: string, word: boolean): Promise<ArrayBuffer | null> {
+export async function synthesize(text: string, word: boolean, ipa?: string): Promise<ArrayBuffer | null> {
   const region = process.env.AZURE_SPEECH_REGION!;
   const res = await fetch(`https://${encodeURIComponent(region)}.tts.speech.microsoft.com/cognitiveservices/v1`, {
     method: "POST",
@@ -37,7 +41,7 @@ export async function synthesize(text: string, word: boolean): Promise<ArrayBuff
       "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
       "User-Agent": "my247tutor",
     },
-    body: speechSsml(text, word),
+    body: speechSsml(text, word, ipa),
     signal: AbortSignal.timeout(10_000),
   }).catch(() => null);
   if (!res?.ok) {

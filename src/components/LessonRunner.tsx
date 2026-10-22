@@ -7,7 +7,7 @@ import { Suni } from "@/components/Suni";
 import { useSuniScreen } from "@/components/SuniCompanion";
 import { useSuniVoice } from "@/components/useSuniVoice";
 import { PASS_MARK, type LessonStep } from "@/lib/phonics/progress";
-import { soundFor, type Sound } from "@/lib/phonics/sequence";
+import { soundAt, type Sound } from "@/lib/phonics/sequence";
 import { inSentence, type SpeechPart } from "@/lib/tutor/speech";
 
 const PRAISE = ["Yes!", "Great!", "Well done!", "That's it!", "Brilliant!"];
@@ -20,6 +20,9 @@ export interface LessonResult {
   readIt: boolean;
 }
 
+/** A phonics sound on its own, said as the sound it makes rather than the letter's name. */
+const soundPart = (s: Sound): SpeechPart => ({ text: s.say, ipa: s.ipa, word: true });
+
 /** What Suni says as each step appears. */
 function instruction(step: LessonStep): [string | SpeechPart[], boolean] {
   switch (step.kind) {
@@ -28,7 +31,7 @@ function instruction(step: LessonStep): [string | SpeechPart[], boolean] {
     case "meetWords":
       return ["Let's learn some new words. Tap each one to hear it.", false];
     case "find":
-      return [`Find the sound ${step.sound.say}`, true];
+      return [[{ text: "Find the sound" }, soundPart(step.sound)], true];
     case "picture":
       return ["Sound out the word, then find its picture.", false];
     case "listen":
@@ -211,7 +214,7 @@ function Step({
               <button
                 key={`${s.grapheme}-${i}`}
                 className="sound-card"
-                onClick={() => say(`${s.say}. ${s.say}, as in ${s.example}`, true)}
+                onClick={() => say([soundPart(s), soundPart(s), { text: `as in ${s.example}` }], true)}
                 aria-label={`${s.grapheme}, as in ${s.example}. Tap to hear it.`}
               >
                 <span className="sound-grapheme">{s.grapheme.replace("_", "–")}</span>
@@ -237,7 +240,7 @@ function Step({
         <>
           <h1 style={{ margin: 0, textAlign: "center" }}>Which sound?</h1>
           <div className="row" style={{ justifyContent: "center" }}>
-            <button className="btn secondary" onClick={() => say(step.sound.say, true)}>
+            <button className="btn secondary" onClick={() => say([soundPart(step.sound)], true)}>
               🔊 Hear the sound
             </button>
           </div>
@@ -267,12 +270,12 @@ function Step({
           <h1 style={{ margin: 0, textAlign: "center" }}>Sound it out</h1>
           <div className="blend-tiles" aria-label={`The word ${step.word.word}`}>
             {step.parts.map((part, i) => {
-              const sound = soundFor(step.word.word, i, step.parts);
+              const sound = soundAt(step.word.word, i, step.parts);
               return (
                 <button
                   key={i}
                   className={`blend-tile ${sound ? "" : "silent"}`}
-                  onClick={() => sound && say(sound, true)}
+                  onClick={() => sound && say([soundPart(sound)], true)}
                   aria-label={sound ? `Hear ${part}` : `${part} is silent`}
                 >
                   {part}
