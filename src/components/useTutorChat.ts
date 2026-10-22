@@ -3,7 +3,8 @@
 import { useState } from "react";
 import type { TutorContext } from "@/lib/tutor/prompt";
 
-type ChatMessage = { role: "user" | "assistant" | "notice"; content: string };
+/** A quiet message goes to Suni but isn't shown in the chat, such as the whiteboard asking for a look. */
+type ChatMessage = { role: "user" | "assistant" | "notice"; content: string; quiet?: boolean };
 
 export type { ChatMessage };
 
@@ -34,14 +35,17 @@ export function useTutorChat(
   }
 
   /** Sends a message, with a picture of the whiteboard when the student has drawn on it. */
-  async function send(text: string, boardImage?: string) {
+  async function send(text: string, boardImage?: string, quiet = false) {
     if (!text || busy || !context) return;
     setBusy(true);
 
-    const history = [...messages, { role: "user" as const, content: text }];
+    const history: ChatMessage[] = [...messages, { role: "user", content: text, ...(quiet ? { quiet } : {}) }];
     setMessages([...history, { role: "assistant", content: "" }]);
     // Only real chat turns go to the server; the greeting and safety notices stay on screen only.
-    const turns = history.slice(1).filter((m) => m.role !== "notice" && m.content) as { role: "user" | "assistant"; content: string }[];
+    const turns = history
+      .slice(1)
+      .filter((m) => m.role !== "notice" && m.content)
+      .map(({ role, content }) => ({ role, content })) as { role: "user" | "assistant"; content: string }[];
 
     const update = (fn: (msgs: ChatMessage[]) => ChatMessage[]) => setMessages((m) => fn(m));
     const appendToReply = (chunk: string) =>

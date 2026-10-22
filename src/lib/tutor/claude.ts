@@ -5,7 +5,7 @@ import { z } from "zod";
 import { curriculumOf, frameworkName, yearName } from "../curriculum/curricula";
 import { HINT_COUNT, type HintRequest } from "./hints";
 import { NOTE_KINDS } from "./memory";
-import { wantsHelp } from "./board";
+import { STILL_WORKING_MESSAGE, wantsHelp } from "./board";
 import { TUTOR_SYSTEM_PROMPT } from "./prompt";
 
 export const TUTOR_MODEL = "claude-opus-5-5";
@@ -315,14 +315,18 @@ function mockNotes(args: Parameters<typeof noteLearning>[0]): LearningNotes {
 
 async function* mockReply(lastMessage: string, sawBoard = false): AsyncGenerator<string> {
   const reply = sawBoard
-    ? "I can see your working on the board. Great start! Now add the tens together."
-    : wantsHelp(lastMessage)
-      ? "Let's work it out together on the whiteboard!\n<board>\n24 + 18\n= 20 + 10 + 4 + 8\n= 30 + ?\n</board>\nCan you work out 4 + 8 and write it on the board?"
-      : /how are you|how('s| is) suni/i.test(lastMessage)
-        ? "I'm buzzing, thanks for asking! I've been looking forward to learning with you. How are you feeling today?"
-        : /answer/i.test(lastMessage)
-          ? "Good question! I won't give the answer away, but let's work it out together. What's the first step you'd try?"
-          : "Let's think about it together. Can you tell me what the question is asking you to find?";
+    ? lastMessage === STILL_WORKING_MESSAGE
+      ? "Looking good, keep going!"
+      : "I can see your working on the board. Great start! Now add the tens together."
+    : /column|long|divi|multipl|set (it )?out/i.test(lastMessage)
+      ? `Let's set it out properly on the whiteboard.\n<board>\nSet out: ${/\d[\d.]*\s*[-+−×x÷/]\s*\d[\d.]*/.exec(lastMessage)?.[0] ?? "756 ÷ 4"}\n</board>\nStart with the first column. Write it in the box.`
+      : wantsHelp(lastMessage)
+        ? "Let's work it out together on the whiteboard!\n<board>\n24 + 18\n= 20 + 10 + 4 + 8\n= 30 + ?\n</board>\nCan you work out 4 + 8 and write it on the board?"
+        : /how are you|how('s| is) suni/i.test(lastMessage)
+          ? "I'm buzzing, thanks for asking! I've been looking forward to learning with you. How are you feeling today?"
+          : /answer/i.test(lastMessage)
+            ? "Good question! I won't give the answer away, but let's work it out together. What's the first step you'd try?"
+            : "Let's think about it together. Can you tell me what the question is asking you to find?";
   for (const word of reply.split(/(?<= )/)) {
     await new Promise((r) => setTimeout(r, 15));
     yield word;
