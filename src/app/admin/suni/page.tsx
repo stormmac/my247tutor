@@ -6,6 +6,7 @@ import { SetupStatus } from "@/components/SetupStatus";
 import { SuniChatList, type SuniChat } from "@/components/SuniChats";
 import { useAccount } from "@/components/useAccount";
 import { speak } from "@/lib/tutor/speech";
+import type { TutorCheck } from "@/lib/tutor/claude";
 import { DEFAULT_PRAISE, MAX_PRAISE_LENGTH } from "@/lib/tutor/praise";
 
 interface Phrase {
@@ -28,8 +29,64 @@ export default function SuniAdminPage() {
   }
   return (
     <div className="stack">
+      <ConnectionCheck />
       <PraiseList />
       <ChatLog />
+    </div>
+  );
+}
+
+/** A button that tests whether Suni can reach the AI service, and says why not. */
+function ConnectionCheck() {
+  const [check, setCheck] = useState<TutorCheck | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run() {
+    setBusy(true);
+    setError(null);
+    const res = await fetch("/api/admin/suni/check", { method: "POST" }).catch(() => null);
+    const body = (await res?.json().catch(() => null)) as (TutorCheck & { error?: string }) | null;
+    setBusy(false);
+    if (!res?.ok || !body) return setError(body?.error ?? "The test couldn't run.");
+    setCheck(body);
+  }
+
+  return (
+    <div className="card stack">
+      <div className="row spread">
+        <div>
+          <h2 style={{ margin: 0 }}>Is Suni working?</h2>
+          <p className="muted" style={{ margin: 0 }}>
+            Sends Suni a tiny message and shows what happened.
+          </p>
+        </div>
+        <button className="btn" disabled={busy} onClick={() => void run()}>
+          {busy ? "Testing…" : "Test Suni"}
+        </button>
+      </div>
+      {error && <p className="feedback bad">{error}</p>}
+      {check && (
+        <div className="stack suni-check" style={{ gap: 8 }}>
+          {!check.keySet && <p className="feedback bad">No API key is set. Add ANTHROPIC_API_KEY in Vercel, then redeploy.</p>}
+          {check.mock && <p className="feedback bad">TUTOR_MOCK is on, so students get practice answers. Remove it in Vercel.</p>}
+          {check.tries.map((t) => (
+            <div key={t.label} className={`feedback ${t.ok ? "good" : "bad"}`}>
+              <strong>
+                {t.ok ? "✅" : "❌"} {t.label}
+                {t.status ? ` (${t.status})` : ""}:
+              </strong>{" "}
+              {t.reason}
+              <div className="small" style={{ marginTop: 4, wordBreak: "break-word" }}>
+                {t.detail}
+              </div>
+            </div>
+          ))}
+          <p className="small muted" style={{ margin: 0 }}>
+            Model: {check.model}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

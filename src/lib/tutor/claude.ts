@@ -335,3 +335,63 @@ function mockHints(req: HintRequest): string[] {
     "Do the first step, then check it against the question before you answer.",
   ];
 }
+
+/** What happened when Admin tested Suni's connection: one line each for the full chat request and a plain one. */
+export interface TutorCheck {
+  keySet: boolean;
+  mock: boolean;
+  model: string;
+  tries: { label: string; ok: boolean; status: number | null; reason: string; detail: string }[];
+}
+
+/** Sends Suni two tiny messages, the way the chat does and as a plain request, and says in plain words why either fails. */
+export async function checkTutor(): Promise<TutorCheck> {
+  const result: TutorCheck = {
+    keySet: Boolean(process.env.ANTHROPIC_API_KEY),
+    mock: process.env.TUTOR_MOCK === "1",
+    model: TUTOR_MODEL,
+    tries: [],
+  };
+  if (!result.keySet) return result;
+  const messages = [{ role: "user" as const, content: "Say hello in five words." }];
+  const attempts = [
+    {
+      label: "Chat request",
+      send: () =>
+        getClient().beta.messages.create({
+          model: TUTOR_MODEL,
+          max_tokens: 50,
+          output_config: { effort: "low" },
+          betas: [FALLBACK_BETA],
+          fallbacks: "default",
+          messages,
+        }),
+    },
+    { label: "Plain request", send: () => getClient().beta.messages.create({ model: TUTOR_MODEL, max_tokens: 50, messages }) },
+  ];
+  for (const { label, send } of attempts) {
+    try {
+      const reply = await send();
+      const text = reply.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+      result.tries.push({ label, ok: true, status: 200, reason: "Working.", detail: text || `No text (stopped: ${reply.stop_reason}).` });
+    } catch (err) {
+      const status = err instanceof Anthropic.APIError ? (err.status ?? null) : null;
+      const message = err instanceof Error ? err.message : String(err);
+      result.tries.push({ label, ok: false, status, reason: whyFailed(status, message), detail: message.slice(0, 500) });
+    }
+  }
+  return result;
+}
+
+function whyFailed(status: number | null, message: string): string {
+  if (/credit balance/i.test(message))
+    return "The Anthropic account has run out of credit. Add credit in the Anthropic Console under Billing.";
+  if (status === 401)
+    return "The API key is wrong or has been turned off. Make a new key in the Anthropic Console and put it in Vercel as ANTHROPIC_API_KEY.";
+  if (status === 403) return "The API key isn't allowed to do this. Check the key's workspace and permissions in the Anthropic Console.";
+  if (status === 404) return `The model ${TUTOR_MODEL} isn't available to this API key.`;
+  if (status === 400) return "The API turned the request down. The detail below says why.";
+  if (status === 429) return "Too many requests right now, or the account's rate limit is reached.";
+  if (status && status >= 500) return "Anthropic's service had a problem. Try again in a minute.";
+  return "The server couldn't reach Anthropic. The detail below says why.";
+}
