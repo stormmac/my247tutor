@@ -289,6 +289,11 @@ export function recordWeekly(reading: ReadingProgress, right: number, total: num
 export type LessonStep =
   /** Suni says each new sound with its example word. */
   | { kind: "meet"; sounds: Sound[] }
+  /**
+   * The student holds the microphone and says each new sound, checked against the recorded sounds
+   * in `compare` (every sound taught so far, by IPA). For practice: it isn't marked.
+   */
+  | { kind: "say"; sounds: Sound[]; compare: string[] }
   /** Suni says a sound; the student taps how it's written. */
   | { kind: "find"; sound: Sound; options: string[] }
   /** The student sounds out a word (tapping each sound to hear it), then picks its picture. */
@@ -365,7 +370,13 @@ export function buildLesson(unitId: string, random: () => number = Math.random):
     .slice(0, WORD_QUESTIONS)
     .map((word) => wordQuestion(word, earlier, random));
 
-  return [{ kind: "meet", sounds: unit.sounds }, ...finds, ...asked, { kind: "read", sentence: unit.sentence }];
+  return [
+    { kind: "meet", sounds: unit.sounds },
+    { kind: "say", sounds: unit.sounds, compare: [...new Set(known.map((s) => s.ipa))] },
+    ...finds,
+    ...asked,
+    { kind: "read", sentence: unit.sentence },
+  ];
 }
 
 /** A word to sound out: pick its picture when it has one, otherwise pick it when Suni says it. */
@@ -489,7 +500,7 @@ export function buildWeeklyLesson(weekly: WeeklyReading, random: () => number = 
   const level = getSightLevel(weekly.levelId);
   if (!unit || !level) return [];
   const sounds = buildLesson(unit.id, random).filter((s) => s.kind !== "read");
-  const [meet, ...rest] = sounds;
+  const [meet, say, ...rest] = sounds;
   const finds = rest.filter((s) => s.kind === "find").slice(0, 2);
   const words = rest.filter((s) => s.kind === "picture" || s.kind === "listen");
   const sight = buildSightLesson(level.id, random);
@@ -497,6 +508,7 @@ export function buildWeeklyLesson(weekly: WeeklyReading, random: () => number = 
   const story = storyFor(unit.id);
   return [
     meet,
+    say,
     { kind: "soundWords", groups: soundWordGroups(unit.id) },
     ...buildDrills(unit.id, 2, random),
     ...finds,

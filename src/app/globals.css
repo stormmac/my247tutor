@@ -2063,3 +2063,64 @@ ul.tight {
     justify-content: flex-start !important;
   }
 }
+
+/* Learn to Read: hold the microphone and say the sound */
+.say-sounds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+.say-sound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  min-width: 120px;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  background: var(--surface);
+}
+.say-sound.yes {
+  border-color: var(--good);
+  background: var(--good-tint);
+}
+.say-sound.no {
+  border-color: var(--accent);
+}
+.say-sound-hear {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.mic-hold {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: none;
+  background: var(--brand);
+  font-size: 2.2rem;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 0.1s;
+}
+.mic-hold.listening {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 8px var(--good-tint);
+  background: var(--bad);
+}
+.mic-hold:disabled {
+  opacity: 0.5;
+}
+.say-sound-result {
+  font-weight: 600;
+}

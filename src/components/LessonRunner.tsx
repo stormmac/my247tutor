@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ReadAloud } from "@/components/ReadAloud";
+import { SayTheSound } from "@/components/SayTheSound";
 import { Suni } from "@/components/Suni";
 import { useSuniScreen } from "@/components/SuniCompanion";
 import { useSuniVoice } from "@/components/useSuniVoice";
@@ -40,6 +41,8 @@ function instruction(step: LessonStep): [string | SpeechPart[], boolean] {
   switch (step.kind) {
     case "meet":
       return ["Let's learn some sounds. Tap each one to hear it.", false];
+    case "say":
+      return ["Now you say them! Hold the microphone, say the sound, then let go.", false];
     case "meetWords":
       return ["Let's learn some new words. Tap each one to hear it.", false];
     case "find":
@@ -73,6 +76,8 @@ export function describeStep(step: LessonStep, answered: boolean): string {
   switch (step.kind) {
     case "meet":
       return `Meeting new sounds: ${step.sounds.map((s) => `"${s.grapheme}" as in ${s.example}`).join(", ")}.`;
+    case "say":
+      return `Saying the new sounds into the microphone, holding the button down: ${step.sounds.map((s) => `"${s.grapheme}" as in ${s.example}`).join(", ")}. Encourage them; it isn't marked.`;
     case "meetWords":
       return `Meeting new sight words: ${step.words.join(", ")}.`;
     case "find":
@@ -267,6 +272,8 @@ function Step({
           </div>
         </>
       );
+    case "say":
+      return <SayTheSound sounds={step.sounds} compare={step.compare} say={say} onDone={() => onNext()} />;
     case "find":
       return (
         <>
