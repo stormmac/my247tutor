@@ -131,12 +131,16 @@ describe("the reading check", () => {
 });
 
 describe("Learn to Read lessons", () => {
-  it("meets the sounds, asks 8 questions, then reads a sentence", () => {
+  it("meets the sounds, says them, asks 8 questions, then reads a sentence", () => {
     for (const unit of UNITS) {
       const lesson = buildLesson(unit.id, seeded(7));
       expect(lesson[0]).toEqual({ kind: "meet", sounds: unit.sounds });
+      expect(lesson[1]).toMatchObject({ kind: "say", sounds: unit.sounds });
+      const compare = (lesson[1] as { compare: string[] }).compare;
+      for (const s of soundsUpTo(unit.id)) expect(compare).toContain(s.ipa);
+      expect(new Set(compare).size).toBe(compare.length);
       expect(lesson.at(-1)).toEqual({ kind: "read", sentence: unit.sentence });
-      const questions = lesson.slice(1, -1);
+      const questions = lesson.slice(2, -1);
       expect(questions).toHaveLength(8);
       for (const q of questions) {
         if (q.kind === "find") expect(q.options).toContain(q.sound.grapheme);

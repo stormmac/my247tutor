@@ -35,11 +35,12 @@ describe("the weekly reading lesson", () => {
     expect(UNITS.findIndex((u) => u.id === older.unitId)).toBeGreaterThan(8);
   });
 
-  it("has sounds, then sight words, then the story with five questions and a picture to colour", () => {
+  it("has sounds to hear and say, then sight words, then the story with five questions and a picture to colour", () => {
     const steps = buildWeeklyLesson(weeklyReading(checked(5.5), NOW)!, seeded());
     const kinds = steps.map((s) => s.kind);
     expect(kinds[0]).toBe("meet");
-    expect(kinds[1]).toBe("soundWords");
+    expect(kinds[1]).toBe("say");
+    expect(kinds[2]).toBe("soundWords");
     expect(kinds).toContain("drill");
     const sight = kinds.indexOf("meetWords");
     const story = kinds.indexOf("story");

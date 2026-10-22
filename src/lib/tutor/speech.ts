@@ -116,6 +116,19 @@ function clipBuffer(ctx: AudioContext, ipa: string, version: number): Promise<Au
   return buffer;
 }
 
+/** A recorded sound, decoded, to compare a child's sound with. Null if it isn't recorded. */
+export async function recordedSound(ipa: string): Promise<AudioBuffer | null> {
+  const version = (await recordedClips()).get(ipa);
+  void prepareVoice();
+  return version === undefined || !context ? null : clipBuffer(context, ipa, version);
+}
+
+/** The audio context Suni plays through, for decoding a child's recording at the same rate. */
+export function audioContext(): AudioContext | null {
+  void prepareVoice();
+  return context;
+}
+
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
