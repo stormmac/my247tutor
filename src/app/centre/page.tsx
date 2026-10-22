@@ -800,7 +800,7 @@ function StudentForm({
       <ClassPicker classes={classes} value={classIds} onChange={setClassIds} />
       <label className="row" style={{ fontWeight: 400, margin: 0, gap: 8 }}>
         <input type="checkbox" style={{ width: "auto" }} checked={learnToRead} onChange={(e) => setLearnToRead(e.target.checked)} />
-        Learn to Read (phonics, for a reading age below 7.5). Students are also put in it by the reading check on their Learn page.
+        Learn to Read (phonics, for a reading age below 7.5). Students are also put in it by the reading check on their Student page.
       </label>
       <div className="row">
         <button className="btn" disabled={busy}>

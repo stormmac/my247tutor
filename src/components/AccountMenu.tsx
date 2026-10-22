@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { signOut, useAccount } from "@/components/useAccount";
 
-/** The Parents link in the top bar, or a tutoring centre's own pages. A child signed in on their own gets neither. */
+/** The Parents link in the top bar, or a centre's, teacher's or admin's own pages. A child signed in on their own gets none. */
 export function ParentsLink() {
   const { user, loaded, enabled } = useAccount();
   // Logged out, Log in and Sign up say where parents go.
@@ -13,6 +13,7 @@ export function ParentsLink() {
   if (user?.child) return null;
   if (user?.role === "centre") return <Link href="/centre">Centre</Link>;
   if (user?.role === "teacher") return <Link href="/classes">Classes</Link>;
+  if (user?.role === "admin") return <Link href="/admin">Admin</Link>;
   return <Link href="/parent">Parents</Link>;
 }
 
@@ -58,14 +59,18 @@ export function AccountMenu() {
         </Link>
       </>
     );
-  const firstName = user.name.split(/\s+/)[0] || user.name;
+  // "Ms Lee" shows as Ms Lee, not Ms.
+  const words = user.name.split(/\s+/);
+  const titled = words.length > 1 && /^(mr|mrs|ms|miss|mx|dr)\.?$/i.test(words[0]);
+  const firstName = (titled ? words.slice(0, 2).join(" ") : words[0]) || user.name;
+  const initial = (titled ? words[1] : firstName).charAt(0).toUpperCase();
   return (
     <>
       {user.trialEndsAt && !user.child && !user.actingAdmin && <TrialTimer endsAt={user.trialEndsAt} account />}
       <details className="account-menu" ref={menu}>
         <summary aria-label={`Account menu for ${user.name}`}>
           <span className="avatar" aria-hidden="true">
-            {firstName.charAt(0).toUpperCase()}
+            {initial}
           </span>
           <span className="account-name">{firstName}</span>
         </summary>

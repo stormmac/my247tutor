@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     lastLoginAt: u.lastLoginAt,
     learners: u.learners,
     centreName: u.centreName,
+    centreId: u.centreId,
     freeAccess: u.freeAccess,
     plan: planFor(u),
     paidUntil: u.paidUntil,

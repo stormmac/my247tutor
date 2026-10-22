@@ -1,9 +1,16 @@
 import Link from "next/link";
 
 /** Switches between the admin pages. */
-export function AdminTabs({ current }: { current: "accounts" | "students" | "curriculum" | "suni" | "sounds" }) {
+export function AdminTabs({ current }: { current: "people" | "accounts" | "students" | "curriculum" | "suni" | "sounds" }) {
   return (
     <nav className="tabs" aria-label="Admin">
+      <Link
+        href="/admin/people"
+        className={`tab ${current === "people" ? "active" : ""}`}
+        aria-current={current === "people" ? "page" : undefined}
+      >
+        Log in as
+      </Link>
       <Link
         href="/admin"
         className={`tab ${current === "accounts" ? "active" : ""}`}

@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Link>
               <nav className="nav">
                 <ChildSwitcher />
-                <Link href="/learn">Learn</Link>
+                <Link href="/learn">Student</Link>
                 <ParentsLink />
                 <AccountMenu />
               </nav>

@@ -88,7 +88,7 @@ export default function ParentPage() {
         <FullReport profile={atCentre.profile} />
         <p className="small muted no-print">
           {atCentre.centreName} pays for {atCentre.name}&apos;s lessons and looks after their sign-in. A child you add yourself
-          {profile ? "" : " with + Add a child on the Learn page"} needs a plan of their own.
+          {profile ? "" : " with + Add a child on the Student page"} needs a plan of their own.
         </p>
       </div>
     );

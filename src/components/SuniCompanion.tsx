@@ -103,7 +103,8 @@ export function useSuniScreen(screen: SuniScreen | null) {
 /** What's on pages that don't say for themselves. */
 export function screenForPath(pathname: string): string {
   if (pathname === "/") return "The my247tutor home page.";
-  if (pathname === "/learn") return "The Learn page, choosing what to do: Maths, English, Learn to Read, writing or the times tables game.";
+  if (pathname === "/learn")
+    return "The Student page, choosing what to do: Maths, English, Learn to Read, writing or the times tables game.";
   if (pathname.startsWith("/read")) return "The Learn to Read page, choosing a sounds lesson, sight words or Sound It Out.";
   if (pathname.startsWith("/tables")) return "The times tables game, choosing which tables to play.";
   if (pathname.startsWith("/learn/writing")) return "The writing page.";
@@ -423,7 +424,7 @@ export function SuniCompanion() {
             </form>
           ) : (
             <p className="small muted" style={{ margin: "0 16px 14px" }}>
-              Set up a learner on the Learn page to chat with me.
+              Set up a learner on the Student page to chat with me.
             </p>
           )}
         </div>

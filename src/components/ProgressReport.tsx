@@ -785,7 +785,7 @@ function ReadingReport({
       </div>
       <p style={{ margin: 0 }}>
         {reading.age === null ? (
-          `${profile.name} hasn't done the reading check yet. It's on their Learn page.`
+          `${profile.name} hasn't done the reading check yet. It's on their Student page.`
         ) : (
           <>
             Reading age: <strong>{formatReadingAge(reading.age)}</strong>
