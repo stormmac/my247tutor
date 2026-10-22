@@ -70,7 +70,18 @@ export function homeFor(role: string | undefined): string {
 
 /** An admin logs in as another account from Admin, then lands where that account would. */
 export async function logInAs(userId: string): Promise<string | null> {
-  const res = await fetch(`/api/admin/users/${userId}/log-in-as`, { method: "POST" }).catch(() => null);
+  return switchTo(fetch(`/api/admin/users/${userId}/log-in-as`, { method: "POST" }));
+}
+
+/** An admin, centre or teacher logs in as someone by their email or username, from the log in page. */
+export async function logInAsLogin(login: string): Promise<string | null> {
+  return switchTo(
+    fetch("/api/auth/log-in-as", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ login }) }),
+  );
+}
+
+async function switchTo(request: Promise<Response>): Promise<string | null> {
+  const res = await request.catch(() => null);
   const body = (await res?.json().catch(() => ({}))) as { role?: string; error?: string } | undefined;
   if (!res?.ok) return body?.error ?? "That didn't work.";
   // The admin's own browser copy of any children mustn't mix with this account's.

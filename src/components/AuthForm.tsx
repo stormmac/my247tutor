@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PasswordField } from "@/components/PasswordField";
-import { homeFor, signOut, useAccount } from "@/components/useAccount";
+import { homeFor, logInAsLogin, signOut, useAccount } from "@/components/useAccount";
 import { MIN_PASSWORD_LENGTH, safeNextPath } from "@/lib/auth/rules";
 
 type SignUpAs = "parent" | "centre";
@@ -63,6 +63,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <button type="button" className="btn secondary" onClick={() => void signOut(signup ? "/signup" : "/login")}>
           Log out and use a different account
         </button>
+        {canActAs(account.user) && <LogInAsSomeone admin={account.user.role === "admin" || account.user.actingRole === "admin"} />}
       </div>
     );
 
@@ -156,6 +157,39 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {signup ? "Already have an account? " : "New to my247tutor? "}
         <Link href={`/${signup ? "login" : "signup"}${keepNext}`}>{signup ? "Log in" : "Sign up"}</Link>
       </p>
+    </form>
+  );
+}
+
+/** Admins, centres and teachers can log in as the people they look after without their password. */
+function canActAs(user: { role: string; actingRole?: string | null }): boolean {
+  return ["admin", "centre", "teacher"].includes(user.role) || user.actingRole === "admin";
+}
+
+function LogInAsSomeone({ admin }: { admin: boolean }) {
+  const [login, setLogin] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(await logInAsLogin(login));
+    setBusy(false);
+  }
+
+  return (
+    <form className="stack log-in-as" onSubmit={submit} style={{ borderTop: "1px solid var(--border)", paddingTop: 16, gap: 8 }}>
+      <h2 style={{ margin: 0, fontSize: "1.1rem" }}>Log in as someone else</h2>
+      <p className="muted" style={{ margin: 0 }}>
+        {admin ? "Anyone except another admin" : "One of your teachers or students"}, without their password.
+      </p>
+      <label htmlFor="log-in-as">Their email or username</label>
+      <input id="log-in-as" value={login} onChange={(e) => setLogin(e.target.value)} autoComplete="off" required />
+      {error && <div className="feedback bad">{error}</div>}
+      <button className="btn" disabled={busy}>
+        {busy ? "Logging in…" : "Log in as them"}
+      </button>
     </form>
   );
 }

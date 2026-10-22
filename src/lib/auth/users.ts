@@ -120,6 +120,16 @@ export async function getUser(id: string): Promise<User | null> {
   return rows[0] ? withParentPlan(toUser(rows[0])) : null;
 }
 
+/** The account someone logs in with: an email for grown-ups, a username for students. */
+export async function findByLogin(login: string): Promise<User | null> {
+  const value = login.trim().toLowerCase();
+  if (!value) return null;
+  const { rows } = await (
+    await ready()
+  ).query(`SELECT ${USER_COLUMNS} FROM users WHERE ${value.includes("@") ? "LOWER(email)" : "LOWER(username)"} = $1`, [value]);
+  return rows[0] ? withParentPlan(toUser(rows[0])) : null;
+}
+
 export type SignUpResult = { user: User } | { error: string };
 
 /** A parent or tutoring centre signing up. Their free trial ends at `trialEndsAt` (milliseconds). */
