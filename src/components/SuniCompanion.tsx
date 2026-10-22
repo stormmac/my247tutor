@@ -7,6 +7,8 @@ import { useProfile } from "@/components/useProfile";
 import { useSpeechInput, type SpeechInputProblem } from "@/components/useSpeechInput";
 import { useSuniVoice } from "@/components/useSuniVoice";
 import { useTutorChat } from "@/components/useTutorChat";
+import { Whiteboard, type WhiteboardHandle } from "@/components/Whiteboard";
+import { splitBoard, wantsHelp } from "@/lib/tutor/board";
 import { CELEBRATE_EVENT } from "@/lib/tutor/celebrate";
 import { FOCUS_CHOICES, MOOD_FACES, MOODS, moodReply, type Mood } from "@/lib/tutor/memory";
 import { TUTOR_NAME } from "@/lib/tutor/persona";
@@ -169,15 +171,40 @@ export function SuniCompanion() {
   const onWellbeing =
     focus?.onWellbeingConcern ??
     ((message: string) => setProfile((p) => ({ ...p, wellbeingFlags: [...p.wellbeingFlags, { at: Date.now(), message }] })));
-  const { messages, busy, send } = useTutorChat(context, greeting, onWellbeing, profile?.id);
+  const { messages, busy, send: sendChat } = useTutorChat(context, greeting, onWellbeing, profile?.id);
   const voice = useSuniVoice();
+
+  // The whiteboard pops up when the student asks for help, or when Suni writes on it. It shows what
+  // Suni has written since it was opened or cleared, and a picture of the student's drawing goes with each message.
+  const [boardFrom, setBoardFrom] = useState<number | null>(null);
+  const board = useRef<WhiteboardHandle>(null);
+  const boardSections =
+    boardFrom === null
+      ? []
+      : messages
+          .slice(boardFrom)
+          .filter((m) => m.role === "assistant")
+          .map((m) => splitBoard(m.content).board)
+          .filter((lines) => lines.length);
+  function openBoard() {
+    setBoardFrom((from) => from ?? messages.length);
+  }
+  function send(text: string, image = board.current?.takePicture()) {
+    if (wantsHelp(text)) openBoard();
+    return sendChat(text, image);
+  }
+  // Suni writing on the board opens it.
+  const last = messages.at(-1);
+  useEffect(() => {
+    if (boardFrom === null && last?.role === "assistant" && splitBoard(last.content).board.length) setBoardFrom(messages.length - 1);
+  }, [boardFrom, last, messages.length]);
 
   // Suni reads each reply aloud once it has finished arriving.
   const wasBusy = useRef(false);
   useEffect(() => {
     if (wasBusy.current && !busy) {
       const last = messages[messages.length - 1];
-      if (last?.role === "assistant" && last.content) voice.say(last.content);
+      if (last?.role === "assistant" && last.content) voice.say(splitBoard(last.content).say);
     }
     wasBusy.current = busy;
   }, [busy, messages, voice]);
@@ -280,7 +307,7 @@ export function SuniCompanion() {
     setBubble(null);
     if (open) voice.stop();
     // Opening the chat says the greeting, or whatever Suni said last.
-    else voice.say(messages.filter((m) => m.role === "assistant" && m.content).at(-1)?.content ?? greeting);
+    else voice.say(splitBoard(messages.filter((m) => m.role === "assistant" && m.content).at(-1)?.content ?? greeting).say);
     setOpen((o) => !o);
   }
 
@@ -315,142 +342,177 @@ export function SuniCompanion() {
   }
 
   return (
-    <div className={`suni-companion ${open ? "open" : ""}`}>
-      {open && (
-        <div className="suni-chat" role="dialog" aria-label={`Chat with ${TUTOR_NAME}`}>
-          <div className="suni-chat-header">
-            <strong>{TUTOR_NAME}</strong>
-            <span className="suni-header-buttons">
-              {voice.supported && (
-                <button
-                  type="button"
-                  className="suni-voice-toggle"
-                  onClick={() => voice.setOn(!voice.on)}
-                  aria-pressed={voice.on}
-                  aria-label={voice.on ? `Turn ${TUTOR_NAME}'s voice off` : `Turn ${TUTOR_NAME}'s voice on`}
-                  title={voice.on ? "Voice on" : "Voice off"}
-                >
-                  <SpeakerIcon on={voice.on} />
-                </button>
-              )}
-              <button type="button" className="suni-close" onClick={close} aria-label={`Close chat with ${TUTOR_NAME}`}>
-                ×
-              </button>
-            </span>
-          </div>
-          <div className="messages" ref={scroller} aria-live="polite">
-            {messages.map((m, i) => (
-              <div key={i} className={`msg ${m.role}`}>
-                {m.content || (busy && i === messages.length - 1 ? "…" : "")}
-                {voice.supported && m.role === "assistant" && m.content && !(busy && i === messages.length - 1) && (
-                  <button type="button" className="msg-say" onClick={() => voice.say(m.content, true)} aria-label="Say it again">
-                    <SpeakerIcon on />
+    <>
+      {boardFrom !== null && (
+        <Whiteboard
+          ref={board}
+          sections={boardSections}
+          busy={busy}
+          onShow={() => {
+            setOpen(true);
+            void send("Here's my working on the whiteboard.");
+          }}
+          onClear={() => setBoardFrom(messages.length)}
+          onClose={() => setBoardFrom(null)}
+        />
+      )}
+      <div className={`suni-companion ${open ? "open" : ""} ${boardFrom !== null ? "with-board" : ""}`}>
+        {open && (
+          <div className="suni-chat" role="dialog" aria-label={`Chat with ${TUTOR_NAME}`}>
+            <div className="suni-chat-header">
+              <strong>{TUTOR_NAME}</strong>
+              <span className="suni-header-buttons">
+                {context && (
+                  <button
+                    type="button"
+                    className="suni-voice-toggle suni-board-toggle"
+                    onClick={() => (boardFrom === null ? openBoard() : setBoardFrom(null))}
+                    aria-pressed={boardFrom !== null}
+                    title="Whiteboard"
+                    aria-label={boardFrom === null ? "Open the whiteboard" : "Close the whiteboard"}
+                  >
+                    📋
                   </button>
                 )}
-              </div>
-            ))}
-            {checkin && profile && (
-              <div className="suni-checkin">
-                <div className="msg assistant">Before we start, how are you feeling today?</div>
-                {checkin === "mood" ? (
-                  <div className="suni-choices" role="group" aria-label="How are you feeling?">
-                    {MOODS.map((m) => (
-                      <button key={m} type="button" className="suni-mood" onClick={() => pickMood(m)}>
-                        <span aria-hidden>{MOOD_FACES[m].face}</span>
-                        {MOOD_FACES[m].label}
+                {voice.supported && (
+                  <button
+                    type="button"
+                    className="suni-voice-toggle"
+                    onClick={() => voice.setOn(!voice.on)}
+                    aria-pressed={voice.on}
+                    aria-label={voice.on ? `Turn ${TUTOR_NAME}'s voice off` : `Turn ${TUTOR_NAME}'s voice on`}
+                    title={voice.on ? "Voice on" : "Voice off"}
+                  >
+                    <SpeakerIcon on={voice.on} />
+                  </button>
+                )}
+                <button type="button" className="suni-close" onClick={close} aria-label={`Close chat with ${TUTOR_NAME}`}>
+                  ×
+                </button>
+              </span>
+            </div>
+            <div className="messages" ref={scroller} aria-live="polite">
+              {messages.map((m, i) => {
+                const { say, board: onBoard } = m.role === "assistant" ? splitBoard(m.content) : { say: m.content, board: [] };
+                return (
+                  <div key={i} className={`msg ${m.role}`}>
+                    {say || (busy && i === messages.length - 1 ? "…" : "")}
+                    {voice.supported && m.role === "assistant" && say && !(busy && i === messages.length - 1) && (
+                      <button type="button" className="msg-say" onClick={() => voice.say(say, true)} aria-label="Say it again">
+                        <SpeakerIcon on />
                       </button>
-                    ))}
+                    )}
+                    {onBoard.length > 0 && boardFrom === null && (
+                      <button type="button" className="board-chip" onClick={() => setBoardFrom(i)}>
+                        📋 See it on the whiteboard
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  <>
-                    <div className="msg user">{mood && `${MOOD_FACES[mood].face} ${MOOD_FACES[mood].label}`}</div>
-                    <div className="msg assistant">
-                      {mood && `${moodReply(mood)} `}What would you like to work on today? Is there anything you&apos;d like to practise?
-                    </div>
-                    <div className="suni-choices" role="group" aria-label="What would you like to work on?">
-                      {FOCUS_CHOICES.map((c) => (
-                        <button
-                          key={c.label}
-                          type="button"
-                          className="btn small secondary"
-                          onClick={() => pickFocus(c.label.replace(/^\S+ /, ""), c.ask)}
-                        >
-                          {c.label}
+                );
+              })}
+              {checkin && profile && (
+                <div className="suni-checkin">
+                  <div className="msg assistant">Before we start, how are you feeling today?</div>
+                  {checkin === "mood" ? (
+                    <div className="suni-choices" role="group" aria-label="How are you feeling?">
+                      {MOODS.map((m) => (
+                        <button key={m} type="button" className="suni-mood" onClick={() => pickMood(m)}>
+                          <span aria-hidden>{MOOD_FACES[m].face}</span>
+                          {MOOD_FACES[m].label}
                         </button>
                       ))}
                     </div>
-                  </>
+                  ) : (
+                    <>
+                      <div className="msg user">{mood && `${MOOD_FACES[mood].face} ${MOOD_FACES[mood].label}`}</div>
+                      <div className="msg assistant">
+                        {mood && `${moodReply(mood)} `}What would you like to work on today? Is there anything you&apos;d like to practise?
+                      </div>
+                      <div className="suni-choices" role="group" aria-label="What would you like to work on?">
+                        {FOCUS_CHOICES.map((c) => (
+                          <button
+                            key={c.label}
+                            type="button"
+                            className="btn small secondary"
+                            onClick={() => pickFocus(c.label.replace(/^\S+ /, ""), c.ask)}
+                          >
+                            {c.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            {context && (speech.listening || speech.problem) && (
+              <p className={`suni-mic-status small ${speech.problem ? "problem" : ""}`} role="status">
+                {speech.problem ? MIC_PROBLEMS[speech.problem] : "Listening… let go when you've finished."}
+              </p>
+            )}
+            {context ? (
+              <form onSubmit={submit}>
+                <input
+                  ref={field}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={checkin === "focus" ? "Or tell me what you'd like to practise…" : `Ask ${TUTOR_NAME}…`}
+                  maxLength={1000}
+                  aria-label={`Message ${TUTOR_NAME}`}
+                />
+                {speech.supported && (
+                  <button
+                    type="button"
+                    className={`suni-mic ${speech.listening ? "listening" : ""}`}
+                    aria-label={speech.listening ? "Listening. Let go to send" : `Hold to talk to ${TUTOR_NAME}`}
+                    aria-pressed={speech.listening}
+                    title="Hold to talk"
+                    disabled={busy && !speech.listening}
+                    onPointerDown={startTalking}
+                    onPointerUp={speech.stop}
+                    onPointerCancel={speech.stop}
+                    onKeyDown={(e) => (e.key === " " || e.key === "Enter") && startTalking(e)}
+                    onKeyUp={(e) => (e.key === " " || e.key === "Enter") && speech.stop()}
+                    onContextMenu={(e) => e.preventDefault()}
+                  >
+                    <MicIcon />
+                  </button>
                 )}
-              </div>
+                <button className="btn small" disabled={busy || !input.trim()}>
+                  Send
+                </button>
+              </form>
+            ) : (
+              <p className="small muted" style={{ margin: "0 16px 14px" }}>
+                Set up a learner on the Student page to chat with me.
+              </p>
             )}
           </div>
-          {context && (speech.listening || speech.problem) && (
-            <p className={`suni-mic-status small ${speech.problem ? "problem" : ""}`} role="status">
-              {speech.problem ? MIC_PROBLEMS[speech.problem] : "Listening… let go when you've finished."}
-            </p>
-          )}
-          {context ? (
-            <form onSubmit={submit}>
-              <input
-                ref={field}
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={checkin === "focus" ? "Or tell me what you'd like to practise…" : `Ask ${TUTOR_NAME}…`}
-                maxLength={1000}
-                aria-label={`Message ${TUTOR_NAME}`}
-              />
-              {speech.supported && (
-                <button
-                  type="button"
-                  className={`suni-mic ${speech.listening ? "listening" : ""}`}
-                  aria-label={speech.listening ? "Listening. Let go to send" : `Hold to talk to ${TUTOR_NAME}`}
-                  aria-pressed={speech.listening}
-                  title="Hold to talk"
-                  disabled={busy && !speech.listening}
-                  onPointerDown={startTalking}
-                  onPointerUp={speech.stop}
-                  onPointerCancel={speech.stop}
-                  onKeyDown={(e) => (e.key === " " || e.key === "Enter") && startTalking(e)}
-                  onKeyUp={(e) => (e.key === " " || e.key === "Enter") && speech.stop()}
-                  onContextMenu={(e) => e.preventDefault()}
-                >
-                  <MicIcon />
-                </button>
-              )}
-              <button className="btn small" disabled={busy || !input.trim()}>
-                Send
-              </button>
-            </form>
-          ) : (
-            <p className="small muted" style={{ margin: "0 16px 14px" }}>
-              Set up a learner on the Student page to chat with me.
-            </p>
-          )}
-        </div>
-      )}
-      {!open && bubble && (
-        <button type="button" className="suni-bubble" onClick={toggle}>
-          {bubble}
-        </button>
-      )}
-      <button
-        type="button"
-        className={`suni-fly ${busy ? "thinking" : ""}`}
-        onClick={toggle}
-        aria-expanded={open}
-        aria-label={
-          pose === "highFive" ? `Give ${TUTOR_NAME} a high five` : open ? `Close chat with ${TUTOR_NAME}` : `Chat with ${TUTOR_NAME}`
-        }
-      >
-        <Suni size={open ? 72 : 92} wave={!!bubble && !open} pose={pose} talking={talking && !pose} />
-        {slaps > 0 && (
-          <span key={slaps} className="suni-slap" aria-hidden>
-            ✋✨
-          </span>
         )}
-      </button>
-    </div>
+        {!open && bubble && (
+          <button type="button" className="suni-bubble" onClick={toggle}>
+            {bubble}
+          </button>
+        )}
+        <button
+          type="button"
+          className={`suni-fly ${busy ? "thinking" : ""}`}
+          onClick={toggle}
+          aria-expanded={open}
+          aria-label={
+            pose === "highFive" ? `Give ${TUTOR_NAME} a high five` : open ? `Close chat with ${TUTOR_NAME}` : `Chat with ${TUTOR_NAME}`
+          }
+        >
+          <Suni size={open ? 72 : 92} wave={!!bubble && !open} pose={pose} talking={talking && !pose} />
+          {slaps > 0 && (
+            <span key={slaps} className="suni-slap" aria-hidden>
+              ✋✨
+            </span>
+          )}
+        </button>
+      </div>
+    </>
   );
 }
 

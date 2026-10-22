@@ -12,6 +12,7 @@ import { buildContextPrompt, TutorContextSchema } from "@/lib/tutor/prompt";
 import { hasWellbeingConcern, MAX_MESSAGE_LENGTH, personalInfoReminder, redactPersonalInfo, WELLBEING_REPLY } from "@/lib/tutor/safety";
 import { checkQuestion, streamTutorReply, SUNI_BUSY_REPLY, SUNI_ERROR_REPLY, tutorConfigured } from "@/lib/tutor/claude";
 import { chatTurns } from "@/lib/tutor/turns";
+import { MAX_BOARD_IMAGE } from "@/lib/tutor/board";
 
 const RequestSchema = z.object({
   context: TutorContextSchema,
@@ -23,6 +24,12 @@ const RequestSchema = z.object({
   conversationId: z.uuid().optional(),
   /** The child's profile id, so the chat is kept with them. */
   learnerId: z.uuid().optional(),
+  /** A picture of the whiteboard, when the student has drawn on it since their last message. */
+  boardImage: z
+    .string()
+    .max(MAX_BOARD_IMAGE)
+    .regex(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/)
+    .optional(),
 });
 
 /** The signed-in account, if any. Visitors on the free hour have none. */
@@ -118,7 +125,7 @@ export async function POST(request: NextRequest) {
   const parsed = RequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
 
-  const { context } = parsed.data;
+  const { context, boardImage } = parsed.data;
   const turns = chatTurns(parsed.data.messages);
   const last = turns.at(-1);
   if (!last || last.role !== "user") return Response.json({ error: "Last message must be from the student" }, { status: 400 });
@@ -165,7 +172,7 @@ export async function POST(request: NextRequest) {
     let reply = "";
     if (found.length) yield { type: "notice", kind: "privacy", text: personalInfoReminder(found) };
     try {
-      for await (const text of streamTutorReply(contextPrompt, redacted)) {
+      for await (const text of streamTutorReply(contextPrompt, redacted, boardImage)) {
         reply += text;
         yield { type: "text", text };
       }

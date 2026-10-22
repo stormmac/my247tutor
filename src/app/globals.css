@@ -2389,3 +2389,113 @@ body:has(.read-along) .suni-fly {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* The whiteboard Suni and the student share */
+.whiteboard-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgb(0 0 0 / 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 16px 16px 16px;
+}
+.whiteboard {
+  width: min(900px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface);
+  border: 2px solid #ffd21f;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.25);
+  animation: suni-pop 0.25s ease-out;
+}
+.whiteboard-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.whiteboard-header .suni-close {
+  margin-left: auto;
+}
+.whiteboard-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.whiteboard-tools .btn.active {
+  outline: 3px solid var(--text);
+}
+.whiteboard-surface {
+  position: relative;
+  aspect-ratio: 900 / 560;
+  width: 100%;
+  background: #fff;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.whiteboard-surface canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+.whiteboard-suni {
+  position: absolute;
+  inset: 0;
+  padding: 14px 18px;
+  pointer-events: none;
+  color: #7a3db8;
+  font-family: "Comic Sans MS", "Chalkboard SE", "Comic Neue", cursive;
+  font-size: clamp(16px, 2.6vw, 24px);
+  line-height: 1.4;
+  overflow: hidden;
+}
+.whiteboard-section + .whiteboard-section {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 2px dashed #e3d4f3;
+}
+.whiteboard-hint {
+  margin: 0;
+  color: #9aa1a6;
+  font-size: 0.8em;
+}
+.msg .board-chip {
+  display: block;
+  margin-top: 6px;
+  font: inherit;
+  font-size: 0.85em;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--brand);
+  cursor: pointer;
+  text-decoration: underline;
+}
+/* Beside the chat on a wide screen; above it on a phone. */
+@media (min-width: 1100px) {
+  .whiteboard-backdrop {
+    padding-right: 400px;
+  }
+}
+@media (max-width: 700px) {
+  .whiteboard-backdrop {
+    align-items: flex-start;
+  }
+}
+@media (max-width: 700px) {
+  /* A shorter chat under the board, so both fit on a phone. */
+  .suni-companion.with-board .suni-chat {
+    height: min(300px, 36vh);
+  }
+}

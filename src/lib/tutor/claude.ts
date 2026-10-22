@@ -5,6 +5,7 @@ import { z } from "zod";
 import { curriculumOf, frameworkName, yearName } from "../curriculum/curricula";
 import { HINT_COUNT, type HintRequest } from "./hints";
 import { NOTE_KINDS } from "./memory";
+import { wantsHelp } from "./board";
 import { TUTOR_SYSTEM_PROMPT } from "./prompt";
 
 export const TUTOR_MODEL = "claude-opus-5-5";
@@ -33,11 +34,28 @@ function getClient(): Anthropic {
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 
 /** Streams the tutor's reply as plain text chunks. */
-export async function* streamTutorReply(contextPrompt: string, turns: ChatTurn[]): AsyncGenerator<string> {
+export async function* streamTutorReply(contextPrompt: string, turns: ChatTurn[], boardImage?: string): AsyncGenerator<string> {
   if (process.env.TUTOR_MOCK === "1") {
-    yield* mockReply(turns.at(-1)?.content ?? "");
+    yield* mockReply(turns.at(-1)?.content ?? "", Boolean(boardImage));
     return;
   }
+  // A picture of the whiteboard goes with the student's latest message, so Suni can see what they drew.
+  const messages: Anthropic.Beta.BetaMessageParam[] = boardImage
+    ? turns.map((t, i) =>
+        i === turns.length - 1
+          ? {
+              role: t.role,
+              content: [
+                {
+                  type: "image",
+                  source: { type: "base64", media_type: "image/png", data: boardImage.replace(/^data:image\/png;base64,/, "") },
+                },
+                { type: "text", text: `(The whiteboard as it looks now.)\n${t.content}` },
+              ],
+            }
+          : t,
+      )
+    : turns;
 
   const system: Anthropic.Beta.BetaTextBlockParam[] = [
     { type: "text", text: TUTOR_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
@@ -54,7 +72,7 @@ export async function* streamTutorReply(contextPrompt: string, turns: ChatTurn[]
         betas: [FALLBACK_BETA],
         fallbacks: "default",
         system,
-        messages: turns,
+        messages,
       }),
     )) {
       sentText = true;
@@ -65,7 +83,7 @@ export async function* streamTutorReply(contextPrompt: string, turns: ChatTurn[]
     // so the child still gets an answer. Anything else, or a reply that had already started, goes to the caller.
     if (sentText || !(err instanceof Anthropic.BadRequestError || err instanceof Anthropic.NotFoundError)) throw err;
     console.error("Tutor request rejected, trying a plain request", `${err.status} ${err.message} (request ${err.requestID ?? "unknown"})`);
-    yield* replyText(getClient().beta.messages.stream({ model: TUTOR_MODEL, max_tokens: 8000, system, messages: turns }));
+    yield* replyText(getClient().beta.messages.stream({ model: TUTOR_MODEL, max_tokens: 8000, system, messages }));
   }
 }
 
@@ -295,12 +313,16 @@ function mockNotes(args: Parameters<typeof noteLearning>[0]): LearningNotes {
   };
 }
 
-async function* mockReply(lastMessage: string): AsyncGenerator<string> {
-  const reply = /how are you|how('s| is) suni/i.test(lastMessage)
-    ? "I'm buzzing, thanks for asking! I've been looking forward to learning with you. How are you feeling today?"
-    : /answer/i.test(lastMessage)
-      ? "Good question! I won't give the answer away, but let's work it out together. What's the first step you'd try?"
-      : "Let's think about it together. Can you tell me what the question is asking you to find?";
+async function* mockReply(lastMessage: string, sawBoard = false): AsyncGenerator<string> {
+  const reply = sawBoard
+    ? "I can see your working on the board. Great start! Now add the tens together."
+    : wantsHelp(lastMessage)
+      ? "Let's work it out together on the whiteboard!\n<board>\n24 + 18\n= 20 + 10 + 4 + 8\n= 30 + ?\n</board>\nCan you work out 4 + 8 and write it on the board?"
+      : /how are you|how('s| is) suni/i.test(lastMessage)
+        ? "I'm buzzing, thanks for asking! I've been looking forward to learning with you. How are you feeling today?"
+        : /answer/i.test(lastMessage)
+          ? "Good question! I won't give the answer away, but let's work it out together. What's the first step you'd try?"
+          : "Let's think about it together. Can you tell me what the question is asking you to find?";
   for (const word of reply.split(/(?<= )/)) {
     await new Promise((r) => setTimeout(r, 15));
     yield word;
