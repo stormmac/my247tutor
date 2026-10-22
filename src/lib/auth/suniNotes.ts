@@ -117,7 +117,7 @@ export async function refreshNotes(learnerId: string): Promise<boolean> {
   const since = (noted[0]?.read_up_to as Date | undefined) ?? new Date(0);
   const { rows: chats } = await pool.query(
     `SELECT screen, question, reply, flag, created_at, student_name, year_level FROM suni_messages
-     WHERE learner_id = $1 AND created_at > $2 ORDER BY created_at LIMIT 60`,
+     WHERE learner_id = $1 AND created_at > $2 AND flag IS DISTINCT FROM 'technical' ORDER BY created_at LIMIT 60`,
     [learnerId, since],
   );
   if (chats.length < CHATS_PER_NOTE && !chats.some((c) => c.flag)) return false;

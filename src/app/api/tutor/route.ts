@@ -150,6 +150,8 @@ export async function POST(request: NextRequest) {
   const redacted = turns.map((t) => (t.role === "user" ? { ...t, content: redactPersonalInfo(t.content).text } : t));
 
   if (!tutorConfigured()) {
+    // A technical problem: kept for admins only, never shown to parents or teachers.
+    await keep(who, parsed.data, question, { reply: "", flag: "technical", flagReason: "Suni isn't switched on (no API key)." });
     saved();
     return ndjson([
       {
@@ -170,6 +172,8 @@ export async function POST(request: NextRequest) {
 
   async function* events(): AsyncGenerator<TutorEvent> {
     let reply = "";
+    // Why Suni couldn't answer, for admins only.
+    let problem: string | null = null;
     if (found.length) yield { type: "notice", kind: "privacy", text: personalInfoReminder(found) };
     try {
       for await (const text of streamTutorReply(contextPrompt, redacted, boardImage)) {
@@ -185,9 +189,9 @@ export async function POST(request: NextRequest) {
         err instanceof Anthropic.RateLimitError ||
         err instanceof Anthropic.InternalServerError ||
         err instanceof Anthropic.APIConnectionError;
-      const text = (reply ? "\n\n" : "") + (busy ? SUNI_BUSY_REPLY : SUNI_ERROR_REPLY);
-      reply += text;
-      yield { type: "error", text };
+      problem = err instanceof Anthropic.APIError ? `${err.status ?? "No"} response: ${err.message}` : String(err);
+      // The child sees Suni's warm message; the saved reply keeps only what Suni actually said.
+      yield { type: "error", text: (reply ? "\n\n" : "") + (busy ? SUNI_BUSY_REPLY : SUNI_ERROR_REPLY) };
     }
     const verdict = await check;
     await keep(who, parsed.data!, question, {
@@ -196,7 +200,9 @@ export async function POST(request: NextRequest) {
         ? { flag: "inappropriate", flagReason: verdict.reason || verdict.category.replace(/_/g, " ") }
         : found.length
           ? { flag: "personal_info", flagReason: `Shared their ${found.join(" or ")} (hidden from Suni).` }
-          : { flag: null, flagReason: null }),
+          : problem
+            ? { flag: "technical", flagReason: `Suni couldn't answer. ${problem}` }
+            : { flag: null, flagReason: null }),
     });
     saved();
   }

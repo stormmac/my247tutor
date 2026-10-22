@@ -8,7 +8,7 @@ import { FAMILY_SQL, SCHOOL_TOPICS_SQL } from "./familySchema";
 import { INVITE_SQL } from "./inviteSchema";
 import { PHONICS_CLIPS_SQL } from "./phonicsClipSchema";
 import { PRAISE_SQL } from "./praiseSchema";
-import { SUNI_CHAT_SQL } from "./suniChatSchema";
+import { SUNI_CHAT_SQL, SUNI_TECHNICAL_SQL } from "./suniChatSchema";
 import { SUNI_NOTES_SQL } from "./suniNotesSchema";
 import { QUESTION_HINTS_SQL } from "./hintSchema";
 import { LEARNING_PLAN_SQL } from "./planSchema";
@@ -43,9 +43,10 @@ ${SCHOOL_TOPICS_SQL}
 ${PHONICS_CLIPS_SQL}
 ${SUNI_NOTES_SQL}
 ${QUESTION_HINTS_SQL}
-${LEARNING_PLAN_SQL}`;
+${LEARNING_PLAN_SQL}
+${SUNI_TECHNICAL_SQL}`;
 
-/** The pool, once the card-payment columns, invite table, child sign-in columns, centre tables, class times, praise phrases, Suni chats, curriculum columns, centre parents, set work, recorded phonics sounds, Suni's notes, question hints and learning plans exist. Tried again on the next call if it fails. */
+/** The pool, once the card-payment columns, invite table, child sign-in columns, centre tables, class times, praise phrases, Suni chats, curriculum columns, centre parents, set work, recorded phonics sounds, Suni's notes, question hints, learning plans and the technical flag exist. Tried again on the next call if it fails. */
 export function ready(): Promise<Pool> {
   schema ??= db()
     .query(LATER_SQL)
