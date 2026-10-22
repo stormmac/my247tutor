@@ -405,6 +405,13 @@ export function SuniCompanion() {
     };
   }, [setBubble]);
 
+  // Someone without a saved learner still gets a hello.
+  useEffect(() => {
+    if (!loaded || profile?.id) return;
+    const t = setTimeout(() => setBubble(profile ? `Hi ${firstName(profile.name)}! I'm ${TUTOR_NAME}.` : `Hi! I'm ${TUTOR_NAME}.`), 1500);
+    return () => clearTimeout(t);
+  }, [loaded]);
+
   // At the start of a visit, Suni flies in and asks how they're feeling and what they'd like to work on.
   const hidden = HIDDEN_ON.some((p) => pathname.startsWith(p));
   useEffect(() => {
@@ -416,7 +423,11 @@ export function SuniCompanion() {
       .then((res) => (res.ok ? (res.json() as Promise<{ due?: boolean }>) : null))
       .catch(() => null)
       .then((body) => {
-        if (!body?.due) return;
+        // Asked already this hour: just a welcome.
+        if (!body?.due) {
+          t = setTimeout(() => setBubble(`Welcome back, ${firstName(profile.name)}!`), 1500);
+          return;
+        }
         t = setTimeout(() => {
           setBubble(null);
           setCheckin("mood");

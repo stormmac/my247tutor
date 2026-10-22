@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { AdminLearnPicker } from "@/components/AdminLearnPicker";
 import { ClassLearnPicker } from "@/components/ClassLearnPicker";
-import { Suni } from "@/components/Suni";
 import { useAccount } from "@/components/useAccount";
 import { switchChild, useChildren, useProfile } from "@/components/useProfile";
 import { currentLesson, lessonProgress } from "@/lib/learner/lesson";
@@ -44,7 +43,6 @@ export default function LearnPage() {
   return (
     <div className="stack">
       <div className="row" style={{ gap: 16, flexWrap: "nowrap" }}>
-        <Suni size={84} wave />
         <div style={{ flex: 1 }}>
           <h1>Hi {profile.name}! What shall we learn?</h1>
           <p className="muted" style={{ margin: 0 }}>

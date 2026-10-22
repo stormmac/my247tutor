@@ -41,7 +41,7 @@ export function firstName(name: string): string {
 }
 
 /** Suni asks again once this long has passed since the last check-in. */
-export const CHECKIN_GAP_HOURS = 1;
+export const CHECKIN_GAP_HOURS = 2;
 
 export function checkinDue(lastAt: number | null, now = Date.now()): boolean {
   return lastAt === null || now - lastAt >= CHECKIN_GAP_HOURS * 3_600_000;
