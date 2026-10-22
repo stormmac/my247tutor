@@ -564,11 +564,12 @@ a.tab {
 .suni .suni-wing {
   transform-box: fill-box;
 }
+/* Wings turn about where they join the back. */
 .suni .suni-wing-left {
-  transform-origin: 100% 80%;
+  transform-origin: 100% 100%;
 }
 .suni .suni-wing-right {
-  transform-origin: 0% 80%;
+  transform-origin: 0% 100%;
 }
 .suni .suni-arm-right {
   transform-box: fill-box;
@@ -578,28 +579,73 @@ a.tab {
   transform-box: fill-box;
   transform-origin: 50% 50%;
 }
-@media (prefers-reduced-motion: no-preference) {
+.suni .suni-palm {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+/* Suni hovers and flaps everywhere. With reduced motion asked for, it's slower and smaller. */
+.suni-animated .suni-hover {
+  animation: suni-hover 2.4s ease-in-out infinite;
+}
+.suni-animated .suni-wing-left {
+  animation: suni-flap-left 0.12s ease-in-out infinite alternate;
+}
+.suni-animated .suni-wing-right {
+  animation: suni-flap-right 0.12s ease-in-out infinite alternate;
+}
+.suni-animated .suni-eyes {
+  animation: suni-blink 5s infinite;
+}
+.suni-waving .suni-arm-right {
+  animation: suni-wave 1.2s ease-in-out 3;
+}
+.suni .suni-pose-thumbsUp {
+  animation: suni-thumb 0.6s ease-out 2;
+}
+.suni .suni-pose-highFive {
+  animation: suni-high-five 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.suni .suni-pose-highFive .suni-palm {
+  animation: suni-palm 0.8s ease-in-out 0.5s infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
   .suni-animated .suni-hover {
-    animation: suni-hover 3s ease-in-out infinite;
+    animation-duration: 4s;
   }
-  .suni-animated .suni-wing {
-    animation: suni-flutter 0.18s ease-in-out infinite alternate;
-  }
-  .suni-animated .suni-eyes {
-    animation: suni-blink 5s infinite;
-  }
-  .suni-waving .suni-arm-right {
-    animation: suni-wave 1.2s ease-in-out 3;
+  .suni-animated .suni-wing-left,
+  .suni-animated .suni-wing-right {
+    animation-duration: 0.5s;
   }
 }
 @keyframes suni-hover {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  25% {
+    transform: translateY(-5px) rotate(-1.5deg);
+  }
   50% {
-    transform: translateY(-6px);
+    transform: translateY(-9px) rotate(0);
+  }
+  75% {
+    transform: translateY(-4px) rotate(1.5deg);
   }
 }
-@keyframes suni-flutter {
+@keyframes suni-flap-left {
+  from {
+    transform: rotate(10deg);
+  }
   to {
-    transform: scaleY(0.82) rotate(-3deg);
+    transform: rotate(-22deg) scaleY(0.9);
+  }
+}
+@keyframes suni-flap-right {
+  from {
+    transform: rotate(-10deg);
+  }
+  to {
+    transform: rotate(22deg) scaleY(0.9);
   }
 }
 @keyframes suni-blink {
@@ -615,6 +661,44 @@ a.tab {
 @keyframes suni-wave {
   50% {
     transform: rotate(-18deg);
+  }
+}
+@keyframes suni-thumb {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-6px) rotate(-6deg);
+  }
+}
+@keyframes suni-high-five {
+  from {
+    transform: rotate(40deg) scale(0.7);
+  }
+}
+@keyframes suni-palm {
+  to {
+    transform: rotate(-8deg);
+  }
+}
+/* A burst of stars when a child taps Suni's hand for a high five. */
+.suni-slap {
+  position: absolute;
+  top: 0;
+  right: 10px;
+  font-size: 2rem;
+  pointer-events: none;
+  animation: suni-slap 0.9s ease-out forwards;
+}
+@keyframes suni-slap {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6) translateY(-20px);
+    opacity: 0;
   }
 }
 .hero-with-suni {
@@ -646,6 +730,7 @@ a.tab {
   pointer-events: auto;
 }
 .suni-fly {
+  position: relative;
   border: 0;
   background: none;
   padding: 0;

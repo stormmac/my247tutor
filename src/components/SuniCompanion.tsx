@@ -2,11 +2,12 @@
 
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Suni } from "@/components/Suni";
+import { Suni, type SuniPose } from "@/components/Suni";
 import { useProfile } from "@/components/useProfile";
 import { useSpeechInput, type SpeechInputProblem } from "@/components/useSpeechInput";
 import { useSuniVoice } from "@/components/useSuniVoice";
 import { useTutorChat } from "@/components/useTutorChat";
+import { CELEBRATE_EVENT } from "@/lib/tutor/celebrate";
 import { TUTOR_NAME } from "@/lib/tutor/persona";
 import type { TutorContext } from "@/lib/tutor/prompt";
 import type { YearLevel } from "@/lib/curriculum/types";
@@ -122,6 +123,24 @@ export function SuniCompanion() {
   const [input, setInput] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement>(null);
+  const [pose, setPose] = useState<SuniPose | null>(null);
+  const [slaps, setSlaps] = useState(0);
+
+  // A right answer anywhere: a thumbs up, or a hand held up for a high five the child can tap.
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const onCelebrate = (e: Event) => {
+      const next = (e as CustomEvent<SuniPose>).detail;
+      setPose(next);
+      clearTimeout(t);
+      t = setTimeout(() => setPose(null), next === "highFive" ? 4000 : 2500);
+    };
+    window.addEventListener(CELEBRATE_EVENT, onCelebrate);
+    return () => {
+      window.removeEventListener(CELEBRATE_EVENT, onCelebrate);
+      clearTimeout(t);
+    };
+  }, []);
 
   // A practice question says the most; otherwise the page's own description, otherwise one from its address.
   const onScreen: SuniScreen = screen ?? { screen: screenForPath(pathname) };
@@ -200,6 +219,13 @@ export function SuniCompanion() {
   if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null;
 
   function toggle() {
+    // Tapping Suni's raised hand is a high five, not opening the chat.
+    if (pose === "highFive") {
+      setPose(null);
+      setSlaps((n) => n + 1);
+      voice.say("High five!");
+      return;
+    }
     setBubble(null);
     if (open) voice.stop();
     // Opening the chat says the greeting, or whatever Suni said last.
@@ -321,9 +347,16 @@ export function SuniCompanion() {
         className={`suni-fly ${busy ? "thinking" : ""}`}
         onClick={toggle}
         aria-expanded={open}
-        aria-label={open ? `Close chat with ${TUTOR_NAME}` : `Chat with ${TUTOR_NAME}`}
+        aria-label={
+          pose === "highFive" ? `Give ${TUTOR_NAME} a high five` : open ? `Close chat with ${TUTOR_NAME}` : `Chat with ${TUTOR_NAME}`
+        }
       >
-        <Suni size={open ? 72 : 92} wave={!!bubble && !open} />
+        <Suni size={open ? 72 : 92} wave={!!bubble && !open} pose={pose} />
+        {slaps > 0 && (
+          <span key={slaps} className="suni-slap" aria-hidden>
+            ✋✨
+          </span>
+        )}
       </button>
     </div>
   );

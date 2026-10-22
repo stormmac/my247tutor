@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { QuestionOutcome } from "@/components/QuestionView";
+import { celebrate } from "@/lib/tutor/celebrate";
 import { DEFAULT_PRAISE, pickPraise, praiseLine } from "@/lib/tutor/praise";
 
 let extra: Promise<string[]> | null = null;
@@ -15,7 +16,7 @@ function loadExtra(): Promise<string[]> {
   return extra;
 }
 
-/** Picks what Suni says after a right answer: the built-in phrases plus any admins added, with the child's first name, never twice in a row. */
+/** Picks what Suni says after a right answer: the built-in phrases plus any admins added, with the child's first name, never twice in a row. Suni celebrates too. */
 export function usePraise(): (o: QuestionOutcome, name?: string) => string {
   const [phrases, setPhrases] = useState<string[]>([...DEFAULT_PRAISE]);
   const last = useRef<string | undefined>(undefined);
@@ -30,6 +31,7 @@ export function usePraise(): (o: QuestionOutcome, name?: string) => string {
     (o: QuestionOutcome, name?: string) => {
       const phrase = pickPraise(phrases, last.current);
       last.current = phrase;
+      celebrate();
       return praiseLine(phrase, name, o.firstTry);
     },
     [phrases],
