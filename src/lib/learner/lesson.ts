@@ -1,6 +1,7 @@
 /**
- * The weekly lesson: a warm-up of written questions from the year below the child's, then two short
- * activities on the topics they are weakest at in their own year. A new lesson is made each Monday.
+ * The weekly lesson: a warm-up of written questions from the child's own year (or the year below
+ * the work, when they are catching up), then two short activities on the topics they are weakest at.
+ * A new lesson is made each Monday.
  *
  * This file has no content tree import, so the Learn page can show lesson progress without loading
  * the question bank. The lesson itself is built in ../content/lesson.ts.

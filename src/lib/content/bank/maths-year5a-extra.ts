@@ -384,27 +384,34 @@ export const PERCENT = levels(5030616, {
 /** MA3-AR-01: adding and subtracting whole numbers and decimals. */
 export const ADD_SUB = levels(5030216, {
   very_easy: [
-    (n) => typed("short_answer", n, "6200 + 2700 = ?", "8900", "6000 + 2000 = 8000 and 200 + 700 = 900, so the total is 8900."),
-    (n) => typed("short_answer", n, "0.9 − 0.4 = ?", ["0.5", ".5"], "9 tenths take away 4 tenths leaves 5 tenths, which is 0.5."),
-    (n) => trueFalse(n, "10 000 − 1 = 9999", true, "One less than 10 000 is 9999."),
+    (n) =>
+      typed(
+        "short_answer",
+        n,
+        "5678 + 1245 = ?",
+        "6923",
+        "5000 + 1000 = 6000, 600 + 200 = 800 and 78 + 45 = 123. 6000 + 800 + 123 = 6923.",
+      ),
+    (n) => typed("short_answer", n, "5.2 − 1.6 = ?", "3.6", "Take away 1 to get 4.2, then take away 0.6 more: 3.6."),
+    (n) => trueFalse(n, "9000 − 2350 = 6650", true, "Count up from 2350: 650 to 3000, then 6000 to 9000. 650 + 6000 = 6650."),
   ],
   easy: [
     (n) =>
       typed(
         "short_answer",
         n,
-        "45 678 − 3000 = ?",
-        ["42 678", "42678"],
-        "Only the thousands change: 45 thousands take away 3 thousands is 42 thousands, so 42 678.",
+        "45 678 − 9300 = ?",
+        ["36 378", "36378"],
+        "Take away 9000 first: 45 678 − 9000 = 36 678. Then take away 300: 36 378.",
       ),
-    (n) => typed("short_answer", n, "4.7 + 1.8 = ?", "6.5", "4 + 1 = 5 and 0.7 + 0.8 = 1.5. Then 5 + 1.5 = 6.5."),
+    (n) => typed("short_answer", n, "6.45 + 2.7 = ?", "9.15", "Write 2.7 as 2.70. 6 + 2 = 8 and 0.45 + 0.70 = 1.15. Then 8 + 1.15 = 9.15."),
     (n) =>
       choice(
         n,
-        "Which is the best estimate of 6890 − 2110?",
-        ["5000", "4000", "9000", "3000"],
+        "Which is the best estimate of 68 904 − 21 087?",
+        ["50 000", "40 000", "90 000", "5000"],
         0,
-        "6890 is about 7000 and 2110 is about 2000, so the answer is about 7000 − 2000 = 5000.",
+        "68 904 is about 70 000 and 21 087 is about 20 000, so the answer is about 70 000 − 20 000 = 50 000.",
       ),
   ],
   medium: [

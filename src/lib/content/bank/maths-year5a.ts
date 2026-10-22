@@ -364,27 +364,28 @@ export const PERCENT = levels(5030601, {
 /** MA3-AR-01: adding and subtracting whole numbers and decimals. */
 export const ADD_SUB = levels(5030201, {
   very_easy: [
-    (n) => typed("short_answer", n, "4500 + 3200 = ?", "7700", "4000 + 3000 = 7000 and 500 + 200 = 700, so the total is 7700."),
-    (n) => typed("short_answer", n, "0.5 + 0.3 = ?", ["0.8", ".8"], "5 tenths and 3 tenths make 8 tenths, which is 0.8."),
-    (n) => trueFalse(n, "1000 − 1 = 999", true, "One less than 1000 is 999."),
-  ],
-  easy: [
     (n) =>
       typed(
         "short_answer",
         n,
-        "12 345 + 2000 = ?",
-        ["14345", "14 345"],
-        "Only the thousands change: 12 thousands and 2 thousands make 14 thousands, so 14 345.",
+        "3486 + 2357 = ?",
+        "5843",
+        "3000 + 2000 = 5000, 400 + 300 = 700, 80 + 50 = 130 and 6 + 7 = 13. 5000 + 700 + 130 + 13 = 5843.",
       ),
-    (n) => typed("short_answer", n, "3.6 + 2.5 = ?", "6.1", "3 + 2 = 5 and 0.6 + 0.5 = 1.1. Then 5 + 1.1 = 6.1."),
+    (n) => typed("short_answer", n, "4.6 + 2.7 = ?", "7.3", "4 + 2 = 6 and 0.6 + 0.7 = 1.3. Then 6 + 1.3 = 7.3."),
+    (n) => trueFalse(n, "7004 − 6 = 6998", true, "Take away 4 to get to 7000, then 2 more: 6998."),
+  ],
+  easy: [
+    (n) =>
+      typed("short_answer", n, "23 456 + 8700 = ?", ["32156", "32 156"], "Add 8000 first: 23 456 + 8000 = 31 456. Then add 700: 32 156."),
+    (n) => typed("short_answer", n, "7.25 + 1.8 = ?", "9.05", "Write 1.8 as 1.80. 7 + 1 = 8 and 0.25 + 0.80 = 1.05. Then 8 + 1.05 = 9.05."),
     (n) =>
       choice(
         n,
-        "Which is the best estimate of 4980 + 3020?",
-        ["7000", "8000", "9000", "80 000"],
+        "Which is the best estimate of 49 812 + 30 205?",
+        ["70 000", "80 000", "90 000", "8000"],
         1,
-        "4980 is about 5000 and 3020 is about 3000, so the total is about 8000.",
+        "49 812 is about 50 000 and 30 205 is about 30 000, so the total is about 80 000.",
       ),
   ],
   medium: [

@@ -146,7 +146,7 @@ describe("work program", () => {
     const answers = [answer("number", 5, true), answer("fractions", 5, false)];
     const profile = applyAssessment(newProfile("Cy", 5, T0), record("maths", 5, { year: 5, level: 5 }, answers));
     const lesson = buildLesson(profile, "maths", T0);
-    expect(lesson.parts[0].title).toBe("Year 4 review");
+    expect(lesson.parts[0].title).toBe("Year 5 review");
     expect(lesson.parts.slice(1).every((p) => p.year === 5 && !/\(Year/.test(p.title))).toBe(true);
     expect(streamOf("maths", lesson.parts[1].subtopicId!)).toBe("fractions");
   });
