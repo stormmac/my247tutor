@@ -13,6 +13,12 @@ const FALLBACK_BETA = "server-side-fallback-2026-07-01";
 
 export const REFUSAL_REPLY = "I can't help with that one. Let's get back to your learning. What would you like to try next?";
 
+/** Said when a reply can't be written: Suni stays warm and asks again, whatever went wrong behind the scenes. */
+export const SUNI_ERROR_REPLY =
+  "Oh no, my wings got in a little tangle and I lost what I was going to say. I'm still right here with you! Could you say that again?";
+export const SUNI_BUSY_REPLY =
+  "Lots of busy bees are chatting with me right now. Give me a tiny moment, then ask me again. I really want to hear it!";
+
 let client: Anthropic | null = null;
 
 export function tutorConfigured(): boolean {
@@ -33,20 +39,38 @@ export async function* streamTutorReply(contextPrompt: string, turns: ChatTurn[]
     return;
   }
 
-  const stream = getClient().beta.messages.stream({
-    model: TUTOR_MODEL,
-    max_tokens: 8000,
-    // Chat replies for children: low effort keeps answers quick. Maths answers are checked in code, not by the model.
-    output_config: { effort: "low" },
-    betas: [FALLBACK_BETA],
-    fallbacks: "default",
-    system: [
-      { type: "text", text: TUTOR_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-      { type: "text", text: contextPrompt },
-    ],
-    messages: turns,
-  });
+  const system: Anthropic.Beta.BetaTextBlockParam[] = [
+    { type: "text", text: TUTOR_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+    { type: "text", text: contextPrompt },
+  ];
+  let sentText = false;
+  try {
+    for await (const text of replyText(
+      getClient().beta.messages.stream({
+        model: TUTOR_MODEL,
+        max_tokens: 8000,
+        // Chat replies for children: low effort keeps answers quick. Maths answers are checked in code, not by the model.
+        output_config: { effort: "low" },
+        betas: [FALLBACK_BETA],
+        fallbacks: "default",
+        system,
+        messages: turns,
+      }),
+    )) {
+      sentText = true;
+      yield text;
+    }
+  } catch (err) {
+    // A request the API won't take (a beta or setting it no longer accepts) is tried once more as a plain request,
+    // so the child still gets an answer. Anything else, or a reply that had already started, goes to the caller.
+    if (sentText || !(err instanceof Anthropic.BadRequestError || err instanceof Anthropic.NotFoundError)) throw err;
+    console.error("Tutor request rejected, trying a plain request", `${err.status} ${err.message} (request ${err.requestID ?? "unknown"})`);
+    yield* replyText(getClient().beta.messages.stream({ model: TUTOR_MODEL, max_tokens: 8000, system, messages: turns }));
+  }
+}
 
+/** The reply's text as it streams, or the refusal reply when there is none. */
+async function* replyText(stream: ReturnType<Anthropic["beta"]["messages"]["stream"]>): AsyncGenerator<string> {
   let sentText = false;
   for await (const event of stream) {
     if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
@@ -272,9 +296,11 @@ function mockNotes(args: Parameters<typeof noteLearning>[0]): LearningNotes {
 }
 
 async function* mockReply(lastMessage: string): AsyncGenerator<string> {
-  const reply = /answer/i.test(lastMessage)
-    ? "Good question! I won't give the answer away, but let's work it out together. What's the first step you'd try?"
-    : "Let's think about it together. Can you tell me what the question is asking you to find?";
+  const reply = /how are you|how('s| is) suni/i.test(lastMessage)
+    ? "I'm buzzing, thanks for asking! I've been looking forward to learning with you. How are you feeling today?"
+    : /answer/i.test(lastMessage)
+      ? "Good question! I won't give the answer away, but let's work it out together. What's the first step you'd try?"
+      : "Let's think about it together. Can you tell me what the question is asking you to find?";
   for (const word of reply.split(/(?<= )/)) {
     await new Promise((r) => setTimeout(r, 15));
     yield word;
