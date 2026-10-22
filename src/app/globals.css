@@ -578,7 +578,7 @@ a.tab {
 .suni-cheer {
   position: absolute;
   top: 2%;
-  right: -4%;
+  left: -4%;
   font-size: calc(var(--suni-cheer, 1) * 2rem);
   line-height: 1;
   pointer-events: none;
