@@ -38,7 +38,9 @@ const PARENT_ONLY = [
   "/classes",
   "/api/classes",
   "/api/students",
-  "/api/suni",
+  // A child's chats and Suni's notes about them are for grown-ups; Suni's check-in is the child's own.
+  "/api/suni/chats",
+  "/api/suni/notes",
   // The curriculum tree shows the answers.
   "/curriculum",
   "/api/curriculum",
