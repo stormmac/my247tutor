@@ -10,12 +10,13 @@ import { getUser, type User } from "@/lib/auth/users";
 import { memoryPrompt } from "@/lib/tutor/memory";
 import { buildContextPrompt, TutorContextSchema } from "@/lib/tutor/prompt";
 import { hasWellbeingConcern, MAX_MESSAGE_LENGTH, personalInfoReminder, redactPersonalInfo, WELLBEING_REPLY } from "@/lib/tutor/safety";
-import { checkQuestion, streamTutorReply, tutorConfigured } from "@/lib/tutor/claude";
+import { checkQuestion, streamTutorReply, SUNI_BUSY_REPLY, SUNI_ERROR_REPLY, tutorConfigured } from "@/lib/tutor/claude";
+import { chatTurns } from "@/lib/tutor/turns";
 
 const RequestSchema = z.object({
   context: TutorContextSchema,
   messages: z
-    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().min(1).max(4000) }))
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().min(1).max(20000) }))
     .min(1)
     .max(40),
   /** One chat with Suni, so its messages can be read back together. */
@@ -118,9 +119,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
 
   const { context } = parsed.data;
-  // Keep the last 20 turns; the conversation must start with the student.
-  let turns = parsed.data.messages.slice(-20);
-  while (turns.length && turns[0].role !== "user") turns = turns.slice(1);
+  const turns = chatTurns(parsed.data.messages);
   const last = turns.at(-1);
   if (!last || last.role !== "user") return Response.json({ error: "Last message must be from the student" }, { status: 400 });
   if (last.content.length > MAX_MESSAGE_LENGTH) {
@@ -145,7 +144,12 @@ export async function POST(request: NextRequest) {
 
   if (!tutorConfigured()) {
     saved();
-    return ndjson([{ type: "error", text: "The tutor chat isn't switched on yet. Ask a grown-up to add the API key." }]);
+    return ndjson([
+      {
+        type: "error",
+        text: "I'd love to chat, but my chatting wings aren't switched on yet. Ask a grown-up to turn me on, and I'll be right here.",
+      },
+    ]);
   }
 
   // The check for anything a grown-up should see runs alongside the reply.
@@ -166,12 +170,15 @@ export async function POST(request: NextRequest) {
         yield { type: "text", text };
       }
     } catch (err) {
-      console.error("Tutor request failed", err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err);
+      console.error(
+        "Tutor request failed",
+        err instanceof Anthropic.APIError ? `${err.status} ${err.message} (request ${err.requestID ?? "unknown"})` : err,
+      );
       const busy =
         err instanceof Anthropic.RateLimitError ||
         err instanceof Anthropic.InternalServerError ||
         err instanceof Anthropic.APIConnectionError;
-      const text = busy ? "I'm a bit busy right now. Try again in a moment." : "Something went wrong. Try asking again.";
+      const text = (reply ? "\n\n" : "") + (busy ? SUNI_BUSY_REPLY : SUNI_ERROR_REPLY);
       reply += text;
       yield { type: "error", text };
     }

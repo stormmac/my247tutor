@@ -80,7 +80,7 @@ export function useTutorChat(
         }
       }
     } catch {
-      appendToReply("I couldn't connect just now. Try again in a moment.");
+      appendToReply("Oh dear, I couldn't hear you just then. I'm still here! Could you try sending that again?");
     } finally {
       // Drop an empty reply bubble (for example after a safety notice).
       update((m) => (m[m.length - 1].role === "assistant" && !m[m.length - 1].content ? m.slice(0, -1) : m));
