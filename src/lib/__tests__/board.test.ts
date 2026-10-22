@@ -18,7 +18,8 @@ describe("whiteboard", () => {
   });
 
   it("opens the board when a student asks for help", () => {
-    for (const m of ["Can you help me?", "I'm stuck", "how do I do this", "I don't get it", "explain fractions"]) expect(wantsHelp(m)).toBe(true);
+    for (const m of ["Can you help me?", "I'm stuck", "how do I do this", "I don't get it", "explain fractions"])
+      expect(wantsHelp(m)).toBe(true);
     for (const m of ["hello", "I got it!", "what's your name"]) expect(wantsHelp(m)).toBe(false);
   });
 });
