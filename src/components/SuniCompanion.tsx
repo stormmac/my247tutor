@@ -9,6 +9,7 @@ import { useSuniVoice } from "@/components/useSuniVoice";
 import { useTutorChat } from "@/components/useTutorChat";
 import { Whiteboard, type WhiteboardHandle } from "@/components/Whiteboard";
 import { parseAlgorithm } from "@/lib/tutor/algorithm";
+import { fitSuni, SUNI_EDGE, type SuniFit, suniMax } from "@/lib/tutor/suniFit";
 import { CHECKING_MESSAGE, splitBoard, STILL_WORKING_MESSAGE, wantsHelp } from "@/lib/tutor/board";
 import { CELEBRATE_EVENT } from "@/lib/tutor/celebrate";
 import { FOCUS_CHOICES, MOOD_FACES, MOODS, moodReply, type Mood } from "@/lib/tutor/memory";
@@ -119,6 +120,142 @@ export function screenForPath(pathname: string): string {
 
 const HIDDEN_ON = ["/parent", "/login", "/signup", "/forgot-password", "/set-password", "/private"];
 
+/** The size Suni shows at while the chat is open. */
+const OPEN_SIZE = 96;
+
+/**
+ * Keeps the flying Suni as big as it can be without covering the question on screen (anything marked
+ * data-suni-avoid), as the page scrolls, resizes or changes.
+ */
+function useSuniFit(): SuniFit {
+  const [fit, setFit] = useState<SuniFit>({ size: 120, bottom: SUNI_EDGE, roam: true });
+  useEffect(() => {
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const { innerWidth: w, innerHeight: h } = window;
+      const avoid = [...document.querySelectorAll("[data-suni-avoid]")].map((el) => el.getBoundingClientRect());
+      const next = fitSuni(w, h, avoid);
+      setFit((f) => (f.size === next.size && f.bottom === next.bottom && f.roam === next.roam ? f : next));
+      // Room at the end of the page, so the last question can scroll clear of Suni.
+      document.documentElement.style.setProperty("--suni-room", `${suniMax(w) + 2 * SUNI_EDGE}px`);
+    };
+    const later = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
+    measure();
+    window.addEventListener("scroll", later, { passive: true });
+    window.addEventListener("resize", later);
+    const watch = new MutationObserver(later);
+    watch.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", later);
+      window.removeEventListener("resize", later);
+      watch.disconnect();
+    };
+  }, []);
+  return fit;
+}
+
+/** Where a child dragged Suni to: distances from the right and bottom of the screen. */
+interface SuniSpot {
+  right: number;
+  bottom: number;
+}
+
+const SPOT_KEY = "my247tutor.suniSpot.v1";
+/** How far the pointer moves before a press on Suni becomes a drag rather than a tap. */
+const DRAG_START = 6;
+/** Dropping Suni this close to the bottom right corner hands it back to fitting itself around the question. */
+const HOME_ZONE = 60;
+
+function savedSpot(): SuniSpot | null {
+  try {
+    const s = JSON.parse(localStorage.getItem(SPOT_KEY) ?? "null") as SuniSpot | null;
+    return s && Number.isFinite(s.right) && Number.isFinite(s.bottom) ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSpot(spot: SuniSpot | null) {
+  try {
+    if (spot) localStorage.setItem(SPOT_KEY, JSON.stringify(spot));
+    else localStorage.removeItem(SPOT_KEY);
+  } catch {
+    // Without storage Suni still moves; it just doesn't remember where.
+  }
+}
+
+/**
+ * Lets the child drag Suni anywhere on the screen with a mouse or finger. Suni stays where it's put
+ * (remembered on this device) until it's dragged back to the bottom right corner.
+ */
+function useSuniDrag(size: number) {
+  const [spot, setSpot] = useState<SuniSpot | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const press = useRef<{ x: number; y: number; right: number; bottom: number; moved: boolean } | null>(null);
+  const dragged = useRef(false);
+
+  useEffect(() => setSpot(savedSpot()), []);
+
+  const place = (right: number, bottom: number): SuniSpot => ({
+    right: Math.round(Math.min(Math.max(right, 0), window.innerWidth - size)),
+    bottom: Math.round(Math.min(Math.max(bottom, 0), window.innerHeight - size)),
+  });
+
+  const handlers = {
+    onPointerDown(e: React.PointerEvent<HTMLElement>) {
+      if (e.button !== 0) return;
+      const box = e.currentTarget.getBoundingClientRect();
+      press.current = {
+        x: e.clientX,
+        y: e.clientY,
+        right: window.innerWidth - box.right,
+        bottom: window.innerHeight - box.bottom,
+        moved: false,
+      };
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    onPointerMove(e: React.PointerEvent<HTMLElement>) {
+      const p = press.current;
+      if (!p) return;
+      const dx = e.clientX - p.x;
+      const dy = e.clientY - p.y;
+      if (!p.moved && Math.hypot(dx, dy) < DRAG_START) return;
+      p.moved = true;
+      setDragging(true);
+      setSpot(place(p.right - dx, p.bottom - dy));
+    },
+    onPointerUp(e: React.PointerEvent<HTMLElement>) {
+      const p = press.current;
+      press.current = null;
+      if (!p?.moved) return;
+      // The click that follows a drag isn't a tap on Suni.
+      dragged.current = true;
+      setDragging(false);
+      const next = place(p.right - (e.clientX - p.x), p.bottom - (e.clientY - p.y));
+      const home = next.right < HOME_ZONE && next.bottom < HOME_ZONE;
+      setSpot(home ? null : next);
+      saveSpot(home ? null : next);
+    },
+    onPointerCancel() {
+      press.current = null;
+      setDragging(false);
+    },
+  };
+
+  /** Whether the click just now ended a drag, so it shouldn't open the chat. */
+  function wasDrag() {
+    const was = dragged.current;
+    dragged.current = false;
+    return was;
+  }
+
+  return { spot, dragging, handlers, wasDrag };
+}
+
 /** Suni flies over every page. Tap Suni to chat. */
 export function SuniCompanion() {
   const pathname = usePathname();
@@ -135,6 +272,10 @@ export function SuniCompanion() {
   const [checkin, setCheckin] = useState<"mood" | "focus" | null>(null);
   const [mood, setMood] = useState<Mood | null>(null);
   const checkedFor = useRef<string | null>(null);
+  const fit = useSuniFit();
+  const drag = useSuniDrag(fit.size);
+  // Where the child put Suni wins over fitting around the question, except while chatting.
+  const placed = drag.spot && !open ? drag.spot : null;
 
   // A right answer anywhere: a thumbs up, or a hand held up for a high five the child can tap.
   useEffect(() => {
@@ -374,7 +515,10 @@ export function SuniCompanion() {
           onClose={() => setBoardFrom(null)}
         />
       )}
-      <div className={`suni-companion ${open ? "open" : ""} ${boardFrom !== null ? "with-board" : ""}`}>
+      <div
+        className={`suni-companion ${open ? "open" : ""} ${boardFrom !== null ? "with-board" : ""} ${fit.roam && !placed ? "" : "still"} ${drag.dragging ? "dragging" : ""}`}
+        style={placed ?? (open ? undefined : { bottom: fit.bottom })}
+      >
         {open && (
           <div className="suni-chat" role="dialog" aria-label={`Chat with ${TUTOR_NAME}`}>
             <div className="suni-chat-header">
@@ -517,13 +661,15 @@ export function SuniCompanion() {
         <button
           type="button"
           className={`suni-fly ${busy ? "thinking" : ""}`}
-          onClick={toggle}
+          onClick={() => !drag.wasDrag() && toggle()}
+          {...drag.handlers}
+          title="Tap to chat, or drag to move me"
           aria-expanded={open}
           aria-label={
             pose === "highFive" ? `Give ${TUTOR_NAME} a high five` : open ? `Close chat with ${TUTOR_NAME}` : `Chat with ${TUTOR_NAME}`
           }
         >
-          <Suni size={open ? 72 : 92} wave={!!bubble && !open} pose={pose} talking={talking && !pose} />
+          <Suni size={open ? OPEN_SIZE : fit.size} wave={!!bubble && !open} pose={pose} talking={talking && !pose} />
           {slaps > 0 && (
             <span key={slaps} className="suni-slap" aria-hidden>
               ✋✨

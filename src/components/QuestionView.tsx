@@ -195,7 +195,7 @@ export function QuestionView({
   }
 
   return (
-    <div className="card">
+    <div className="card" data-suni-avoid>
       {question.passage && (
         <div className="passage">
           <h3>{question.passage.title}</h3>

@@ -306,7 +306,7 @@ function Game({ tables, speed, onFinish }: { tables: number[]; speed: Speed; onF
 
   const seconds = Math.ceil(left / 1000);
   return (
-    <div className="card narrow stack tables-game">
+    <div className="card narrow stack tables-game" data-suni-avoid>
       <div className="row spread">
         <span className={`tables-clock ${seconds <= 10 ? "ending" : ""}`} aria-label={`${seconds} seconds left`}>
           ⏱ {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}
