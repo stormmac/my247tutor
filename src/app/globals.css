@@ -823,6 +823,15 @@ a.tab {
   font-size: 0.8rem;
   cursor: pointer;
 }
+.suni-mood strong {
+  font-size: 1.1rem;
+}
+.suni-program {
+  margin: 0;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 2px;
+}
 .suni-mood span {
   font-size: 1.6rem;
   line-height: 1;

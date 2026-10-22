@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Suni, type SuniPose, useSuniTalking } from "@/components/Suni";
 import { useProfile } from "@/components/useProfile";
@@ -14,6 +14,7 @@ import { CHECKING_MESSAGE, splitBoard, STILL_WORKING_MESSAGE, wantsHelp } from "
 import { CELEBRATE_EVENT } from "@/lib/tutor/celebrate";
 import { FOCUS_CHOICES, MOOD_FACES, MOODS, moodReply, type Mood } from "@/lib/tutor/memory";
 import { TUTOR_NAME } from "@/lib/tutor/persona";
+import { MOOD_RATING, programAhead, programText } from "@/lib/tutor/program";
 import type { TutorContext } from "@/lib/tutor/prompt";
 import type { YearLevel } from "@/lib/curriculum/types";
 
@@ -119,6 +120,11 @@ export function screenForPath(pathname: string): string {
 }
 
 const HIDDEN_ON = ["/parent", "/login", "/signup", "/forgot-password", "/set-password", "/private"];
+
+/** How Suni starts the day's first chat. */
+function checkinQuestion(name: string): string {
+  return `Hi ${name}! How are you today? Rate how you're feeling from 1 to 5.`;
+}
 
 /** The size Suni shows at while the chat is open. */
 const OPEN_SIZE = 96;
@@ -269,7 +275,11 @@ export function SuniCompanion() {
   const talking = useSuniTalking();
   const [slaps, setSlaps] = useState(0);
   // The start-of-visit check-in: how they feel, then what they'd like to work on.
-  const [checkin, setCheckin] = useState<"mood" | "focus" | null>(null);
+  // Then Suni goes through the week's program, or asks what they'd like to do when there's nothing set.
+  const [checkin, setCheckin] = useState<"mood" | "program" | "focus" | null>(null);
+  // Once Suni has asked how they feel, that's how the chat begins, not with the usual hello.
+  const [checkedIn, setCheckedIn] = useState(false);
+  const router = useRouter();
   const [mood, setMood] = useState<Mood | null>(null);
   const checkedFor = useRef<string | null>(null);
   const fit = useSuniFit();
@@ -368,13 +378,11 @@ export function SuniCompanion() {
     if (bubble && !open) voice.say(bubble);
   }, [bubble, said]);
 
-  // Say hello once, shortly after arriving.
+  // Say hello once, shortly after arriving, unless Suni is about to ask how they feel (below).
+  const hello = () => setBubble(profile ? `Hi ${profile.name}! Tap me if you get stuck.` : "Hi! I'm Suni. Tap me to say hello.");
   useEffect(() => {
-    if (!loaded) return;
-    const t = setTimeout(
-      () => setBubble(profile ? `Hi ${profile.name}! Tap me if you get stuck.` : "Hi! I'm Suni. Tap me to say hello."),
-      1500,
-    );
+    if (!loaded || profile?.id) return;
+    const t = setTimeout(hello, 1500);
     return () => clearTimeout(t);
   }, [loaded]);
 
@@ -387,16 +395,20 @@ export function SuniCompanion() {
     let t: ReturnType<typeof setTimeout> | undefined;
     void fetch(`/api/suni/checkin?learner=${profile.id}`)
       .then((res) => (res.ok ? (res.json() as Promise<{ due?: boolean }>) : null))
+      .catch(() => null)
       .then((body) => {
-        if (!body?.due) return;
+        if (!body?.due) {
+          t = setTimeout(hello, 1500);
+          return;
+        }
         t = setTimeout(() => {
           setBubble(null);
           setCheckin("mood");
+          setCheckedIn(true);
           setOpen(true);
-          voice.say(`Hi ${profile.name}! How are you feeling today?`);
+          voice.say(checkinQuestion(profile.name));
         }, 1200);
-      })
-      .catch(() => undefined);
+      });
     return () => clearTimeout(t);
   }, [loaded, profile?.id, hidden]);
 
@@ -408,11 +420,29 @@ export function SuniCompanion() {
     }).catch(() => undefined);
   }
 
+  // This week's program, for once they've said how they feel.
+  const program = profile ? programAhead(profile) : null;
+
   function pickMood(picked: Mood) {
     setMood(picked);
-    setCheckin("focus");
     sendCheckin({ mood: picked });
-    voice.say(`${moodReply(picked)} What would you like to work on today? Is there anything you'd like to practise?`);
+    if (program?.lines.length) {
+      setCheckin("program");
+      voice.say(`${moodReply(picked)} ${programText(program)}`);
+    } else {
+      setCheckin("focus");
+      voice.say(`${moodReply(picked)} What would you like to work on today? Is there anything you'd like to practise?`);
+    }
+  }
+
+  /** They start a subject from the program: off to its lesson, with Suni close by. */
+  function startStep(subject: string, label: string, href: string) {
+    setCheckin(null);
+    sendCheckin({ focus: subject });
+    voice.stop();
+    setOpen(false);
+    setBubble(`${label}! Tap me if you get stuck.`);
+    router.push(href);
   }
 
   /** What they'd like to work on goes to Suni, who helps them get started. */
@@ -488,7 +518,7 @@ export function SuniCompanion() {
     const text = input.trim();
     if (!text) return;
     setInput("");
-    if (checkin === "focus") pickFocus(text);
+    if (checkin === "focus" || checkin === "program") pickFocus(text);
     else {
       setCheckin(null);
       void send(text);
@@ -555,7 +585,8 @@ export function SuniCompanion() {
             </div>
             <div className="messages" ref={scroller} aria-live="polite">
               {messages.map((m, i) => {
-                if (m.quiet) return null;
+                // The check-in is how the chat begins, so the usual hello isn't said as well.
+                if (m.quiet || (checkedIn && i === 0)) return null;
                 const { say, board: onBoard } = m.role === "assistant" ? splitBoard(m.content) : { say: m.content, board: [] };
                 return (
                   <div key={i} className={`msg ${m.role}`}>
@@ -575,21 +606,58 @@ export function SuniCompanion() {
               })}
               {checkin && profile && (
                 <div className="suni-checkin">
-                  <div className="msg assistant">Before we start, how are you feeling today?</div>
+                  <div className="msg assistant">{checkinQuestion(profile.name)}</div>
                   {checkin === "mood" ? (
-                    <div className="suni-choices" role="group" aria-label="How are you feeling?">
-                      {MOODS.map((m) => (
-                        <button key={m} type="button" className="suni-mood" onClick={() => pickMood(m)}>
-                          <span aria-hidden>{MOOD_FACES[m].face}</span>
-                          {MOOD_FACES[m].label}
-                        </button>
-                      ))}
+                    <div className="suni-choices suni-rating" role="group" aria-label="How are you feeling, from 1 to 5?">
+                      {[...MOODS]
+                        .sort((a, b) => MOOD_RATING[a] - MOOD_RATING[b])
+                        .map((m) => (
+                          <button key={m} type="button" className="suni-mood" onClick={() => pickMood(m)}>
+                            <strong>{MOOD_RATING[m]}</strong>
+                            <span aria-hidden>{MOOD_FACES[m].face}</span>
+                            {MOOD_FACES[m].label}
+                          </button>
+                        ))}
                     </div>
+                  ) : checkin === "program" && program ? (
+                    <>
+                      <div className="msg user">{mood && `${MOOD_RATING[mood]} ${MOOD_FACES[mood].face} ${MOOD_FACES[mood].label}`}</div>
+                      <div className="msg assistant">
+                        {mood && <p style={{ margin: "0 0 6px" }}>{moodReply(mood)}</p>}
+                        <p style={{ margin: "0 0 4px" }}>Here&apos;s your program this week:</p>
+                        <ul className="suni-program">
+                          {program.lines.map((l) => (
+                            <li key={l}>{l}</li>
+                          ))}
+                        </ul>
+                        <p style={{ margin: "6px 0 0" }}>
+                          {program.steps[0]
+                            ? `Shall we ${program.steps[0].suggest}? Or is there something else you'd like to do?`
+                            : "You've finished this week's lessons! Would you like to practise something?"}
+                        </p>
+                      </div>
+                      <div className="suni-choices" role="group" aria-label="What would you like to do?">
+                        {program.steps.map((st, i) => (
+                          <button
+                            key={st.subject}
+                            type="button"
+                            className={`btn small ${i ? "secondary" : ""}`}
+                            onClick={() => startStep(st.subject, st.label, st.href)}
+                          >
+                            {st.label}
+                          </button>
+                        ))}
+                        <button type="button" className="btn small secondary" onClick={() => setCheckin("focus")}>
+                          Something else
+                        </button>
+                      </div>
+                    </>
                   ) : (
                     <>
-                      <div className="msg user">{mood && `${MOOD_FACES[mood].face} ${MOOD_FACES[mood].label}`}</div>
+                      <div className="msg user">{mood && `${MOOD_RATING[mood]} ${MOOD_FACES[mood].face} ${MOOD_FACES[mood].label}`}</div>
                       <div className="msg assistant">
-                        {mood && `${moodReply(mood)} `}What would you like to work on today? Is there anything you&apos;d like to practise?
+                        {mood && !program?.lines.length && `${moodReply(mood)} `}What would you like to work on today? Is there anything
+                        you&apos;d like to practise?
                       </div>
                       <div className="suni-choices" role="group" aria-label="What would you like to work on?">
                         {FOCUS_CHOICES.map((c) => (
