@@ -1,11 +1,13 @@
-import type { NextRequest } from "next/server";
+import { after, type NextRequest } from "next/server";
 import { paymentRequired } from "@/lib/billing/access";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { databaseUrl } from "@/lib/auth/dburl";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth/session";
 import { chatLearner, saveChat, type ChatFlag } from "@/lib/auth/suniChats";
+import { checkinState, notesFor, refreshNotes } from "@/lib/auth/suniNotes";
 import { getUser, type User } from "@/lib/auth/users";
+import { memoryPrompt } from "@/lib/tutor/memory";
 import { buildContextPrompt, TutorContextSchema } from "@/lib/tutor/prompt";
 import { hasWellbeingConcern, MAX_MESSAGE_LENGTH, personalInfoReminder, redactPersonalInfo, WELLBEING_REPLY } from "@/lib/tutor/safety";
 import { checkQuestion, streamTutorReply, tutorConfigured } from "@/lib/tutor/claude";
@@ -31,18 +33,58 @@ async function signedIn(request: NextRequest): Promise<User | null> {
 
 type ChatRecord = { reply: string; flag: ChatFlag | null; flagReason: string | null };
 
+/** Who is chatting: the signed-in account, and the child the chat is kept with. */
+type Who = { user: User | null; learnerId: string | null };
+
+async function whoIsChatting(request: NextRequest, claimed: string | undefined): Promise<Who> {
+  if (!databaseUrl()) return { user: null, learnerId: null };
+  try {
+    const user = await signedIn(request);
+    return { user, learnerId: await chatLearner(user, claimed) };
+  } catch (error) {
+    console.error("Couldn't tell who is chatting with Suni", error);
+    return { user: null, learnerId: null };
+  }
+}
+
+/** What Suni remembers about the child, and how they said they feel today. Empty when there's nothing yet. */
+async function remembered(learnerId: string | null): Promise<string> {
+  if (!learnerId) return "";
+  try {
+    const [notes, { today }] = await Promise.all([notesFor(learnerId), checkinState(learnerId)]);
+    return memoryPrompt({ forSuni: notes.forSuni, today });
+  } catch (error) {
+    console.error("Couldn't read Suni's notes", error);
+    return "";
+  }
+}
+
+/**
+ * Once the chat is saved, and after the reply has gone, Suni reads the latest chats into its notes
+ * about the child. Call the returned function when the chat has been saved.
+ */
+function noteAfterwards(learnerId: string | null): () => void {
+  let saved = () => {};
+  const done = new Promise<void>((resolve) => (saved = resolve));
+  if (learnerId)
+    after(async () => {
+      const finished = await Promise.race([done.then(() => true), new Promise<false>((r) => setTimeout(() => r(false), 120_000))]);
+      if (finished) await refreshNotes(learnerId).catch((error) => console.error("Couldn't update Suni's notes", error));
+    });
+  return saved;
+}
+
 /**
  * Keeps every message a student sends Suni, and Suni's reply, so grown-ups can read them back.
  * Saving never stops the chat: without a database (local demos) or on an error, it's skipped.
  */
-async function keep(request: NextRequest, body: z.infer<typeof RequestSchema>, question: string, record: ChatRecord) {
+async function keep(who: Who, body: z.infer<typeof RequestSchema>, question: string, record: ChatRecord) {
   if (!databaseUrl()) return;
   try {
-    const user = await signedIn(request);
     await saveChat({
       conversationId: body.conversationId ?? crypto.randomUUID(),
-      userId: user?.id ?? null,
-      learnerId: await chatLearner(user, body.learnerId),
+      userId: who.user?.id ?? null,
+      learnerId: who.learnerId,
       studentName: body.context.studentName,
       yearLevel: body.context.yearLevel,
       screen: body.context.screen ?? null,
@@ -86,19 +128,23 @@ export async function POST(request: NextRequest) {
   }
 
   const { found, text: question } = redactPersonalInfo(last.content);
+  const who = await whoIsChatting(request, parsed.data.learnerId);
+  const saved = noteAfterwards(who.learnerId);
 
   // Safety checks run before anything is sent to the model.
   if (hasWellbeingConcern(last.content)) {
-    await keep(request, parsed.data, question, {
+    await keep(who, parsed.data, question, {
       reply: WELLBEING_REPLY,
       flag: "wellbeing",
       flagReason: "Something that suggests they may be unsafe or upset.",
     });
+    saved();
     return ndjson([{ type: "notice", kind: "wellbeing", text: WELLBEING_REPLY }]);
   }
   const redacted = turns.map((t) => (t.role === "user" ? { ...t, content: redactPersonalInfo(t.content).text } : t));
 
   if (!tutorConfigured()) {
+    saved();
     return ndjson([{ type: "error", text: "The tutor chat isn't switched on yet. Ask a grown-up to add the API key." }]);
   }
 
@@ -108,11 +154,14 @@ export async function POST(request: NextRequest) {
     return null;
   });
 
+  const memory = await remembered(who.learnerId);
+  const contextPrompt = buildContextPrompt(context) + (memory ? `\n${memory}` : "");
+
   async function* events(): AsyncGenerator<TutorEvent> {
     let reply = "";
     if (found.length) yield { type: "notice", kind: "privacy", text: personalInfoReminder(found) };
     try {
-      for await (const text of streamTutorReply(buildContextPrompt(context), redacted)) {
+      for await (const text of streamTutorReply(contextPrompt, redacted)) {
         reply += text;
         yield { type: "text", text };
       }
@@ -127,7 +176,7 @@ export async function POST(request: NextRequest) {
       yield { type: "error", text };
     }
     const verdict = await check;
-    await keep(request, parsed.data!, question, {
+    await keep(who, parsed.data!, question, {
       reply,
       ...(verdict && !verdict.appropriate
         ? { flag: "inappropriate", flagReason: verdict.reason || verdict.category.replace(/_/g, " ") }
@@ -135,6 +184,7 @@ export async function POST(request: NextRequest) {
           ? { flag: "personal_info", flagReason: `Shared their ${found.join(" or ")} (hidden from Suni).` }
           : { flag: null, flagReason: null }),
     });
+    saved();
   }
   return ndjson(events());
 }

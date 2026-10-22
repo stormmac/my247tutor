@@ -6,6 +6,7 @@ import { StudentReport } from "@/components/StudentReport";
 import { WeekCalendar } from "@/components/WeekCalendar";
 import { CLASS_SUBJECTS as SUBJECTS, describeTime, formatDuration, WEEKDAYS, type ClassTime } from "@/lib/auth/rules";
 import { YEARS } from "@/lib/curriculum/types";
+import { SuniStudentNotes } from "@/components/SuniNotes";
 import { dateOfBirthProblem, describeBirth, today } from "@/lib/learner/birth";
 
 interface Teacher {
@@ -137,6 +138,8 @@ export default function CentrePage() {
           {centre.students.length === 1 ? "student" : "students"}.
         </p>
       </div>
+
+      <SuniStudentNotes />
 
       {notice && (
         <div className={`feedback ${inviteLink ? "warn" : "good"}`} role="status">

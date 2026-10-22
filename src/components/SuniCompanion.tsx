@@ -8,6 +8,7 @@ import { useSpeechInput, type SpeechInputProblem } from "@/components/useSpeechI
 import { useSuniVoice } from "@/components/useSuniVoice";
 import { useTutorChat } from "@/components/useTutorChat";
 import { CELEBRATE_EVENT } from "@/lib/tutor/celebrate";
+import { FOCUS_CHOICES, MOOD_FACES, MOODS, moodReply, type Mood } from "@/lib/tutor/memory";
 import { TUTOR_NAME } from "@/lib/tutor/persona";
 import type { TutorContext } from "@/lib/tutor/prompt";
 import type { YearLevel } from "@/lib/curriculum/types";
@@ -125,6 +126,10 @@ export function SuniCompanion() {
   const field = useRef<HTMLInputElement>(null);
   const [pose, setPose] = useState<SuniPose | null>(null);
   const [slaps, setSlaps] = useState(0);
+  // The start-of-visit check-in: how they feel, then what they'd like to work on.
+  const [checkin, setCheckin] = useState<"mood" | "focus" | null>(null);
+  const [mood, setMood] = useState<Mood | null>(null);
+  const checkedFor = useRef<string | null>(null);
 
   // A right answer anywhere: a thumbs up, or a hand held up for a high five the child can tap.
   useEffect(() => {
@@ -190,6 +195,50 @@ export function SuniCompanion() {
     return () => clearTimeout(t);
   }, [loaded]);
 
+  // At the start of a visit, Suni flies in and asks how they're feeling and what they'd like to work on.
+  const hidden = HIDDEN_ON.some((p) => pathname.startsWith(p));
+  useEffect(() => {
+    // Only a child kept with an account has check-ins to keep.
+    if (!loaded || !profile?.id || hidden || checkedFor.current === profile.id) return;
+    checkedFor.current = profile.id;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    void fetch(`/api/suni/checkin?learner=${profile.id}`)
+      .then((res) => (res.ok ? (res.json() as Promise<{ due?: boolean }>) : null))
+      .then((body) => {
+        if (!body?.due) return;
+        t = setTimeout(() => {
+          setBubble(null);
+          setCheckin("mood");
+          setOpen(true);
+          voice.say(`Hi ${profile.name}! How are you feeling today?`);
+        }, 1200);
+      })
+      .catch(() => undefined);
+    return () => clearTimeout(t);
+  }, [loaded, profile?.id, hidden]);
+
+  function sendCheckin(answer: { mood?: Mood | null; focus?: string | null }) {
+    void fetch("/api/suni/checkin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ learnerId: profile?.id, ...answer }),
+    }).catch(() => undefined);
+  }
+
+  function pickMood(picked: Mood) {
+    setMood(picked);
+    setCheckin("focus");
+    sendCheckin({ mood: picked });
+    voice.say(`${moodReply(picked)} What would you like to work on today? Is there anything you'd like to practise?`);
+  }
+
+  /** What they'd like to work on goes to Suni, who helps them get started. */
+  function pickFocus(focus: string, ask = focus) {
+    setCheckin(null);
+    sendCheckin({ focus });
+    void send(ask);
+  }
+
   // Speech bubbles fade away after a while.
   useEffect(() => {
     if (!bubble) return;
@@ -199,7 +248,7 @@ export function SuniCompanion() {
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
-  }, [messages, open]);
+  }, [messages, open, checkin]);
 
   useEffect(() => {
     if (open) field.current?.focus();
@@ -216,7 +265,7 @@ export function SuniCompanion() {
   });
 
   // After every hook, so moving between pages where Suni is hidden and shown keeps the same hooks.
-  if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null;
+  if (hidden) return null;
 
   function toggle() {
     // Tapping Suni's raised hand is a high five, not opening the chat.
@@ -236,6 +285,9 @@ export function SuniCompanion() {
   function close() {
     voice.stop();
     setOpen(false);
+    // Closed without saying how they feel: Suni won't ask again until next time.
+    if (checkin === "mood") sendCheckin({ mood: null });
+    setCheckin(null);
   }
 
   function startTalking(e: React.PointerEvent | React.KeyboardEvent) {
@@ -253,7 +305,11 @@ export function SuniCompanion() {
     const text = input.trim();
     if (!text) return;
     setInput("");
-    void send(text);
+    if (checkin === "focus") pickFocus(text);
+    else {
+      setCheckin(null);
+      void send(text);
+    }
   }
 
   return (
@@ -291,6 +347,40 @@ export function SuniCompanion() {
                 )}
               </div>
             ))}
+            {checkin && profile && (
+              <div className="suni-checkin">
+                <div className="msg assistant">Before we start, how are you feeling today?</div>
+                {checkin === "mood" ? (
+                  <div className="suni-choices" role="group" aria-label="How are you feeling?">
+                    {MOODS.map((m) => (
+                      <button key={m} type="button" className="suni-mood" onClick={() => pickMood(m)}>
+                        <span aria-hidden>{MOOD_FACES[m].face}</span>
+                        {MOOD_FACES[m].label}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <div className="msg user">{mood && `${MOOD_FACES[mood].face} ${MOOD_FACES[mood].label}`}</div>
+                    <div className="msg assistant">
+                      {mood && `${moodReply(mood)} `}What would you like to work on today? Is there anything you&apos;d like to practise?
+                    </div>
+                    <div className="suni-choices" role="group" aria-label="What would you like to work on?">
+                      {FOCUS_CHOICES.map((c) => (
+                        <button
+                          key={c.label}
+                          type="button"
+                          className="btn small secondary"
+                          onClick={() => pickFocus(c.label.replace(/^\S+ /, ""), c.ask)}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           {context && (speech.listening || speech.problem) && (
             <p className={`suni-mic-status small ${speech.problem ? "problem" : ""}`} role="status">
@@ -304,7 +394,7 @@ export function SuniCompanion() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={`Ask ${TUTOR_NAME}…`}
+                placeholder={checkin === "focus" ? "Or tell me what you'd like to practise…" : `Ask ${TUTOR_NAME}…`}
                 maxLength={1000}
                 aria-label={`Message ${TUTOR_NAME}`}
               />
