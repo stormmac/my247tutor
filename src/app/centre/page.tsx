@@ -514,7 +514,7 @@ function Students({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
                 <th>Year</th>
                 <th>Username</th>
                 <th>Classes</th>
-                <th>Parents</th>
+                <th>Family</th>
                 <th>Last sign-in</th>
                 <th />
               </tr>
@@ -556,7 +556,7 @@ function Students({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
                           setLinking(null);
                           if (!invite) return;
                           const message = invite.existing
-                            ? `${invite.email} already has an account, so ${s.name} is now on their Parents page.`
+                            ? `${invite.email} already has an account, so ${s.name} is now on their Family page.`
                             : undefined;
                           await run(Promise.resolve({ error: null, data: {} }), message);
                           if (!invite.existing) onInvited(invite);
@@ -665,7 +665,7 @@ function Parents({
             required
           />
           <p className="small muted" style={{ margin: 0 }}>
-            They&apos;ll see {student.name}&apos;s progress on their Parents page. You pay for {student.name}, so they don&apos;t.
+            They&apos;ll see {student.name}&apos;s progress on their Family page. You pay for {student.name}, so they don&apos;t.
           </p>
           {error && (
             <div className="feedback bad small" role="alert">

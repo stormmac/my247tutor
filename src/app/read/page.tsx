@@ -49,7 +49,7 @@ export default function ReadPage() {
         <p className="muted" style={{ margin: 0 }}>
           {reading.age === null
             ? `Do the reading check to see if it's right for ${profile.name}.`
-            : `${profile.name}'s reading age is ${formatReadingAge(reading.age)}, so they don't need it. A grown-up can still turn it on from the Parents page.`}
+            : `${profile.name}'s reading age is ${formatReadingAge(reading.age)}, so they don't need it. A grown-up can still turn it on from the Family page.`}
         </p>
         <div className="row">
           <Link className="btn" href="/read/check">

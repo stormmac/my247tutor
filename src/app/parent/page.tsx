@@ -261,7 +261,7 @@ function ParentGate({ onPass }: { onPass: () => void }) {
         else setWrong(true);
       }}
     >
-      <h1>For parents</h1>
+      <h1>For families</h1>
       <p className="muted">To continue, answer this question.</p>
       <label htmlFor="gate">
         What is {a} × {b}?

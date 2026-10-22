@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { signOut, useAccount } from "@/components/useAccount";
 
-/** The Parents link in the top bar, or a centre's, teacher's or admin's own pages. A child signed in on their own gets none. */
+/** The Family link in the top bar, or a centre's, teacher's or admin's own pages. A child signed in on their own gets none. */
 export function ParentsLink() {
   const { user, loaded, enabled } = useAccount();
   // Logged out, Log in and Sign up say where parents go.
@@ -13,16 +13,17 @@ export function ParentsLink() {
   if (user?.child) return null;
   if (user?.role === "centre") return <Link href="/centre">Centre</Link>;
   if (user?.role === "teacher") return <Link href="/classes">Classes</Link>;
-  if (user?.role === "admin") return <Link href="/admin">Admin</Link>;
-  return <Link href="/parent">Parents</Link>;
+  if (user?.role === "admin") return <Link href="/admin">Super admin</Link>;
+  return <Link href="/parent">Family</Link>;
 }
 
-const ROLE_NAMES: Record<string, string> = {
-  admin: "Admin",
-  parent: "Parent",
-  centre: "Tutoring centre",
-  teacher: "Teacher",
-  student: "Student",
+/** Which kind of account someone is logged into, as the top bar shows it. */
+export const ACCOUNT_NAMES: Record<string, { icon: string; name: string }> = {
+  admin: { icon: "⭐", name: "Super admin" },
+  parent: { icon: "👪", name: "Family account" },
+  centre: { icon: "🏫", name: "Centre admin" },
+  teacher: { icon: "🧑‍🏫", name: "Teacher account" },
+  student: { icon: "🎒", name: "Student" },
 };
 
 /**
@@ -64,8 +65,12 @@ export function AccountMenu() {
   const titled = words.length > 1 && /^(mr|mrs|ms|miss|mx|dr)\.?$/i.test(words[0]);
   const firstName = (titled ? words.slice(0, 2).join(" ") : words[0]) || user.name;
   const initial = (titled ? words[1] : firstName).charAt(0).toUpperCase();
+  const kind = ACCOUNT_NAMES[user.role] ?? { icon: "👤", name: user.role };
   return (
     <>
+      <span className={`account-kind account-kind-${user.role}`} title={`You're logged into a ${kind.name.toLowerCase()}`}>
+        <span aria-hidden="true">{kind.icon}</span> {kind.name}
+      </span>
       {user.trialEndsAt && !user.child && !user.actingAdmin && <TrialTimer endsAt={user.trialEndsAt} account />}
       <details className="account-menu" ref={menu}>
         <summary aria-label={`Account menu for ${user.name}`}>
@@ -78,7 +83,9 @@ export function AccountMenu() {
           <div className="account-who">
             <strong>{user.name}</strong>
             <span className="small muted">{user.email}</span>
-            <span className="small muted">{ROLE_NAMES[user.role] ?? user.role}</span>
+            <span className="small muted">
+              {kind.icon} {kind.name}
+            </span>
           </div>
           <Link href="/account">My account</Link>
           {billing && (user.role === "parent" || user.role === "centre") && <Link href="/billing">Billing</Link>}

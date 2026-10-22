@@ -43,7 +43,7 @@ export default function AdminPage() {
   if (!account.enabled) {
     return (
       <div className="stack" style={{ maxWidth: 720 }}>
-        <h1>Admin</h1>
+        <h1>Super admin</h1>
         <SetupStatus />
       </div>
     );
@@ -142,7 +142,7 @@ function Accounts() {
       <AdminTabs current="accounts" />
       <div className="row spread">
         <div>
-          <h1>Admin</h1>
+          <h1>Super admin</h1>
           <p className="muted" style={{ margin: 0 }}>
             {users.length} accounts, {users.filter((u) => u.isActive).length} active, {users.reduce((n, u) => n + u.learners, 0)} learners.
           </p>
@@ -233,9 +233,9 @@ function Accounts() {
                       aria-label={`Role for ${u.email}`}
                       style={{ width: "auto" }}
                     >
-                      <option value="parent">Parent</option>
+                      <option value="parent">Family</option>
                       <option value="centre">Tutoring centre</option> <option value="teacher">Teacher</option>
-                      <option value="admin">Admin</option>
+                      <option value="admin">Super admin</option>
                     </select>
                   </td>
                   <td>
@@ -374,9 +374,9 @@ function AddAccount({ onAdded, onCancel, emailOn }: { onAdded: (invite: Invite) 
         <label className="row" style={{ fontWeight: 400, margin: 0 }}>
           Role
           <select value={role} onChange={(e) => setRole(e.target.value as Role)} style={{ width: "auto" }}>
-            <option value="parent">Parent</option>
+            <option value="parent">Family</option>
             <option value="centre">Tutoring centre</option> <option value="teacher">Teacher</option>
-            <option value="admin">Admin</option>
+            <option value="admin">Super admin</option>
           </select>
         </label>
         {(role === "parent" || role === "centre") && (
@@ -440,7 +440,7 @@ function PaymentsSetup() {
           <h2 style={{ margin: 0 }}>{status.enabled ? "Card payments are on" : "Card payments are off"}</h2>
           <p className="muted" style={{ margin: "4px 0 0" }}>
             {status.enabled
-              ? `Parents pay ${price ?? "the Stripe price"} once their free trial ends.${done ? "" : " Some setup is still missing."}`
+              ? `Families pay ${price ?? "the Stripe price"} once their free trial ends.${done ? "" : " Some setup is still missing."}`
               : "Until Stripe is connected, nobody is asked to pay."}
           </p>
         </div>

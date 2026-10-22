@@ -16,7 +16,7 @@ export default function Home() {
               Start learning
             </Link>
             <Link href="/parent" className="btn secondary">
-              Parent dashboard
+              Family dashboard
             </Link>
           </div>
         </div>
