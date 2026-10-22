@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { SuniStudentNotes } from "@/components/SuniNotes";
 import { WeekCalendar, type CalendarClass } from "@/components/WeekCalendar";
 import { CLASS_SUBJECTS, describeTime } from "@/lib/auth/rules";
 
@@ -39,6 +40,7 @@ export default function ClassesPage() {
         </div>
       ) : (
         <>
+          <SuniStudentNotes />
           <div className="card stack">
             <h2 style={{ margin: 0 }}>Timetable</h2>
             <WeekCalendar classes={data.classes} />

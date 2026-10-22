@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ParentSummary } from "@/components/ParentSummary";
 import { FullReport, WellbeingAlert } from "@/components/ProgressReport";
 import { SuniChatsButton } from "@/components/SuniChats";
+import { SuniNotes } from "@/components/SuniNotes";
 import type { LearnerProfile } from "@/lib/learner/model";
 
 /**
@@ -61,6 +62,7 @@ export function StudentReport({
       {profile && (
         <>
           <WellbeingAlert profile={profile} />
+          <SuniNotes learnerId={studentId} name={name} />
           <ParentSummary profile={profile} />
           <FullReport profile={profile} />
         </>

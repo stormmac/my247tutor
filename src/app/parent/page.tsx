@@ -8,6 +8,7 @@ import { ChildTabs } from "@/components/ChildSwitcher";
 import { ParentSummary } from "@/components/ParentSummary";
 import { FullReport, WellbeingAlert } from "@/components/ProgressReport";
 import { SuniChatsButton } from "@/components/SuniChats";
+import { SuniNotes } from "@/components/SuniNotes";
 import { removeCurrentChild, useProfile } from "@/components/useProfile";
 import type { LearnerProfile } from "@/lib/learner/model";
 import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, localeOf, outcomesName, yearName } from "@/lib/curriculum/curricula";
@@ -82,6 +83,7 @@ export default function ParentPage() {
           <ReportButtons learnerId={atCentre.profile.id} name={atCentre.name} />
         </div>
         <WellbeingAlert profile={atCentre.profile} />
+        <SuniNotes learnerId={atCentre.profile.id} name={atCentre.name} />
         <ParentSummary profile={atCentre.profile} />
         <FullReport profile={atCentre.profile} />
         <p className="small muted no-print">
@@ -123,6 +125,7 @@ export default function ParentPage() {
       </div>
 
       <WellbeingAlert profile={profile} onChange={setProfile} />
+      {account.user && <SuniNotes learnerId={profile.id} name={profile.name} />}
       <ParentSummary profile={profile} />
       <FullReport profile={profile} onChange={setProfile} />
 
