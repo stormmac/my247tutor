@@ -44,6 +44,19 @@ beforeAll(async () => {
       if (body.fallbacks) {
         res.writeHead(400, { "content-type": "application/json" });
         res.end(JSON.stringify({ type: "error", error: { type: "invalid_request_error", message: "fallbacks: not accepted" } }));
+      } else if (!body.stream) {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(
+          JSON.stringify({
+            id: "m",
+            type: "message",
+            role: "assistant",
+            model: "claude-opus-5-5",
+            content: [{ type: "text", text: "Hello there, lovely friend!" }],
+            stop_reason: "end_turn",
+            usage: { input_tokens: 1, output_tokens: 5 },
+          }),
+        );
       } else {
         res.writeHead(200, { "content-type": "text/event-stream" });
         res.end(sse("I'm buzzing, thanks for asking!"));
@@ -67,5 +80,17 @@ describe("streamTutorReply", () => {
     expect(reply).toBe("I'm buzzing, thanks for asking!");
     expect(bodies).toHaveLength(2);
     expect(bodies[1]).not.toHaveProperty("fallbacks");
+  });
+
+  it("the admin test says which request fails and why", async () => {
+    const { checkTutor } = await import("../tutor/claude");
+    const check = await checkTutor();
+    expect(check.keySet).toBe(true);
+    expect(check.tries.map((t) => [t.label, t.ok, t.status])).toEqual([
+      ["Chat request", false, 400],
+      ["Plain request", true, 200],
+    ]);
+    expect(check.tries[0].detail).toContain("fallbacks: not accepted");
+    expect(check.tries[1].detail).toBe("Hello there, lovely friend!");
   });
 });
