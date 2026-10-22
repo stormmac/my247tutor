@@ -10,6 +10,7 @@ import { PHONICS_CLIPS_SQL } from "./phonicsClipSchema";
 import { PRAISE_SQL } from "./praiseSchema";
 import { SUNI_CHAT_SQL } from "./suniChatSchema";
 import { SUNI_NOTES_SQL } from "./suniNotesSchema";
+import { QUESTION_HINTS_SQL } from "./hintSchema";
 import { connectionString, databaseUrl } from "./dburl";
 
 let pool: Pool | null = null;
@@ -26,9 +27,23 @@ export function db(): Pool {
 
 let schema: Promise<Pool> | null = null;
 
-const LATER_SQL = `${BILLING_SQL}\n${INVITE_SQL}\n${CHILD_SQL}\n${CENTRE_SQL}\n${CLASS_TIMES_SQL}\n${PRAISE_SQL}\n${SUNI_CHAT_SQL}\n${CURRICULUM_SQL}\n${UK_CURRICULUM_SQL}\n${YEARS_SQL}\n${FAMILY_SQL}\n${SCHOOL_TOPICS_SQL}\n${PHONICS_CLIPS_SQL}\n${SUNI_NOTES_SQL}`;
+const LATER_SQL = `${BILLING_SQL}
+${INVITE_SQL}
+${CHILD_SQL}
+${CENTRE_SQL}
+${CLASS_TIMES_SQL}
+${PRAISE_SQL}
+${SUNI_CHAT_SQL}
+${CURRICULUM_SQL}
+${UK_CURRICULUM_SQL}
+${YEARS_SQL}
+${FAMILY_SQL}
+${SCHOOL_TOPICS_SQL}
+${PHONICS_CLIPS_SQL}
+${SUNI_NOTES_SQL}
+${QUESTION_HINTS_SQL}`;
 
-/** The pool, once the card-payment columns, invite table, child sign-in columns, centre tables, class times, praise phrases, Suni chats, curriculum columns, centre parents, set work, recorded phonics sounds and Suni's notes exist. Tried again on the next call if it fails. */
+/** The pool, once the card-payment columns, invite table, child sign-in columns, centre tables, class times, praise phrases, Suni chats, curriculum columns, centre parents, set work, recorded phonics sounds, Suni's notes and question hints exist. Tried again on the next call if it fails. */
 export function ready(): Promise<Pool> {
   schema ??= db()
     .query(LATER_SQL)

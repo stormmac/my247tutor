@@ -17,6 +17,7 @@ export function generateEnglishQuestion(skillId: string, seed: number): Question
       prompt: item.prompt,
       choices,
       answer: { kind: "choice", index: choices.indexOf(item.correct) },
+      writeHints: true,
       hints: skillId.includes("spelling")
         ? [
             "Say each option slowly and listen for each sound.",
@@ -49,6 +50,7 @@ export function generateEnglishQuestion(skillId: string, seed: number): Question
       prompt: q.prompt,
       choices,
       answer: { kind: "choice", index: choices.indexOf(q.correct) },
+      writeHints: true,
       hints: [
         hintByType[q.type],
         "Reread the paragraph that is most about this question.",

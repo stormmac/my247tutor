@@ -22,6 +22,7 @@ export function toPracticeQuestion(q: ContentQuestion, seed: number): Question {
     skillId: q.subtopic_id,
     prompt: q.question_text,
     hints: HINTS[q.question_type],
+    writeHints: true,
     solution: q.explanation,
     ...(q.picture ? { picture: q.picture } : {}),
     ...(q.passage ? { passage: q.passage } : {}),
