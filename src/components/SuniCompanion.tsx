@@ -8,7 +8,8 @@ import { useSpeechInput, type SpeechInputProblem } from "@/components/useSpeechI
 import { useSuniVoice } from "@/components/useSuniVoice";
 import { useTutorChat } from "@/components/useTutorChat";
 import { Whiteboard, type WhiteboardHandle } from "@/components/Whiteboard";
-import { splitBoard, wantsHelp } from "@/lib/tutor/board";
+import { parseAlgorithm } from "@/lib/tutor/algorithm";
+import { CHECKING_MESSAGE, splitBoard, STILL_WORKING_MESSAGE, wantsHelp } from "@/lib/tutor/board";
 import { CELEBRATE_EVENT } from "@/lib/tutor/celebrate";
 import { FOCUS_CHOICES, MOOD_FACES, MOODS, moodReply, type Mood } from "@/lib/tutor/memory";
 import { TUTOR_NAME } from "@/lib/tutor/persona";
@@ -186,18 +187,30 @@ export function SuniCompanion() {
           .filter((m) => m.role === "assistant")
           .map((m) => splitBoard(m.content).board)
           .filter((lines) => lines.length);
+  // The latest written method Suni set out is drawn properly; the rest is Suni's handwriting.
+  const boardAlgorithm =
+    boardSections
+      .flat()
+      .map(parseAlgorithm)
+      .filter((a) => a !== null)
+      .at(-1) ?? null;
+  const boardWriting = boardSections.map((lines) => lines.filter((l) => !parseAlgorithm(l))).filter((lines) => lines.length);
   function openBoard() {
     setBoardFrom((from) => from ?? messages.length);
   }
-  function send(text: string, image = board.current?.takePicture()) {
+  function send(text: string, image = board.current?.takePicture(), quiet = false) {
     if (wantsHelp(text)) openBoard();
-    return sendChat(text, image);
+    return sendChat(text, image, quiet);
   }
-  // Suni writing on the board opens it.
+  // Suni writing on the board in a new reply opens it, once: closing it keeps it closed.
   const last = messages.at(-1);
+  const openedFor = useRef(-1);
   useEffect(() => {
-    if (boardFrom === null && last?.role === "assistant" && splitBoard(last.content).board.length) setBoardFrom(messages.length - 1);
-  }, [boardFrom, last, messages.length]);
+    const at = messages.length - 1;
+    if (at <= openedFor.current || last?.role !== "assistant" || !splitBoard(last.content).board.length) return;
+    openedFor.current = at;
+    setBoardFrom((from) => from ?? at);
+  }, [last, messages.length]);
 
   // Suni reads each reply aloud once it has finished arriving.
   const wasBusy = useRef(false);
@@ -346,11 +359,16 @@ export function SuniCompanion() {
       {boardFrom !== null && (
         <Whiteboard
           ref={board}
-          sections={boardSections}
+          sections={boardWriting}
+          algorithm={boardAlgorithm}
           busy={busy}
-          onShow={() => {
+          onCheck={() => {
             setOpen(true);
-            void send("Here's my working on the whiteboard.");
+            void send(CHECKING_MESSAGE, board.current?.takePicture(true));
+          }}
+          onPause={() => {
+            const picture = board.current?.takePicture();
+            if (picture) void send(STILL_WORKING_MESSAGE, picture, true);
           }}
           onClear={() => setBoardFrom(messages.length)}
           onClose={() => setBoardFrom(null)}
@@ -393,6 +411,7 @@ export function SuniCompanion() {
             </div>
             <div className="messages" ref={scroller} aria-live="polite">
               {messages.map((m, i) => {
+                if (m.quiet) return null;
                 const { say, board: onBoard } = m.role === "assistant" ? splitBoard(m.content) : { say: m.content, board: [] };
                 return (
                   <div key={i} className={`msg ${m.role}`}>

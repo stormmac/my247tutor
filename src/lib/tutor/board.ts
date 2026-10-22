@@ -27,5 +27,11 @@ export function wantsHelp(message: string): boolean {
   );
 }
 
+/** Sent with a picture when the student presses "Check my answer". */
+export const CHECKING_MESSAGE = "Can you check my answer on the whiteboard?";
+
+/** Sent quietly with a picture when the student stops drawing for a moment and "Help as I draw" is on. */
+export const STILL_WORKING_MESSAGE = "(I'm still working on the whiteboard. Have a look at what I've done so far.)";
+
 /** The largest picture of the board sent to Suni, as a data URL. */
 export const MAX_BOARD_IMAGE = 1_500_000;
