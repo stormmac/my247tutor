@@ -1,4 +1,7 @@
-import { useId } from "react";
+"use client";
+
+import dynamic from "next/dynamic";
+import { useEffect, useId, useState } from "react";
 
 /**
  * Suni, the robot bumble bee tutor, drawn to match the character art: a big glossy orange head
@@ -10,17 +13,50 @@ import { useId } from "react";
 /** What Suni does with the right arm to celebrate a right answer. */
 export type SuniPose = "thumbsUp" | "highFive";
 
-export function Suni({
-  size = 120,
-  animated = true,
-  wave = false,
-  pose = null,
-}: {
+interface SuniProps {
   size?: number;
   animated?: boolean;
   wave?: boolean;
   pose?: SuniPose | null;
-}) {
+}
+
+// The 3D model needs WebGL and three.js, so it loads in the browser after the drawing shows.
+const Suni3D = dynamic(() => import("@/components/Suni3D"), { ssr: false });
+
+function canUseWebGL(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    return Boolean(canvas.getContext("webgl2") || canvas.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Suni as a 3D model where the browser can draw one, and as the drawing until it is ready or
+ * where it can't.
+ */
+export function Suni({ size = 120, animated = true, wave = false, pose = null }: SuniProps) {
+  const [webgl, setWebgl] = useState(false);
+  const [ready, setReady] = useState(false);
+  useEffect(() => setWebgl(canUseWebGL()), []);
+
+  return (
+    <span
+      className="suni-holder"
+      data-pose={pose ?? undefined}
+      data-render={ready ? "3d" : "drawing"}
+      role="img"
+      aria-label="Suni, a friendly robot bumble bee"
+      style={{ width: size, height: Math.round(size * 1.1) }}
+    >
+      {!ready && <SuniDrawing size={size} animated={animated} wave={wave} pose={pose} />}
+      {webgl && <Suni3D size={size} animated={animated} wave={wave} pose={pose ?? null} onReady={() => setReady(true)} />}
+    </span>
+  );
+}
+
+function SuniDrawing({ size = 120, animated = true, wave = false, pose = null }: SuniProps) {
   const uid = useId().replace(/:/g, "");
   const id = (name: string) => `suni-${uid}-${name}`;
   const url = (name: string) => `url(#${id(name)})`;
@@ -64,8 +100,7 @@ export function Suni({
       width={size}
       height={size * 1.1}
       viewBox="0 0 200 220"
-      role="img"
-      aria-label="Suni, a friendly robot bumble bee"
+      aria-hidden
     >
       <defs>
         <radialGradient id={id("head")} cx="38%" cy="30%" r="78%">

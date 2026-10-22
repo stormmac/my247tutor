@@ -556,6 +556,18 @@ a.tab {
 }
 
 /* Suni, the robot bee tutor */
+.suni-holder {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+}
+.suni-3d {
+  position: absolute;
+  inset: 0;
+}
+.suni-3d canvas {
+  display: block;
+}
 .suni {
   display: block;
   flex-shrink: 0;
