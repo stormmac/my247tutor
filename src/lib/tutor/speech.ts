@@ -54,6 +54,22 @@ export interface SpeechPart {
   ipa?: string;
 }
 
+/** Sent on window when Suni starts talking (detail true) and stops (detail false), so pictures of Suni can move their mouth. */
+export const SUNI_TALKING = "suni-talking";
+
+let talkingTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Says Suni is talking, or has stopped; when talking for a known time, stopping follows by itself. */
+function talking(on: boolean, ms?: number) {
+  if (typeof window === "undefined" || typeof window.dispatchEvent !== "function") return;
+  if (talkingTimer) clearTimeout(talkingTimer);
+  talkingTimer = on && ms ? setTimeout(() => talking(false), ms) : null;
+  window.dispatchEvent(new CustomEvent(SUNI_TALKING, { detail: on }));
+}
+
+/** About how long the device's voice takes to say some text, for when it never says it's finished. */
+const sayingTime = (text: string) => 600 + text.length * 90;
+
 let waitedForVoices = false;
 /** Counts what Suni is asked to say, so something newer replaces a line still waiting. */
 let latest = 0;
@@ -155,6 +171,7 @@ async function speakWithClips(words: SpeechPart[], turn: number) {
       source.connect(ctx.destination);
       source.start();
       playing.push(source);
+      talking(true, buffer.duration * 1000);
       await wait(buffer.duration * 1000);
     } else await sayAndWait(part, turn);
   }
@@ -173,10 +190,17 @@ async function sayAndWait(part: SpeechPart, turn: number) {
     if (voice) utterance.voice = voice;
     utterance.lang = voice?.lang ?? "en-AU";
     Object.assign(utterance, part.word ? WORD : TALK);
-    utterance.onend = () => resolve();
-    utterance.onerror = () => resolve();
+    utterance.onstart = () => talking(true, sayingTime(part.text));
+    utterance.onend = () => {
+      talking(false);
+      resolve();
+    };
+    utterance.onerror = () => {
+      talking(false);
+      resolve();
+    };
     // Some browsers never say they've finished, so stop waiting after about as long as it takes to say.
-    setTimeout(resolve, 600 + part.text.length * 90);
+    setTimeout(resolve, sayingTime(part.text));
     window.speechSynthesis.speak(utterance);
   });
 }
@@ -284,6 +308,7 @@ async function playCloud(parts: SpeechPart[], turn: number): Promise<number | fa
       playing.push(source);
       at += buffer.duration + 0.3;
     }
+    talking(true, (at - 0.3 - start) * 1000);
     return at - 0.3 - start;
   } catch {
     return false;
@@ -291,6 +316,7 @@ async function playCloud(parts: SpeechPart[], turn: number): Promise<number | fa
 }
 
 function stopAudio() {
+  talking(false);
   for (const source of playing) {
     try {
       source.stop();
@@ -310,13 +336,101 @@ export const WORD = { rate: 0.7, pitch: 1 };
 
 function say(parts: SpeechPart[]) {
   const voice = pickVoice(window.speechSynthesis.getVoices());
-  for (const part of parts) {
+  const time = parts.reduce((ms, p) => ms + sayingTime(p.text), 0);
+  for (const [i, part] of parts.entries()) {
     const utterance = new SpeechSynthesisUtterance(part.text);
     if (voice) utterance.voice = voice;
     utterance.lang = voice?.lang ?? "en-AU";
     Object.assign(utterance, part.word ? WORD : TALK);
+    if (i === 0) utterance.onstart = () => talking(true, time);
+    if (i === parts.length - 1) utterance.onend = utterance.onerror = () => talking(false);
     window.speechSynthesis.speak(utterance);
   }
+}
+
+/** Says a line and finishes once it's said, or straight away if something else is said instead. */
+export async function speakAndWait(text: string): Promise<void> {
+  if (typeof window === "undefined") return;
+  const turn = ++latest;
+  stopAudio();
+  if (speechSupported()) window.speechSynthesis.cancel();
+  await sayAndWait({ text: speakableText(text) }, turn);
+}
+
+/** How Suni reads a sentence for a child to follow: slower than talking. */
+export const READ = { rate: 0.8, pitch: 1.1 };
+
+/** When each word starts, in ms from the start, if `ms` is spread over the words by their length. */
+export function wordTimes(words: string[], ms: number): number[] {
+  const weights = words.map((w) => w.length + 2);
+  const total = weights.reduce((a, b) => a + b, 0) || 1;
+  let at = 0;
+  return weights.map((w) => {
+    const start = (at / total) * ms;
+    at += w;
+    return start;
+  });
+}
+
+/** Which word a character position in the sentence falls in. */
+export function wordAt(sentence: string, charIndex: number): number {
+  return Math.max(
+    0,
+    sentence
+      .slice(0, charIndex + 1)
+      .trim()
+      .split(/\s+/).length - 1,
+  );
+}
+
+/**
+ * Reads a sentence slowly for a child to follow along, calling `onWord` with each word's position
+ * as Suni says it. Finishes when Suni has, or straight away if something else is said instead.
+ */
+export async function readAlong(sentence: string, onWord: (index: number) => void): Promise<void> {
+  if (typeof window === "undefined") return;
+  const turn = ++latest;
+  stopAudio();
+  if (speechSupported()) window.speechSynthesis.cancel();
+  const words = sentence.trim().split(/\s+/);
+  const follow = (ms: number) => wordTimes(words, ms).map((at, i) => setTimeout(() => turn === latest && onWord(i), at));
+
+  if (cloudOn !== false && (await cloudVoice())) {
+    const seconds = await playCloud([{ text: sentence }], turn);
+    if (seconds !== false) {
+      if (turn === latest) follow(seconds * 1000);
+      return wait(seconds * 1000).then(() => undefined);
+    }
+  }
+  if (!speechSupported() || turn !== latest) return;
+  await new Promise<void>((resolve) => {
+    const voice = pickVoice(window.speechSynthesis.getVoices());
+    const utterance = new SpeechSynthesisUtterance(sentence);
+    if (voice) utterance.voice = voice;
+    utterance.lang = voice?.lang ?? "en-AU";
+    Object.assign(utterance, READ);
+    const time = sayingTime(sentence) / READ.rate;
+    // Words are followed by the voice's own word marks where it gives them, otherwise by time.
+    let timed: ReturnType<typeof setTimeout>[] = [];
+    let marked = false;
+    utterance.onstart = () => {
+      talking(true, time);
+      if (!marked) timed = follow(time - 600);
+    };
+    utterance.onboundary = (e) => {
+      if (e.name && e.name !== "word") return;
+      if (!marked) timed.forEach(clearTimeout);
+      marked = true;
+      if (turn === latest) onWord(wordAt(sentence, e.charIndex));
+    };
+    utterance.onend = utterance.onerror = () => {
+      timed.forEach(clearTimeout);
+      talking(false);
+      resolve();
+    };
+    setTimeout(resolve, time + 1000);
+    window.speechSynthesis.speak(utterance);
+  });
 }
 
 export function stopSpeaking() {

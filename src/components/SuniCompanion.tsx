@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Suni, type SuniPose } from "@/components/Suni";
+import { Suni, type SuniPose, useSuniTalking } from "@/components/Suni";
 import { useProfile } from "@/components/useProfile";
 import { useSpeechInput, type SpeechInputProblem } from "@/components/useSpeechInput";
 import { useSuniVoice } from "@/components/useSuniVoice";
@@ -125,6 +125,7 @@ export function SuniCompanion() {
   const scroller = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLInputElement>(null);
   const [pose, setPose] = useState<SuniPose | null>(null);
+  const talking = useSuniTalking();
   const [slaps, setSlaps] = useState(0);
   // The start-of-visit check-in: how they feel, then what they'd like to work on.
   const [checkin, setCheckin] = useState<"mood" | "focus" | null>(null);
@@ -441,7 +442,7 @@ export function SuniCompanion() {
           pose === "highFive" ? `Give ${TUTOR_NAME} a high five` : open ? `Close chat with ${TUTOR_NAME}` : `Chat with ${TUTOR_NAME}`
         }
       >
-        <Suni size={open ? 72 : 92} wave={!!bubble && !open} pose={pose} />
+        <Suni size={open ? 72 : 92} wave={!!bubble && !open} pose={pose} talking={talking && !pose} />
         {slaps > 0 && (
           <span key={slaps} className="suni-slap" aria-hidden>
             ✋✨

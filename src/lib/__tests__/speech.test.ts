@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { inSentence, pickVoice, speak, speakableText, speechChunks, TALK, WORD } from "../tutor/speech";
+import { inSentence, pickVoice, speak, speakableText, speechChunks, TALK, WORD, wordAt, wordTimes } from "../tutor/speech";
 
 describe("what Suni reads aloud", () => {
   it("leaves out emoji and markdown", () => {
@@ -78,5 +78,18 @@ describe("saying a word", () => {
     expect(speechChunks("One. Two! Three?", 9)).toEqual(["One. Two!", "Three?"]);
     expect(speechChunks("It costs 3.50 today.", 400)).toEqual(["It costs 3.50 today."]);
     expect(speechChunks("A sentence much too long.", 10)).toBeNull();
+  });
+});
+
+describe("Suni reading along", () => {
+  it("spreads the time over the words by their length", () => {
+    expect(wordTimes(["I", "can", "see"], 1000)).toEqual([0, (3 / 13) * 1000, (8 / 13) * 1000]);
+    expect(wordTimes([], 1000)).toEqual([]);
+  });
+
+  it("finds the word a voice's word mark points at", () => {
+    const sentence = "The cat sat on the mat.";
+    expect([0, 4, 8, 12, 15, 19].map((i) => wordAt(sentence, i))).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(wordAt(sentence, 5)).toBe(1);
   });
 });

@@ -597,9 +597,52 @@ a.tab {
 .suni[data-pose] .suni-hover {
   animation: suni-cheer 0.5s ease-out 2;
 }
+/* While Suni talks, the still frame bobs as a whole and the mouth opens and shuts over the smile. */
+.suni-talking .suni-hover {
+  animation: none;
+}
+.suni-talking {
+  animation: suni-hover 2.4s ease-in-out infinite;
+}
+.suni-mouth {
+  position: absolute;
+  left: 33.7%;
+  top: 37.4%;
+  width: 9.5%;
+  height: 6.5%;
+  transform: translateX(-50%);
+  transform-origin: 50% 0;
+  border-radius: 35% 35% 50% 50% / 25% 25% 75% 75%;
+  background: #4a1a0c;
+  box-shadow: inset 0 1px 0 rgb(0 0 0 / 0.3);
+  overflow: hidden;
+  animation: suni-mouth 0.26s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+.suni-mouth::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  bottom: -10%;
+  height: 45%;
+  border-radius: 50% 50% 0 0;
+  background: #e5657a;
+}
+@keyframes suni-mouth {
+  from {
+    transform: translateX(-50%) scaleY(0.3);
+  }
+  to {
+    transform: translateX(-50%) scaleY(1);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .suni-animated .suni-hover {
     animation-duration: 4s;
+  }
+  .suni-mouth {
+    animation-duration: 0.4s;
   }
 }
 @keyframes suni-hover {
@@ -1360,10 +1403,41 @@ ul.tight {
   line-height: 1.5;
   margin: 0;
 }
+.read-sentence .reading {
+  background: color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 6px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent);
+}
 .read-sentence .heard {
   color: var(--good);
   text-decoration: underline;
   text-decoration-thickness: 3px;
+}
+/* Suni next to the sentence, big enough for a child to watch Suni read it. */
+.read-along {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.read-along .read-sentence {
+  flex: 1;
+}
+/* The flying Suni steps aside while the big one reads with the child. */
+body:has(.read-along) .suni-fly {
+  display: none;
+}
+@media (max-width: 560px) {
+  .read-along {
+    flex-direction: column;
+  }
+  .read-along .suni {
+    width: 150px !important;
+    height: 150px !important;
+  }
+  .read-sentence {
+    font-size: 1.6rem;
+  }
 }
 .read-mic {
   display: inline-flex;
