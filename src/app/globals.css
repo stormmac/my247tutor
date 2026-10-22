@@ -973,7 +973,38 @@ ul.tight {
   }
 }
 
+/* The coloured-in picture with its story, shown only when printed. */
+.print-sheet {
+  display: none;
+}
+
 @media print {
+  body.printing-picture > *:not(.print-sheet) {
+    display: none !important;
+  }
+  body.printing-picture .print-sheet {
+    display: block;
+    text-align: center;
+    color: #000;
+    background: #fff;
+  }
+  .print-sheet h1 {
+    margin: 0 0 12px;
+    font-size: 28pt;
+  }
+  .print-sheet .colour-picture {
+    width: 100%;
+    max-width: 16cm;
+    max-height: 15cm;
+  }
+  .print-story {
+    margin-top: 16px;
+    font-size: 20pt;
+    line-height: 1.5;
+  }
+  .print-story p {
+    margin: 0 0 6px;
+  }
   .topbar,
   .suni-companion,
   .no-print {

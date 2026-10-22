@@ -560,7 +560,7 @@ function Step({
       return (
         <>
           <h1 style={{ margin: 0, textAlign: "center" }}>Colour it in</h1>
-          <ColourIn regions={step.story.picture} title={step.story.title} />
+          <ColourIn regions={step.story.picture} title={step.story.title} sentences={step.story.sentences} />
           <div className="row" style={{ justifyContent: "center" }}>
             <button className="btn" onClick={() => onNext()}>
               I&apos;m finished
