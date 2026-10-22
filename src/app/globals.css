@@ -2527,3 +2527,32 @@ body:has(.read-along) .suni-fly {
 .rewards-link {
   flex-shrink: 0;
 }
+/* Which kind of account is logged in, in the top bar */
+.account-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #e6f2ec;
+  color: #1f6b4a;
+}
+.account-kind-admin {
+  background: #fdecc8;
+  color: #7a4b00;
+}
+.account-kind-centre {
+  background: #e8e4fb;
+  color: #4b3a99;
+}
+.account-kind-teacher {
+  background: #e1eefc;
+  color: #1f4f8a;
+}
+.account-kind-student {
+  background: #fff4c2;
+  color: #6b5400;
+}

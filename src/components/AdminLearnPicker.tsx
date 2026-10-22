@@ -77,7 +77,7 @@ export function AdminLearnPicker({ onSelf }: { onSelf: () => void }) {
                 setOpen(null);
               }}
             >
-              {role === "parent" ? "Parents" : "Tutoring centres"} ({count(role)})
+              {role === "parent" ? "Families" : "Tutoring centres"} ({count(role)})
             </button>
           ))}
         </div>

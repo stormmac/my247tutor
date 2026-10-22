@@ -124,7 +124,7 @@ function Students() {
               className={`btn small ${kind === role ? "" : "secondary"}`}
               onClick={() => setKind(role)}
             >
-              {role === "parent" ? "Parents" : "Tutoring centres"} ({count(role)})
+              {role === "parent" ? "Families" : "Tutoring centres"} ({count(role)})
             </button>
           ))}
         </div>

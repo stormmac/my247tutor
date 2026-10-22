@@ -274,7 +274,7 @@ function Setup({
       {plan === "centre" && (
         <div className="feedback warn">
           Your child&apos;s tutoring centre pays for them, and they learn with the sign-in the centre gave them. You can see their progress
-          on the <Link href="/parent">Parents page</Link>. A child you add here is yours, so they need a plan of their own.
+          on the <Link href="/parent">Family page</Link>. A child you add here is yours, so they need a plan of their own.
         </div>
       )}
       <div>

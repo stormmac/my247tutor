@@ -5,10 +5,10 @@ import { ChangePassword } from "@/components/ChangePassword";
 import { homeFor, signOut, useAccount } from "@/components/useAccount";
 
 const ACCOUNT_TYPES: Record<string, string> = {
-  admin: "Admin",
-  parent: "Parent or carer",
-  centre: "Tutoring centre",
-  teacher: "Teacher",
+  admin: "Super admin",
+  parent: "Family account",
+  centre: "Centre admin",
+  teacher: "Teacher account",
   student: "Student",
 };
 

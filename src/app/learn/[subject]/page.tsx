@@ -93,7 +93,7 @@ function AssessmentThanks({ name, record, onContinue }: { name: string; record: 
         You answered {record.answers.length} questions. Now we know where to start, so your lessons will be just right for you.
       </p>
       <p className="muted" style={{ margin: 0 }}>
-        Your grown-up can see how you went on the Parents page.
+        Your grown-up can see how you went on the Family page.
       </p>
       <button className="btn" onClick={onContinue}>
         See this week&apos;s lesson
@@ -122,7 +122,7 @@ function AssessmentDone({
           You answered {finished.answers.length} questions. Now we know where to start, so your practice will be just right for you.
         </p>
         <p className="muted" style={{ margin: 0 }}>
-          Your grown-up can see how you went on the Parents page.
+          Your grown-up can see how you went on the Family page.
         </p>
         <button className="btn" onClick={() => setProfile((p) => applyAssessment(p, finished))}>
           Start practising

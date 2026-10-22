@@ -100,7 +100,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         </fieldset>
       ) : (
         <p className="muted" style={{ margin: 0 }}>
-          Parents, tutoring centres and teachers: use your email. Students: use the username you were given.
+          Families, tutoring centres and teachers: use your email. Students: use the username you were given.
         </p>
       )}
       {signup && (
