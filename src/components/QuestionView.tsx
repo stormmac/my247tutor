@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { type Curriculum, localiseQuestion } from "@/lib/curriculum/curricula";
+import { type Curriculum, curriculumOf, localiseQuestion } from "@/lib/curriculum/curricula";
 import { answerText, checkAnswer, type Question } from "@/lib/practice";
 import type { AttemptDetails } from "@/lib/learner/model";
 import { Picture } from "./Picture";
-import { useCurriculum } from "./useProfile";
+import { hintLadder } from "@/lib/tutor/hints";
+import { useProfile } from "./useProfile";
 
 export type QuestionOutcome = {
   correct: boolean;
@@ -62,7 +63,8 @@ export function QuestionView({
   curriculum: shownIn,
 }: Props) {
   // A child on the US curriculum sees the question, and is marked, in US English.
-  const childCurriculum = useCurriculum();
+  const { profile } = useProfile();
+  const childCurriculum = curriculumOf(profile?.curriculum);
   const curriculum = shownIn ?? childCurriculum;
   const question = useMemo(() => localiseQuestion(asWritten, curriculum), [asWritten, curriculum]);
   const [input, setInput] = useState("");
@@ -74,6 +76,10 @@ export function QuestionView({
   // Multiple choice: options already tried and wrong can't be picked again.
   const [ruledOut, setRuledOut] = useState<number[]>([]);
   const [hintsShown, setHintsShown] = useState(0);
+  // Hints written for this question, in place of the general ones it came with.
+  const [written, setWritten] = useState<{ id: string; hints: string[] } | null>(null);
+  const [writing, setWriting] = useState(false);
+  const hints = written?.id === question.id ? hintLadder(written.hints, question.hints) : question.hints;
   const [result, setResult] = useState<{ correct: boolean; feedback?: string; unreadable?: boolean } | null>(null);
   const [finished, setFinished] = useState(false);
   const firstAnswer = useRef("");
@@ -157,9 +163,35 @@ export function QuestionView({
   }
 
   function showHint() {
-    const n = Math.min(hintsShown + 1, question.hints.length);
+    const n = Math.min(hintsShown + 1, hints.length);
     setHintsShown(n);
     onHintsChange?.(n);
+  }
+
+  /** The first hint for a question with only general ones waits for hints written for it, or the general ones if that fails. */
+  async function firstHint() {
+    if (!question.writeHints || written?.id === question.id) return showHint();
+    const id = question.id;
+    setWriting(true);
+    const got = await fetch("/api/hints", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt: question.prompt,
+        choices: question.choices,
+        correctAnswer: answerText(question.answer, question.choices),
+        solution: question.solution,
+        passage: question.passage ? `${question.passage.title}\n${question.passage.text}` : undefined,
+        picture: question.picture ? JSON.stringify(question.picture) : undefined,
+        yearLevel: profile?.yearLevel ?? 4,
+        curriculum,
+      }),
+    })
+      .then((res) => (res.ok ? (res.json() as Promise<{ hints?: string[] }>) : null))
+      .catch(() => null);
+    setWriting(false);
+    setWritten({ id, hints: got?.hints ?? [] });
+    showHint();
   }
 
   return (
@@ -274,9 +306,9 @@ export function QuestionView({
 
         <div className="row" style={{ marginTop: 16 }}>
           {!finished && <button className="btn">Check</button>}
-          {!finished && !placement && hintsShown < question.hints.length && (
-            <button type="button" className="btn secondary" onClick={showHint}>
-              {hintsShown ? "Another hint" : "Hint"}
+          {!finished && !placement && hintsShown < hints.length && (
+            <button type="button" className="btn secondary" onClick={hintsShown ? showHint : firstHint} disabled={writing}>
+              {writing ? "Thinking…" : hintsShown ? "Another hint" : "Hint"}
             </button>
           )}
           {finished && (
@@ -287,7 +319,7 @@ export function QuestionView({
         </div>
       </form>
 
-      {question.hints.slice(0, hintsShown).map((h, i) => (
+      {hints.slice(0, hintsShown).map((h, i) => (
         <div className="hint" key={i}>
           <strong>Hint {i + 1}:</strong> {h}
         </div>

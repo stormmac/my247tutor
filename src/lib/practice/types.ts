@@ -22,6 +22,8 @@ export interface Question {
   choices?: string[];
   /** Hint ladder: a nudge, then a stronger hint, then a worked step. Never the final answer. */
   hints: string[];
+  /** The hints above are general ones for any question of its kind, so better ones are written for it when asked. */
+  writeHints?: boolean;
   /** Full working shown after the student answers. */
   solution: string;
   /** Reading passage for comprehension questions. */
