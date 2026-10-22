@@ -2303,3 +2303,40 @@ body:has(.read-along) .suni-fly {
   flex-direction: column;
   gap: 8px;
 }
+
+/* Admin's Log in as page: centres with their teachers and students, then families. */
+.people-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.people-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.people-list .people-row:last-child {
+  border-bottom: 0;
+}
+.people-head {
+  border-bottom: 0;
+  padding-top: 0;
+}
+.people-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.people-columns h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+@media (max-width: 720px) {
+  .people-columns {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

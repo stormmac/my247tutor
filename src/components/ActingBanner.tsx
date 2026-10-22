@@ -22,7 +22,7 @@ export function ActingBanner() {
         <div className="container">
           <span>
             Admin: you&apos;re learning as <strong>{profile?.name ?? user.name}</strong>
-            {user.role !== "student" && <> ({user.name}&apos;s account)</>}. Learn stays on this student until you switch.
+            {user.role !== "student" && <> ({user.name}&apos;s account)</>}. You stay as this student until you switch.
           </span>
           <span className="row" style={{ gap: 8 }}>
             <button className="btn small" onClick={() => void backToAdmin("/learn")}>

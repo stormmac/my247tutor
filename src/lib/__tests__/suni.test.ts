@@ -27,7 +27,7 @@ describe("Suni follows what's on screen", () => {
   });
 
   it("describes pages that don't describe themselves", () => {
-    expect(screenForPath("/learn")).toMatch(/Learn page/);
+    expect(screenForPath("/learn")).toMatch(/Student page/);
     expect(screenForPath("/learn/english/topics")).toMatch(/English/);
     expect(screenForPath("/learn/maths")).toMatch(/maths/);
     expect(screenForPath("/learn/writing")).toMatch(/writing/);
