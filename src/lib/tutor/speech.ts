@@ -66,11 +66,105 @@ export function speak(text: string | SpeechPart[]) {
   stopAudio();
   if (speechSupported()) window.speechSynthesis.cancel();
   if (!words.length) return;
+  if (words.some((p) => p.ipa) && "AudioContext" in window) {
+    void speakWithClips(words, turn);
+    return;
+  }
+  speakNow(words, turn);
+}
+
+function speakNow(words: SpeechPart[], turn: number) {
   if (cloudOn === false || !("AudioContext" in window)) return speakOnDevice(words, turn);
   void cloudVoice().then(async (on) => {
     if (turn !== latest) return;
-    if (on && (await playCloud(words, turn))) return;
+    if (on && (await playCloud(words, turn)) !== false) return;
     if (turn === latest) speakOnDevice(words, turn);
+  });
+}
+
+/** Recorded phonics sounds, as IPA to version: asked for once. */
+let clipsAsked: Promise<Map<string, number>> | null = null;
+
+export function recordedClips(): Promise<Map<string, number>> {
+  clipsAsked ??= fetch("/api/phonics-clips")
+    .then((res) => (res.ok ? (res.json() as Promise<{ clips?: { ipa: string; version: number }[] }>) : null))
+    .then((body) => new Map((body?.clips ?? []).map((c) => [c.ipa, c.version] as const)))
+    .catch(() => new Map<string, number>());
+  return clipsAsked;
+}
+
+/** After an admin records a sound, so the next one said is the new recording. */
+export function forgetClips() {
+  clipsAsked = null;
+}
+
+const clipBuffers = new Map<string, Promise<AudioBuffer | null>>();
+
+function clipBuffer(ctx: AudioContext, ipa: string, version: number): Promise<AudioBuffer | null> {
+  const key = `${ipa}|${version}`;
+  let buffer = clipBuffers.get(key);
+  if (!buffer) {
+    buffer = fetch(`/api/phonics-clips/audio?ipa=${encodeURIComponent(ipa)}&v=${version}`)
+      .then((res) => (res.ok ? res.arrayBuffer() : Promise.reject(new Error(`Clip ${res.status}`))))
+      .then((data) => ctx.decodeAudioData(data))
+      .catch(() => {
+        clipBuffers.delete(key);
+        return null;
+      });
+    clipBuffers.set(key, buffer);
+  }
+  return buffer;
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Says the parts one at a time, in order: the recording for each phonics sound that has one, and
+ * the voice for everything else. Without any recordings it's the usual voice.
+ */
+async function speakWithClips(words: SpeechPart[], turn: number) {
+  const clips = await recordedClips();
+  if (turn !== latest) return;
+  if (!words.some((p) => p.ipa && clips.has(p.ipa))) return speakNow(words, turn);
+  void prepareVoice();
+  const ctx = context;
+  if (!ctx) return speakNow(words, turn);
+  if (ctx.state === "suspended") await ctx.resume().catch(() => undefined);
+  for (const [i, part] of words.entries()) {
+    if (turn !== latest) return;
+    if (i) await wait(300);
+    const version = part.ipa ? clips.get(part.ipa) : undefined;
+    const buffer = version === undefined ? null : await clipBuffer(ctx, part.ipa!, version);
+    if (turn !== latest) return;
+    if (buffer && ctx.state === "running") {
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start();
+      playing.push(source);
+      await wait(buffer.duration * 1000);
+    } else await sayAndWait(part, turn);
+  }
+}
+
+/** Says one part, in the cloud voice when it's set up, and waits until it's said. */
+async function sayAndWait(part: SpeechPart, turn: number) {
+  if (cloudOn !== false && (await cloudVoice())) {
+    const seconds = await playCloud([part], turn);
+    if (seconds !== false) return wait(seconds * 1000);
+  }
+  if (!speechSupported() || turn !== latest) return;
+  await new Promise<void>((resolve) => {
+    const voice = pickVoice(window.speechSynthesis.getVoices());
+    const utterance = new SpeechSynthesisUtterance(part.text);
+    if (voice) utterance.voice = voice;
+    utterance.lang = voice?.lang ?? "en-AU";
+    Object.assign(utterance, part.word ? WORD : TALK);
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+    // Some browsers never say they've finished, so stop waiting after about as long as it takes to say.
+    setTimeout(resolve, 600 + part.text.length * 90);
+    window.speechSynthesis.speak(utterance);
   });
 }
 
@@ -145,8 +239,11 @@ export function prepareVoice(): Promise<boolean> {
   return cloudVoice();
 }
 
-/** Plays the parts in the cloud voice, one after another with a short pause. False if it couldn't, so the device's voice can say them. */
-async function playCloud(parts: SpeechPart[], turn: number): Promise<boolean> {
+/**
+ * Plays the parts in the cloud voice, one after another with a short pause. Gives how many seconds
+ * it will take, or false if it couldn't, so the device's voice can say them.
+ */
+async function playCloud(parts: SpeechPart[], turn: number): Promise<number | false> {
   void prepareVoice();
   const ctx = context;
   if (!ctx) return false;
@@ -162,9 +259,10 @@ async function playCloud(parts: SpeechPart[], turn: number): Promise<boolean> {
         return ctx.decodeAudioData(await res.arrayBuffer());
       }),
     );
-    if (turn !== latest) return true;
+    if (turn !== latest) return 0;
     if (ctx.state !== "running") return false;
-    let at = ctx.currentTime + 0.05;
+    const start = ctx.currentTime;
+    let at = start + 0.05;
     for (const buffer of buffers) {
       const source = ctx.createBufferSource();
       source.buffer = buffer;
@@ -173,7 +271,7 @@ async function playCloud(parts: SpeechPart[], turn: number): Promise<boolean> {
       playing.push(source);
       at += buffer.duration + 0.3;
     }
-    return true;
+    return at - 0.3 - start;
   } catch {
     return false;
   }
