@@ -45,13 +45,13 @@ export function ReadAloud({ sentence, onDone }: { sentence: string; onDone: (rea
     setListened(false);
     setHeard("");
     setReading(-1);
-    if (afterMistake) await speakAndWait("Listen as I read it.");
+    if (afterMistake) await speakAndWait("Not quite. Listen while I read the sentence for you.");
     if (stale()) return;
     await readAlong(sentence, (i) => !stale() && setReading(i));
     if (stale()) return;
     setReading(null);
     setListened(true);
-    speak("Now you try. Hold the button and read every word.");
+    speak("Your turn.");
   }
   const { words, heard: got } = wordsHeard(sentence, heard);
   const shown = sentence.split(/\s+/);
@@ -70,7 +70,6 @@ export function ReadAloud({ sentence, onDone }: { sentence: string; onDone: (rea
   return (
     <div className="stack read-aloud">
       <div className="read-along">
-        <Suni size={200} talking={reading !== null} word={reading ?? undefined} />
         <p className="read-sentence" aria-label={sentence}>
           {shown.map((word, i) => (
             <span key={i} className={reading === i ? "reading" : reading === null && got[i] && words[i] ? "heard" : ""}>
@@ -78,6 +77,7 @@ export function ReadAloud({ sentence, onDone }: { sentence: string; onDone: (rea
             </span>
           ))}
         </p>
+        <Suni size={200} talking={reading !== null} word={reading ?? undefined} />
       </div>
       {speech.supported ? (
         <>
@@ -103,12 +103,12 @@ export function ReadAloud({ sentence, onDone }: { sentence: string; onDone: (rea
           {result === "again" &&
             (reading !== null ? (
               <p className="feedback warn" role="status">
-                Listen as Suni reads it, and follow the words.
+                Not quite. Listen while Suni reads the sentence for you.
               </p>
             ) : (
               listened && (
                 <p className="feedback warn" role="status">
-                  Now you try. Hold the button and read every word.
+                  Your turn. Hold the button and read every word.
                 </p>
               )
             ))}

@@ -175,7 +175,9 @@ describe("Learn to Read lessons", () => {
   });
 
   it("counts a sentence as read when most of its words are heard", () => {
-    expect(readWell("The cat sat on a mat.", "the cat sat on the mat")).toBe(true);
+    expect(readWell("The cat sat on a mat.", "the cat sat on a mat")).toBe(true);
+    expect(readWell("The cat sat on a mat.", "the cat sat on the mat")).toBe(false);
+    expect(readWell("The fish is in the dish.", "the fish is in a dish")).toBe(false);
     expect(readWell("The cat sat on a mat.", "cat")).toBe(false);
     expect(readWell("The cat sat on a mat.", "")).toBe(false);
   });
