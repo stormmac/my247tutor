@@ -32,11 +32,11 @@ describe("Suni's check-in", () => {
     expect(CHECKIN_GREAT_SQL).toContain(`mood IN (${MOODS.map((m) => `'${m}'`).join(", ")})`);
   });
 
-  it("asks at the start of a visit, and at most once an hour", () => {
+  it("asks at the start of a visit, and at most once every two hours", () => {
     const now = Date.parse("2026-10-22T09:00:00Z");
     expect(checkinDue(null, now)).toBe(true);
-    expect(checkinDue(now - 30 * 60_000, now)).toBe(false);
-    expect(checkinDue(now - 61 * 60_000, now)).toBe(true);
+    expect(checkinDue(now - 90 * 60_000, now)).toBe(false);
+    expect(checkinDue(now - 121 * 60_000, now)).toBe(true);
   });
 
   it("has a kind answer for every feeling", () => {

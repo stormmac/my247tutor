@@ -143,7 +143,6 @@ function Setup({
   return (
     <div className="stack tables-setup">
       <div className="row" style={{ gap: 16, flexWrap: "nowrap" }}>
-        <Suni size={84} wave />
         <div>
           <h1>Times tables</h1>
           <p className="muted" style={{ margin: 0 }}>

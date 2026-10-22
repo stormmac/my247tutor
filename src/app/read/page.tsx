@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Suni } from "@/components/Suni";
 import { useProfile } from "@/components/useProfile";
 import {
   currentSightLevel,
@@ -72,7 +71,6 @@ export default function ReadPage() {
   return (
     <div className="stack">
       <div className="row" style={{ gap: 16, flexWrap: "nowrap" }}>
-        <Suni size={84} wave />
         <div>
           <h1>Learn to Read</h1>
           <p className="muted" style={{ margin: 0 }}>
