@@ -3,7 +3,7 @@ import { ready } from "./db";
 import { canSeeLearner } from "./family";
 import { audit, type User } from "./users";
 
-export const CHAT_FLAGS = ["wellbeing", "inappropriate", "personal_info", "grown_up"] as const;
+export const CHAT_FLAGS = ["wellbeing", "inappropriate", "personal_info", "grown_up", "technical"] as const;
 export type ChatFlag = (typeof CHAT_FLAGS)[number];
 
 /** One message a student sent Suni, with Suni's reply. */
@@ -90,12 +90,22 @@ export async function saveChat(chat: {
   );
 }
 
-/** A child's chats, newest first. */
-export async function chatsFor(learnerId: string, limit = 200): Promise<SuniChat[]> {
+/**
+ * A chat as a parent, centre or teacher sees it. Technical problems are for admins only: the flag is
+ * hidden, and a chat Suni couldn't answer at all is left out.
+ */
+export function forGrownUps(chat: SuniChat): SuniChat | null {
+  if (chat.flag !== "technical") return chat;
+  return chat.reply.trim() ? { ...chat, flag: null, flagReason: null } : null;
+}
+
+/** A child's chats, newest first. Admins see technical problems too. */
+export async function chatsFor(learnerId: string, viewer: User, limit = 200): Promise<SuniChat[]> {
   const { rows } = await (
     await ready()
   ).query(`SELECT * FROM suni_messages WHERE learner_id = $1 ORDER BY created_at DESC LIMIT $2`, [learnerId, limit]);
-  return rows.map(toChat);
+  const chats = rows.map(toChat);
+  return viewer.role === "admin" ? chats : chats.flatMap((c) => forGrownUps(c) ?? []);
 }
 
 /** Every chat, newest first, for admins: all of them, or only flagged ones. */
@@ -121,10 +131,13 @@ export async function setChatFlag(viewer: User, id: string, flagged: boolean): P
   if (viewer.role !== "admin" && !(learnerId && (await canSeeChats(viewer, learnerId)))) return null;
   const updated = await pool.query(
     flagged
-      ? `UPDATE suni_messages SET flag = COALESCE(flag, 'grown_up'), flag_reason = COALESCE(flag_reason, $2), flagged_by = COALESCE(flagged_by, $3) WHERE id = $1 RETURNING *`
+      ? `UPDATE suni_messages SET flag = CASE WHEN flag IS NULL OR flag = 'technical' THEN 'grown_up' ELSE flag END,
+           flag_reason = CASE WHEN flag IS NULL OR flag = 'technical' THEN $2 ELSE flag_reason END, flagged_by = COALESCE(flagged_by, $3)
+         WHERE id = $1 RETURNING *`
       : `UPDATE suni_messages SET flag = NULL, flag_reason = NULL, flagged_by = NULL WHERE id = $1 RETURNING *`,
     flagged ? [id, `Flagged by ${viewer.name}`, viewer.id] : [id],
   );
   await audit(viewer.id, flagged ? "flag_suni_chat" : "clear_suni_flag", id, {});
-  return toChat(updated.rows[0]);
+  const chat = toChat(updated.rows[0]);
+  return viewer.role === "admin" ? chat : forGrownUps(chat);
 }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type ChatFlag = "wellbeing" | "inappropriate" | "personal_info" | "grown_up";
+export type ChatFlag = "wellbeing" | "inappropriate" | "personal_info" | "grown_up" | "technical";
 
 export interface SuniChat {
   id: string;
@@ -24,6 +24,7 @@ export const FLAG_LABELS: Record<ChatFlag, string> = {
   inappropriate: "Not appropriate",
   personal_info: "Personal details",
   grown_up: "Flagged by a grown-up",
+  technical: "Technical problem",
 };
 
 /** Flags or clears a message, returning the updated one (or an error message). */

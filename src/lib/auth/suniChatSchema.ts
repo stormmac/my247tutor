@@ -24,3 +24,18 @@ CREATE INDEX IF NOT EXISTS idx_suni_messages_learner ON suni_messages(learner_id
 CREATE INDEX IF NOT EXISTS idx_suni_messages_created ON suni_messages(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_suni_messages_flag ON suni_messages(created_at DESC) WHERE flag IS NOT NULL;
 ALTER TABLE suni_messages ENABLE ROW LEVEL SECURITY;`;
+
+/**
+ * Lets a chat be flagged as a technical problem, which only admins see
+ * (database/024_my247tutor_suni_technical.sql, kept identical by a test).
+ */
+export const SUNI_TECHNICAL_SQL = `DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'suni_messages_flag_check' AND pg_get_constraintdef(oid) LIKE '%technical%'
+  ) THEN
+    ALTER TABLE suni_messages DROP CONSTRAINT IF EXISTS suni_messages_flag_check;
+    ALTER TABLE suni_messages ADD CONSTRAINT suni_messages_flag_check
+      CHECK (flag IN ('wellbeing', 'inappropriate', 'personal_info', 'grown_up', 'technical'));
+  END IF;
+END $$;`;

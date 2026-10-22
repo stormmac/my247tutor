@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { describeStep } from "../../components/LessonRunner";
 import { screenForPath } from "../../components/SuniCompanion";
-import { SUNI_CHAT_SQL } from "../auth/suniChatSchema";
+import { SUNI_CHAT_SQL, SUNI_TECHNICAL_SQL } from "../auth/suniChatSchema";
 import { buildLesson } from "../phonics/progress";
 import { UNITS } from "../phonics/sequence";
 import { buildContextPrompt, TUTOR_SYSTEM_PROMPT, TutorContextSchema } from "../tutor/prompt";
@@ -55,5 +55,11 @@ describe("Suni's conversation records", () => {
 
   it("only allows the known flags", () => {
     expect(SUNI_CHAT_SQL).toMatch(/flag IN \('wellbeing', 'inappropriate', 'personal_info', 'grown_up'\)/);
+  });
+
+  it("adds the technical flag with a migration matching the app's schema", () => {
+    const sql = readFileSync(join(__dirname, "../../../database/024_my247tutor_suni_technical.sql"), "utf8");
+    expect(sql).toContain(SUNI_TECHNICAL_SQL.trim());
+    expect(SUNI_TECHNICAL_SQL).toMatch(/flag IN \('wellbeing', 'inappropriate', 'personal_info', 'grown_up', 'technical'\)/);
   });
 });
