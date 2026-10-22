@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { adminReturnCookie, SESSION_COOKIE, sessionCookie } from "@/lib/auth/session";
+import { actAsCookies } from "@/lib/auth/actAs";
+import { ADMIN_RETURN_COOKIE, SESSION_COOKIE } from "@/lib/auth/session";
 import { audit, learnAsTarget, requireUser } from "@/lib/auth/users";
 
 /**
@@ -18,10 +19,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   await audit(result.user.id, "learn_as", target.user.id, { learnerId: id });
   const response = Response.json({ ok: true, pick: target.pick });
-  response.headers.append("Set-Cookie", adminReturnCookie(request.cookies.get(SESSION_COOKIE)!.value));
-  response.headers.append(
-    "Set-Cookie",
-    await sessionCookie({ userId: target.user.id, role: target.user.role, version: target.user.sessionVersion, actorId: result.user.id }),
+  const cookies = await actAsCookies(
+    { session: request.cookies.get(SESSION_COOKIE)!.value, kept: request.cookies.get(ADMIN_RETURN_COOKIE)?.value },
+    result.user.id,
+    { userId: target.user.id, role: target.user.role, version: target.user.sessionVersion },
   );
+  for (const cookie of cookies) response.headers.append("Set-Cookie", cookie);
   return response;
 }

@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { learnAsStudent } from "@/lib/auth/centres";
-import { adminReturnCookie, SESSION_COOKIE, sessionCookie, verifySession } from "@/lib/auth/session";
+import { actAsCookies } from "@/lib/auth/actAs";
+import { ADMIN_RETURN_COOKIE, SESSION_COOKIE } from "@/lib/auth/session";
 import { audit, requireUser } from "@/lib/auth/users";
 
 /**
@@ -13,9 +14,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if ("response" in result) return result.response;
   if (result.user.role !== "teacher" && result.user.role !== "centre")
     return Response.json({ error: "This is for tutoring centres and their teachers." }, { status: 403 });
-  // Only one way back is kept, so someone already logged in as another account goes back first.
-  if ((await verifySession(request.cookies.get(SESSION_COOKIE)?.value))?.actorId)
-    return Response.json({ error: "You're already logged in as someone else. Go back to your own account first." }, { status: 400 });
   const { id } = await params;
   const student = z.uuid().safeParse(id).success ? await learnAsStudent(result.user, id) : null;
   if (!student) return Response.json({ error: "No such student." }, { status: 404 });
@@ -23,10 +21,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   await audit(result.user.id, "learn_as", student.id, { learnerId: id });
   const response = Response.json({ ok: true });
-  response.headers.append("Set-Cookie", adminReturnCookie(request.cookies.get(SESSION_COOKIE)!.value));
-  response.headers.append(
-    "Set-Cookie",
-    await sessionCookie({ userId: student.id, role: student.role, version: student.sessionVersion, actorId: result.user.id }),
+  const cookies = await actAsCookies(
+    { session: request.cookies.get(SESSION_COOKIE)!.value, kept: request.cookies.get(ADMIN_RETURN_COOKIE)?.value },
+    result.user.id,
+    { userId: student.id, role: student.role, version: student.sessionVersion },
   );
+  for (const cookie of cookies) response.headers.append("Set-Cookie", cookie);
   return response;
 }
