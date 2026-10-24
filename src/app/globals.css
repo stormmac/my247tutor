@@ -1785,7 +1785,8 @@ body:has(.read-along) .suni-fly {
   border-left-style: solid;
   font-size: 0.8rem;
   line-height: 1.25;
-  color: var(--text);
+  /* Dark text in dark mode too, since the blocks keep their light colours. */
+  color: #1f2328;
   text-decoration: none;
   box-sizing: border-box;
 }
@@ -2622,6 +2623,8 @@ body:has(.read-along) .suni-fly {
   --practice-tint: #e6eff9;
   --games: #b8650f;
   --games-tint: #fdf0dd;
+  --account: #b0386e;
+  --account-tint: #fbe8f0;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -2633,6 +2636,8 @@ body:has(.read-along) .suni-fly {
     --practice-tint: #1b2c40;
     --games: #f2b36d;
     --games-tint: #3a2a17;
+    --account: #f19cc3;
+    --account-tint: #3a1f2c;
   }
 }
 .week-deadline {
@@ -2666,7 +2671,12 @@ body:has(.read-along) .suni-fly {
   --section: var(--games);
   --section-tint: var(--games-tint);
 }
-.home-section > h2 {
+.home-section.section-account {
+  --section: var(--account);
+  --section-tint: var(--account-tint);
+}
+.home-section > h2,
+.home-section .section-title {
   margin: 0;
   color: var(--section);
   font-size: 1.45rem;
@@ -2691,11 +2701,29 @@ body:has(.read-along) .suni-fly {
 .home-section h3 {
   font-size: 1.15rem;
 }
+/* The Family, Classes and Centre pages use the same panels, and Suni's notes get Suni's own colour. */
+.home-section .row.spread > .section-title {
+  flex: 1 1 auto;
+}
+.suni-notes {
+  background: var(--games-tint);
+  border: 2px solid var(--games);
+  border-top-width: 8px;
+  box-shadow: none;
+}
+.suni-notes > h2 {
+  color: var(--games);
+}
+.home-section .full-report > summary {
+  color: var(--section);
+  font-size: 1.05rem;
+}
 @media (max-width: 420px) {
   .home-section {
     padding: 12px 12px 16px;
   }
-  .home-section > h2 {
+  .home-section > h2,
+  .home-section .section-title {
     font-size: 1.25rem;
   }
 }

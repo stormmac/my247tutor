@@ -163,8 +163,13 @@ export default function CentrePage() {
         </div>
       )}
 
-      <div className="card stack">
-        <h2 style={{ margin: 0 }}>Timetable</h2>
+      <div className="stack home-section section-practice">
+        <h2 className="section-title">
+          <span className="section-icon" aria-hidden>
+            🗓️
+          </span>{" "}
+          Timetable
+        </h2>
         <WeekCalendar classes={centre.classes} />
       </div>
       <Classes centre={centre} run={run} />
@@ -191,9 +196,14 @@ function YearSelect({ id, value, onChange }: { id?: string; value: number; onCha
 function Classes({ centre, run }: { centre: Centre; run: Run }) {
   const [editing, setEditing] = useState<string | "new" | null>(null);
   return (
-    <div className="card stack">
+    <div className="stack home-section section-diy">
       <div className="row spread">
-        <h2 style={{ margin: 0 }}>Classes</h2>
+        <h2 className="section-title">
+          <span className="section-icon" aria-hidden>
+            🏫
+          </span>{" "}
+          Classes
+        </h2>
         {editing !== "new" && (
           <button className="btn small" onClick={() => setEditing("new")}>
             Add a class
@@ -468,9 +478,14 @@ function Students({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
   const viewed = centre.students.find((s) => s.id === viewing);
   const shown = centre.students.filter((s) => `${s.name} ${s.username ?? ""}`.toLowerCase().includes(filter.trim().toLowerCase()));
   return (
-    <div className="card stack">
+    <div className="stack home-section section-games">
       <div className="row spread">
-        <h2 style={{ margin: 0 }}>Students</h2>
+        <h2 className="section-title">
+          <span className="section-icon" aria-hidden>
+            🧒
+          </span>{" "}
+          Students
+        </h2>
         <div className="row" style={{ gap: 8 }}>
           {centre.students.length > 8 && (
             <input
@@ -860,9 +875,14 @@ function Teachers({ centre, run, onInvited }: { centre: Centre; run: Run; onInvi
   }
 
   return (
-    <div className="card stack">
+    <div className="stack home-section section-teacher">
       <div className="row spread">
-        <h2 style={{ margin: 0 }}>Teachers</h2>
+        <h2 className="section-title">
+          <span className="section-icon" aria-hidden>
+            🧑‍🏫
+          </span>{" "}
+          Teachers
+        </h2>
         {!adding && (
           <button className="btn small" onClick={() => setAdding(true)}>
             Add a teacher
