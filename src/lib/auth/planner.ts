@@ -1,6 +1,8 @@
 import "server-only";
 import type { LearnerProfile } from "@/lib/learner/model";
+import { autoActivities, autoSlots, classSubjects, type AutoActivity } from "@/lib/learner/autoActivities";
 import { addWeeks } from "@/lib/learner/lesson";
+import { doesSubject } from "@/lib/learner/plan";
 import { centreOf, listClasses, studentForViewer, type CentreClass } from "./centres";
 import { ready } from "./db";
 import { MAX_OPEN_WORK, SET_WORK_SELECT, setWorkOf, type SetWork } from "./family";
@@ -20,6 +22,8 @@ export interface PlannerStudent {
   name: string;
   yearLevel: number;
   curriculum: LearnerProfile["curriculum"];
+  /** The activities the student gets each week without anyone setting them, in the first boxes. */
+  auto: AutoActivity[];
   /** Planned for this class's session this week, box by box. */
   planned: SetWork[];
 }
@@ -38,7 +42,7 @@ export async function plannerWeek(viewer: User, week: string): Promise<PlannerCl
   const pool = await ready();
   const ids = classes.map((c) => c.id);
   const { rows: enrolled } = await pool.query(
-    `SELECT e.class_id, l.id, l.name, l.year_level, ${CHILD_CURRICULUM} AS curriculum
+    `SELECT e.class_id, l.id, l.name, l.year_level, l.profile, ${CHILD_CURRICULUM} AS curriculum
      FROM class_enrolments e JOIN learners l ON l.id = e.learner_id
      WHERE e.class_id = ANY($1::uuid[]) ORDER BY l.name`,
     [ids],
@@ -63,6 +67,13 @@ export async function plannerWeek(viewer: User, week: string): Promise<PlannerCl
           name: r.name as string,
           yearLevel: Number(r.year_level),
           curriculum: r.curriculum as LearnerProfile["curriculum"],
+          auto: classSubjects(c.subject).flatMap((subject) =>
+            autoActivities(
+              { ...(r.profile as LearnerProfile), yearLevel: Number(r.year_level) as LearnerProfile["yearLevel"] },
+              subject,
+              week,
+            ),
+          ),
           planned: mine.filter((w) => w.class_id === c.id).map((w) => setWorkOf(w)),
         };
       }),
@@ -105,6 +116,8 @@ export async function planSlot(
   const found = await viewerClass(viewer, plan.classId, plan.learnerIds);
   if (!found) return { error: "No such class or student.", status: 404 };
   if (!subjectOk(found, plan.subject)) return { error: "That subject isn't taught in this class.", status: 400 };
+  if (plan.slot <= autoSlots(found.subject))
+    return { error: "The first boxes are the student's weekly lessons, which are added by themselves.", status: 400 };
   const pool = await ready();
   const { rows } = await pool.query(
     `SELECT l.id, l.name,
@@ -177,8 +190,19 @@ export const HISTORY_WEEKS = 4;
  * A student's work for the last four weeks up to `week`, newest week first, for the planner's
  * pop-up: each session's activities and homework, and other work set in that week, with scores.
  */
-export async function studentHistory(viewer: User, learnerId: string, week: string): Promise<{ week: string; work: SetWork[] }[] | null> {
-  if (!(await studentForViewer(viewer, learnerId).catch(() => null))) return null;
+export async function studentHistory(
+  viewer: User,
+  learnerId: string,
+  week: string,
+): Promise<{ week: string; auto: AutoActivity[]; work: SetWork[] }[] | null> {
+  const profile = await studentForViewer(viewer, learnerId).catch(() => null);
+  if (!profile) return null;
+  // The weekly lessons keep only this week's answers, so earlier weeks show just the set work.
+  const auto = (w: string) =>
+    (["maths", "english"] as const)
+      .filter((s) => doesSubject(profile.plan, s))
+      .flatMap((s) => autoActivities(profile, s, w))
+      .filter((a) => a.done);
   const { rows } = await (
     await ready()
   ).query(
@@ -193,6 +217,6 @@ export async function studentHistory(viewer: User, learnerId: string, week: stri
   const work = rows.map((r) => ({ ...setWorkOf(r), at: r.at as string }));
   return Array.from({ length: HISTORY_WEEKS }, (_, i) => {
     const w = addWeeks(week, -i);
-    return { week: w, work: work.filter((x) => x.at === w).map(({ at: _at, ...x }) => x) };
+    return { week: w, auto: auto(w), work: work.filter((x) => x.at === w).map(({ at: _at, ...x }) => x) };
   });
 }

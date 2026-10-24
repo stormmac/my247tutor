@@ -40,11 +40,19 @@ export default function ClassesPage() {
         </div>
       ) : (
         <>
-          <Link href="/classes/planner" className="card class-card planner-link">
-            <h2 style={{ margin: 0 }}>📋 Lesson planner</h2>
-            <p className="muted" style={{ margin: "6px 0 0" }}>
-              See each student&apos;s activities this week, add up to 8 for their session, and set homework.
-            </p>
+          <Link href="/classes/planner" className="home-section section-teacher planner-link">
+            <h2>
+              <span className="section-icon" aria-hidden>
+                📋
+              </span>{" "}
+              Lesson planner
+            </h2>
+            <div className="row spread" style={{ flexWrap: "wrap" }}>
+              <p style={{ margin: 0 }}>
+                See every student&apos;s activities this week, add up to 8 for their session, set homework and check how they went.
+              </p>
+              <span className="btn">Open the planner →</span>
+            </div>
           </Link>
           <SuniStudentNotes />
           <div className="card stack">

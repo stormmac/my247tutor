@@ -2687,7 +2687,16 @@ body:has(.read-along) .suni-fly {
   color: var(--teacher);
 }
 .planner-link {
-  border-left: 6px solid var(--teacher);
+  display: flex;
+  flex-direction: column;
+  color: var(--text);
+  text-decoration: none;
+}
+.planner-link:hover {
+  box-shadow: 0 4px 16px rgb(107 79 187 / 0.25);
+}
+.planner-link .btn {
+  background: var(--teacher);
 }
 .planner-week {
   flex-wrap: wrap;
@@ -2740,9 +2749,32 @@ body:has(.read-along) .suni-fly {
   font-weight: 700;
   cursor: pointer;
 }
-.planner-head:hover {
+button.planner-head:hover {
   background: var(--teacher);
   color: #fff;
+}
+.planner-head.auto {
+  display: block;
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: default;
+}
+.planner-box.auto {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--muted);
+  background: var(--surface-2);
+}
+.planner-box.auto.good {
+  border-color: var(--good);
+  background: var(--good-tint);
+}
+.planner-box.auto.warn {
+  border-color: var(--warn-text);
+  background: var(--warn-tint);
+}
+.planner-box.auto.bad {
+  border-color: var(--bad);
+  background: var(--bad-tint);
 }
 .planner-redo-head {
   color: var(--teacher);
@@ -2780,6 +2812,8 @@ body:has(.read-along) .suni-fly {
 }
 .planner-box {
   display: flex;
+  min-width: 0;
+  overflow: hidden;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
@@ -2824,19 +2858,23 @@ button.planner-box.filled:hover {
   box-shadow: 0 0 0 2px var(--teacher);
 }
 .planner-box-title {
+  max-width: 100%;
   font-weight: 700;
   line-height: 1.2;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   hyphens: auto;
 }
 .planner-box-topic {
+  max-width: 100%;
+  overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.2;
 }
 .planner-box-foot {
   display: flex;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 2px 6px;
   align-items: center;
   margin-top: auto;
   padding-top: 2px;
