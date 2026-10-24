@@ -2091,7 +2091,8 @@ body:has(.read-along) .suni-fly {
   padding: 8px 10px 10px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 4px;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 @media (max-width: 420px) {
   .account-menu .account-name {
@@ -2111,7 +2112,8 @@ body:has(.read-along) .suni-fly {
 }
 .details-list dd {
   margin: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 /* Parents page summary */
@@ -2676,4 +2678,238 @@ body:has(.read-along) .suni-fly {
   .home-section > h2 {
     font-size: 1.25rem;
   }
+}
+
+/* The teacher's lesson planner: students down the left, eight activity boxes across. */
+.pill.homework {
+  margin-left: 6px;
+  background: var(--teacher-tint);
+  color: var(--teacher);
+}
+.planner-link {
+  border-left: 6px solid var(--teacher);
+}
+.planner-week {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.planner-week-label {
+  font-size: 1.05rem;
+}
+.planner-class {
+  border-top: 6px solid var(--teacher);
+}
+.planner .link-button {
+  color: var(--brand);
+  text-decoration: underline;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.planner-scroll {
+  overflow-x: auto;
+  margin: 0 -4px;
+  padding: 0 4px 4px;
+}
+.planner-grid {
+  border-collapse: separate;
+  border-spacing: 5px;
+  table-layout: fixed;
+  width: 100%;
+  /* On a narrow screen the grid scrolls sideways in its box, the name column staying put. */
+  min-width: 940px;
+}
+.planner-grid th,
+.planner-grid td {
+  padding: 0;
+  border: 0;
+  vertical-align: top;
+  background: none;
+}
+.planner-grid thead th {
+  font-size: 0.85rem;
+  text-align: center;
+}
+.planner-head {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 4px 0;
+  background: var(--teacher-tint);
+  color: var(--teacher);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.planner-head:hover {
+  background: var(--teacher);
+  color: #fff;
+}
+.planner-redo-head {
+  color: var(--teacher);
+}
+.planner-name {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface) !important;
+  text-align: left;
+  width: 100px;
+}
+.planner-grid .planner-redo-head {
+  width: 104px;
+}
+.planner-student-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 84px;
+  justify-content: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.planner-student-button:hover {
+  border-color: var(--teacher);
+}
+.planner-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  min-height: 84px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  color: var(--text);
+}
+button.planner-box {
+  cursor: pointer;
+}
+.planner-box.empty {
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.2rem;
+}
+.planner-grid td .stack .planner-box.empty {
+  font-size: 0.8rem;
+  min-height: 40px;
+}
+.planner-box.empty:hover {
+  border-color: var(--teacher);
+  color: var(--teacher);
+}
+.planner-box.filled {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--brand);
+  background: var(--surface);
+}
+.planner-box.filled.homework {
+  border-left-color: var(--teacher);
+  background: var(--teacher-tint);
+}
+button.planner-box.filled:hover {
+  box-shadow: 0 0 0 2px var(--teacher);
+}
+.planner-box-title {
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.planner-box-topic {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+.planner-box-foot {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 2px;
+}
+.planner-dialog {
+  width: min(640px, calc(100vw - 32px));
+}
+.planner-topics {
+  max-height: 45vh;
+  overflow-y: auto;
+}
+.planner-history-dialog {
+  width: min(980px, calc(100vw - 32px));
+}
+/* One row a week: the week on the left, then each finished activity, coloured by its score. */
+.planner-history-week {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.planner-history-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+}
+.planner-history-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  min-height: 40px;
+}
+.planner-history-box {
+  /* Up to nine in a row (eight activities and the redo) fit the pop-up; more scroll. */
+  flex: 1 0 0;
+  min-width: 86px;
+  max-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 84px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 2px solid;
+  font-size: 0.8rem;
+}
+.planner-history-box.good {
+  background: var(--good-tint);
+  border-color: var(--good);
+}
+.planner-history-box.warn {
+  background: var(--warn-tint);
+  border-color: var(--warn-text);
+}
+.planner-history-box.bad {
+  background: var(--bad-tint);
+  border-color: var(--bad);
+}
+.planner-history-box .planner-box-title {
+  font-size: 0.78rem;
+  overflow-wrap: normal;
+  hyphens: none;
+}
+.planner-history-score {
+  margin-top: auto;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.planner-history-score small {
+  font-weight: 400;
+  font-size: 0.75rem;
 }

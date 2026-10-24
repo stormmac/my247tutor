@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { AdminLearnPicker } from "@/components/AdminLearnPicker";
 import { ClassLearnPicker } from "@/components/ClassLearnPicker";
 import { loadRewards } from "@/components/RewardsButton";
-import { type SetWork, useSetWork } from "@/components/SetWork";
+import { openNow, redoOf, type SetWork, useSetWork } from "@/components/SetWork";
 import { useAccount } from "@/components/useAccount";
 import { switchChild, useChildren, useProfile } from "@/components/useProfile";
 import { currentLesson, daysLeftInWeek, daysLeftText, lessonProgress, ownPart, weekOf } from "@/lib/learner/lesson";
@@ -53,7 +53,18 @@ function StudentHome({ profile, signedIn }: { profile: LearnerProfile; signedIn:
   const english = subjects.includes("english");
   const reading = english && readingYear(profile.yearLevel);
   const setWork = useSetWork(profile.id);
-  const teacherWork = setWork.work.filter((w) => subjects.includes(w.subject) && (!w.doneAt || Date.parse(w.doneAt) >= mondayOf()));
+  const teacherWork = setWork.work.filter(
+    (w) => subjects.includes(w.subject) && openNow(w, weekOf()) && (!w.doneAt || Date.parse(w.doneAt) >= mondayOf()),
+  );
+  // Box by box as the teacher planned them, then other set work in the order it was set, with the redo of the mistakes last.
+  const inOrder = [...teacherWork].sort(
+    (a, b) =>
+      Number(a.kind === "mistakes") - Number(b.kind === "mistakes") ||
+      (a.slot ?? 99) - (b.slot ?? 99) ||
+      a.createdAt.localeCompare(b.createdAt),
+  );
+  const classWork = inOrder.filter((w) => !w.homework);
+  const homework = inOrder.filter((w) => w.homework);
   const session = profile.plan?.session;
   const left = daysLeftText();
 
@@ -84,11 +95,23 @@ function StudentHome({ profile, signedIn }: { profile: LearnerProfile; signedIn:
             </p>
           )}
           {teacherWork.length ? (
-            <div className="stack" style={{ gap: 10 }}>
-              {teacherWork.map((w) => (
-                <TeacherLessonCard key={w.id} profile={profile} work={w} />
-              ))}
-            </div>
+            <>
+              {classWork.length > 0 && (
+                <div className="stack" style={{ gap: 10 }}>
+                  {classWork.map((w) => (
+                    <TeacherLessonCard key={w.id} profile={profile} work={w} all={setWork.work} />
+                  ))}
+                </div>
+              )}
+              {homework.length > 0 && (
+                <div className="stack" style={{ gap: 10 }}>
+                  <h3 style={{ margin: "4px 0 0" }}>🏠 Homework</h3>
+                  {homework.map((w) => (
+                    <TeacherLessonCard key={w.id} profile={profile} work={w} all={setWork.work} />
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
             <p className="muted" style={{ margin: 0 }}>
               Nothing set this week yet.
@@ -164,27 +187,37 @@ function mondayOf(now = Date.now()): number {
 }
 
 /** One piece of work a teacher (or another grown-up) set: where it's up to, and a button straight into it. */
-function TeacherLessonCard({ profile, work }: { profile: LearnerProfile; work: SetWork }) {
+function TeacherLessonCard({ profile, work, all }: { profile: LearnerProfile; work: SetWork; all: SetWork[] }) {
   const curriculum = curriculumOf(profile.curriculum);
   const path = subtopicPath(work.subtopicId, curriculum);
-  const title = path
-    ? path.topic.title === path.subtopic.title
-      ? path.topic.title
-      : `${path.topic.title}: ${path.subtopic.title}`
-    : "Set work";
-  const part = currentLesson(profile, work.subject)?.parts.find((p) => p.setWorkId === work.id);
+  const redo = work.kind === "mistakes";
+  const title = redo
+    ? "Redo the questions you got wrong"
+    : path
+      ? path.topic.title === path.subtopic.title
+        ? path.topic.title
+        : `${path.topic.title}: ${path.subtopic.title}`
+      : "Set work";
+  const lesson = currentLesson(profile, work.subject);
+  const part = lesson?.parts.find((p) => p.setWorkId === work.id);
   const answered = part ? Math.min(part.results.length, part.questionIds.length) : 0;
   const total = part?.questionIds.length ?? 0;
   const done = Boolean(work.doneAt) || (total > 0 && answered >= total);
+  // Homework redoing the mistakes opens once the class activities are done.
+  const waiting = redo && !done && !part;
+  const classActivities = redo ? all.filter((a) => redoOf(work, all).includes(a.id)) : [];
   return (
     <div className="card stack teacher-lesson" style={{ gap: 6 }}>
       <div className="row spread">
         <div>
           <span className="pill">{subjectName(work.subject, curriculum)}</span>
+          {work.homework && <span className="pill homework">🏠 Homework</span>}
           <h3 style={{ margin: "6px 0 0" }}>{title}</h3>
         </div>
         {done ? (
-          <span className="pill good">Done ⭐</span>
+          <span className="pill good">{redo && work.total === 0 ? "Nothing to redo 🎉" : "Done ⭐"}</span>
+        ) : waiting ? (
+          <span className="pill">After class</span>
         ) : (
           <Link href={`/learn/${work.subject}?work=${work.id}`} className="btn">
             {answered ? "Keep going" : "Start"}
@@ -192,7 +225,11 @@ function TeacherLessonCard({ profile, work }: { profile: LearnerProfile; work: S
         )}
       </div>
       <p className="small muted" style={{ margin: 0 }}>
-        {work.atSchool ? "What you're doing at school now" : `Set by ${work.setBy ?? "your teacher"}`}
+        {waiting
+          ? `Opens when you've finished your ${classActivities.length === 1 ? "class activity" : `${classActivities.length} class activities`}`
+          : work.atSchool
+            ? "What you're doing at school now"
+            : `Set by ${work.setBy ?? "your teacher"}`}
         {total > 0 && !done ? `. ${answered} of ${total} questions done.` : "."}
         {work.note ? ` “${work.note}”` : ""}
       </p>

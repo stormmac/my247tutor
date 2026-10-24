@@ -175,11 +175,47 @@ export const SetWorkSchema = z.object({
 });
 
 /** How a child went on a piece of set work. */
-export const FinishWorkSchema = z.object({
-  learnerId: z.uuid(),
-  right: z.number().int().min(0).max(100),
-  total: z.number().int().min(1).max(100),
-});
+export const FinishWorkSchema = z
+  .object({
+    learnerId: z.uuid(),
+    right: z.number().int().min(0).max(100),
+    // 0 for homework redoing the questions not right first go, when every one was.
+    total: z.number().int().min(0).max(100),
+  })
+  .refine((w) => w.right <= w.total);
+
+/** Activities a teacher can plan for each student in one weekly session of a class. */
+export const MAX_SESSION_ACTIVITIES = 8;
+
+/** A session's Monday, as yyyy-mm-dd. */
+const MondaySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === 1, "Pick the Monday of the week.");
+
+/** The lesson planner: one of a session's boxes for some of a class's students, or homework redoing their mistakes. */
+export const PlanWorkSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("slot"),
+    classId: z.uuid(),
+    week: MondaySchema,
+    learnerIds: z.array(z.uuid()).min(1, "Choose at least one student.").max(30),
+    /** The box, 1 to 8, left to right. */
+    slot: z.number().int().min(1).max(MAX_SESSION_ACTIVITIES),
+    subject: z.enum(["maths", "english"]),
+    subtopicId: z.string().regex(/^[0-9a-f-]{36}$/, "Choose an activity."),
+    homework: z.boolean().default(false),
+    note: z.string().trim().max(200).optional(),
+  }),
+  z.object({
+    kind: z.literal("mistakes"),
+    classId: z.uuid(),
+    week: MondaySchema,
+    learnerIds: z.array(z.uuid()).min(1, "Choose at least one student.").max(30),
+    subject: z.enum(["maths", "english"]),
+    note: z.string().trim().max(200).optional(),
+  }),
+]);
 
 const YearSchema = z.union(
   [z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6), z.literal(7), z.literal(8)],

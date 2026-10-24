@@ -48,6 +48,15 @@ export interface SetWork {
   atSchool: boolean;
   /** Whether the person asking added it. */
   mine?: boolean;
+  /** Planned for one weekly session of a class (the lesson planner): the class and the session's Monday. */
+  classId: string | null;
+  week: string | null;
+  /** To do at home after the session. */
+  homework: boolean;
+  /** Which of the session's boxes it's in, 1 to 8, left to right. */
+  slot: number | null;
+  /** "topic": ten questions on a subtopic. "mistakes": the session's questions not right first go, to redo. */
+  kind: "topic" | "mistakes";
 }
 
 const iso = (value: unknown) => (value ? new Date(value as string).toISOString() : null);
@@ -183,12 +192,17 @@ export async function canAddSchoolWork(viewer: User, learnerId: string): Promise
 export async function listSetWork(learnerId: string, limit = 30, viewerId?: string): Promise<SetWork[]> {
   const { rows } = await (
     await ready()
-  ).query(
-    `SELECT w.*, u.display_name AS set_by_name FROM set_work w LEFT JOIN users u ON u.id = w.set_by
-     WHERE w.learner_id = $1 ORDER BY w.created_at DESC LIMIT $2`,
-    [learnerId, limit],
-  );
-  return rows.map((r) => ({
+  )
+    // Everything still to do first (there's at most MAX_OPEN_WORK of it), so none falls off the list.
+    .query(`${SET_WORK_SELECT} WHERE w.learner_id = $1 ORDER BY (w.done_at IS NULL) DESC, w.created_at DESC LIMIT $2`, [learnerId, limit]);
+  return rows.map((r) => setWorkOf(r, viewerId));
+}
+
+export const SET_WORK_SELECT = `SELECT w.*, to_char(w.week, 'YYYY-MM-DD') AS week_text, u.display_name AS set_by_name
+  FROM set_work w LEFT JOIN users u ON u.id = w.set_by`;
+
+export function setWorkOf(r: Record<string, unknown>, viewerId?: string): SetWork {
+  return {
     id: r.id as string,
     subject: r.subject as SetWork["subject"],
     subtopicId: r.subtopic_id as string,
@@ -200,11 +214,16 @@ export async function listSetWork(learnerId: string, limit = 30, viewerId?: stri
     total: r.total === null ? null : Number(r.total),
     atSchool: Boolean(r.at_school),
     ...(viewerId ? { mine: r.set_by === viewerId } : {}),
-  }));
+    classId: (r.class_id as string | null) ?? null,
+    week: (r.week_text as string | null) ?? null,
+    homework: Boolean(r.homework),
+    slot: r.slot === null || r.slot === undefined ? null : Number(r.slot),
+    kind: r.kind === "mistakes" ? "mistakes" : "topic",
+  };
 }
 
 /** How many unfinished pieces of set work a child can have at once. */
-export const MAX_OPEN_WORK = 10;
+export const MAX_OPEN_WORK = 20;
 
 export async function addSetWork(
   viewer: User,
@@ -215,8 +234,7 @@ export async function addSetWork(
 ): Promise<{ added: number } | { error: string }> {
   const pool = await ready();
   const { rows } = await pool.query(`SELECT COUNT(*) AS n FROM set_work WHERE learner_id = $1 AND done_at IS NULL`, [learnerId]);
-  if (Number(rows[0].n) + items.length > MAX_OPEN_WORK)
-    return { error: `A child can have up to ${MAX_OPEN_WORK} pieces of work still to do. Wait for some to be finished first.` };
+  if (Number(rows[0].n) + items.length > MAX_OPEN_WORK) return { error: tooMuchWork() };
   for (const item of items)
     await pool.query(`INSERT INTO set_work (learner_id, set_by, subject, subtopic_id, note, at_school) VALUES ($1, $2, $3, $4, $5, $6)`, [
       learnerId,
@@ -229,6 +247,9 @@ export async function addSetWork(
   await audit(viewer.id, "set_work", learnerId, { count: items.length, atSchool });
   return { added: items.length };
 }
+
+const tooMuchWork = (name = "A child") =>
+  `${name} can have up to ${MAX_OPEN_WORK} pieces of work still to do. Wait for some to be finished first.`;
 
 /** Records how the child went on a piece of set work. Only the first finish counts. */
 export async function finishSetWork(learnerId: string, id: string, right: number, total: number): Promise<boolean> {

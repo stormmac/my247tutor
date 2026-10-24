@@ -3,6 +3,7 @@ import type { Subject, YearLevel } from "../curriculum/types";
 import {
   ACTIVITY_QUESTIONS,
   REVIEW_QUESTIONS,
+  resultTries,
   SKILL_BUILDER_QUESTIONS,
   weekOf,
   type LessonPart,
@@ -164,38 +165,92 @@ export interface SetWorkItem {
   subtopicId: string;
   setBy: string | null;
   note: string | null;
+  /** To do at home after the class session. */
+  homework?: boolean;
+  /** Homework redoing the questions not right first go in these pieces of set work (the session's activities). */
+  redo?: string[];
+}
+
+/**
+ * The questions to redo for homework: those not right first go in the session's activities that
+ * are in this lesson. Null until each of those activities is finished, and when none is here.
+ */
+export function mistakesOf(lesson: WeeklyLesson, redo: string[]): string[] | null {
+  const parts = lesson.parts.filter((p) => p.setWorkId && redo.includes(p.setWorkId));
+  if (!parts.length || parts.some((p) => p.results.length < p.questionIds.length)) return null;
+  return parts.flatMap((p) => p.questionIds.filter((_, i) => resultTries(p.results[i]) !== 1));
+}
+
+/** A piece of set work as a lesson part, or null when it can't be one (yet). */
+function setPart(lesson: WeeklyLesson, w: SetWorkItem, profile: LearnerProfile): LessonPart | null {
+  const curriculum = curriculumOf(profile.curriculum);
+  const extra = {
+    ...(w.setBy ? { setBy: w.setBy } : {}),
+    ...(w.note ? { note: w.note } : {}),
+    ...(w.homework ? { homework: true } : {}),
+  };
+  if (w.redo) {
+    const questionIds = mistakesOf(lesson, w.redo);
+    if (!questionIds?.length) return null;
+    const title = "Redo the questions you got wrong";
+    return { kind: "set", title, year: profile.yearLevel, setWorkId: w.id, ...extra, redo: true, questionIds, results: [] };
+  }
+  const path = subtopicPath(w.subtopicId, curriculum);
+  if (!path) return null;
+  const rng = new Rng(hash(`${w.id}:${lesson.week}`));
+  const { topic, subtopic } = path;
+  const questionIds = activity(subtopic, rng, curriculum);
+  if (!questionIds.length) return null;
+  return {
+    kind: "set",
+    title: topic.title === subtopic.title ? topic.title : `${topic.title}: ${subtopic.title}`,
+    year: profile.yearLevel,
+    subtopicId: subtopic.id,
+    setWorkId: w.id,
+    ...extra,
+    questionIds,
+    results: [],
+  };
 }
 
 /**
  * Adds set work the lesson doesn't have yet as parts after the rest: ten questions on its
- * subtopic, easy to hard. Work on a subtopic this curriculum doesn't have is left out.
+ * subtopic, easy to hard. Work on a subtopic this curriculum doesn't have is left out. Homework
+ * redoing a session's mistakes joins once the session's activities are finished.
  */
 export function addSetWork(lesson: WeeklyLesson, items: SetWorkItem[], profile: LearnerProfile): WeeklyLesson {
-  const curriculum = curriculumOf(profile.curriculum);
   const have = new Set(lesson.parts.map((p) => p.setWorkId).filter(Boolean));
-  const parts = items
-    .filter((w) => !have.has(w.id))
-    .flatMap((w): LessonPart[] => {
-      const path = subtopicPath(w.subtopicId, curriculum);
-      if (!path) return [];
-      const rng = new Rng(hash(`${w.id}:${lesson.week}`));
-      const { topic, subtopic } = path;
-      return [
-        {
-          kind: "set",
-          title: topic.title === subtopic.title ? topic.title : `${topic.title}: ${subtopic.title}`,
-          year: profile.yearLevel,
-          subtopicId: subtopic.id,
-          setWorkId: w.id,
-          ...(w.setBy ? { setBy: w.setBy } : {}),
-          ...(w.note ? { note: w.note } : {}),
-          questionIds: activity(subtopic, rng, curriculum),
-          results: [],
-        },
-      ];
-    })
-    .filter((p) => p.questionIds.length);
+  const parts = items.filter((w) => !have.has(w.id)).flatMap((w) => setPart(lesson, w, profile) ?? []);
   return parts.length ? { ...lesson, parts: [...lesson.parts, ...parts] } : lesson;
+}
+
+/**
+ * Brings the lesson's set work in line with `open`, all the open set work in its subject: parts
+ * not started yet follow a teacher's changes (a new activity in the box, homework or not) or go
+ * when the work was taken back, then new work is added. Parts already started stay as they are.
+ */
+export function syncSetWork(lesson: WeeklyLesson, open: SetWorkItem[], profile: LearnerProfile): WeeklyLesson {
+  const byId = new Map(open.map((w) => [w.id, w]));
+  let changed = false;
+  const parts = lesson.parts.flatMap((p): LessonPart[] => {
+    if (p.kind !== "set" || !p.setWorkId || p.results.length) return [p];
+    const w = byId.get(p.setWorkId);
+    if (!w) {
+      changed = true;
+      return [];
+    }
+    if (!w.redo && w.subtopicId !== p.subtopicId) {
+      changed = true;
+      return [setPart(lesson, w, profile) ?? []].flat();
+    }
+    if (Boolean(w.homework) !== Boolean(p.homework)) {
+      changed = true;
+      const { homework: _old, ...rest } = p;
+      return [w.homework ? { ...rest, homework: true } : rest];
+    }
+    return [p];
+  });
+  return addSetWork(changed ? { ...lesson, parts } : lesson, open, profile);
 }
 
 /**

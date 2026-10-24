@@ -45,6 +45,10 @@ export interface LessonPart {
   setWorkId?: string;
   setBy?: string;
   note?: string;
+  /** For set work: to do at home after the class session. */
+  homework?: boolean;
+  /** For set work: homework redoing the class session's questions that weren't right first go. */
+  redo?: boolean;
   questionIds: string[];
   /** One entry per answered question, in order (see LessonResult). */
   results: (LessonResult | boolean)[];
@@ -64,6 +68,20 @@ export function weekOf(now = Date.now()): string {
   d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** The Monday `weeks` weeks after (or before, when negative) this one, both as yyyy-mm-dd. */
+export function addWeeks(week: string, weeks: number): string {
+  const d = new Date(`${week}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + weeks * 7);
+  return d.toISOString().slice(0, 10);
+}
+
+/** The date of a day in a week (1 is Monday, 7 is Sunday), as yyyy-mm-dd. */
+export function dayOfWeek(week: string, weekday: number): string {
+  const d = new Date(`${week}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + weekday - 1);
+  return d.toISOString().slice(0, 10);
 }
 
 /** This week's lesson in a subject, or null when it hasn't been made yet this week (or the child changed curriculum). */

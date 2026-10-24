@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { practiseable } from "@/lib/content/program";
 import { subtopicPath } from "@/lib/content/tree";
-import { curriculumOf, localeOf, subjectName, yearName } from "@/lib/curriculum/curricula";
+import { type Curriculum, curriculumOf, localeOf, subjectName, yearName } from "@/lib/curriculum/curricula";
 import { YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
 import type { LearnerProfile } from "@/lib/learner/model";
 
@@ -22,7 +22,23 @@ export interface SetWork {
   atSchool: boolean;
   /** Whether this person added it. */
   mine?: boolean;
+  /** Planned for one weekly session of a class: the class, and the session's Monday as yyyy-mm-dd. */
+  classId: string | null;
+  week: string | null;
+  /** To do at home after the session. */
+  homework: boolean;
+  /** Which of the session's boxes it's in, 1 to 8, left to right. */
+  slot: number | null;
+  /** "mistakes": redo the session's questions that weren't right first go. */
+  kind: "topic" | "mistakes";
 }
+
+/** Work that's open now: not for a session in a later week. */
+export const openNow = (w: SetWork, week: string) => !w.week || w.week <= week;
+
+/** The pieces of set work a "mistakes" homework redoes: the session's activities in its subject. */
+export const redoOf = (w: SetWork, all: SetWork[]) =>
+  all.filter((a) => a.kind === "topic" && a.classId === w.classId && a.week === w.week && a.subject === w.subject).map((a) => a.id);
 
 /**
  * The work set for a child, and whether this person can set more. Empty for a child without an
@@ -48,9 +64,26 @@ export function useSetWork(learnerId: string | undefined) {
   return { work, canSet, canAddSchool, loaded, reload: load };
 }
 
+/** What a piece of set work is called: its topic, or the homework redoing the mistakes. */
+export function workTitle(w: SetWork, curriculum: Curriculum): string {
+  if (w.kind === "mistakes") return "Redo the questions got wrong";
+  const path = subtopicPath(w.subtopicId, curriculum);
+  return path ? (path.topic.title === path.subtopic.title ? path.topic.title : `${path.topic.title}: ${path.subtopic.title}`) : "A topic";
+}
+
+/** How the child went on a finished piece of set work. */
+export function WorkResult({ work }: { work: SetWork }) {
+  if (!work.total) return <span className="pill good">Nothing to redo</span>;
+  return (
+    <span className={`pill ${work.right! / work.total > 0.75 ? "good" : "warn"}`}>
+      {work.right} of {work.total} right first go
+    </span>
+  );
+}
+
 /** Tells the server how the child went on a piece of set work. */
-export function finishWork(learnerId: string, id: string, right: number, total: number) {
-  void fetch(`/api/set-work/${id}`, {
+export function finishWork(learnerId: string, id: string, right: number, total: number): Promise<unknown> {
+  return fetch(`/api/set-work/${id}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ learnerId, right, total }),
@@ -67,10 +100,7 @@ export function SetWorkCard({ profile }: { profile: LearnerProfile }) {
   const [open, setOpen] = useState(false);
   if (!loaded || !profile.id || (!canSet && !work.length)) return null;
   const curriculum = curriculumOf(profile.curriculum);
-  const title = (w: SetWork) => {
-    const path = subtopicPath(w.subtopicId, curriculum);
-    return path ? (path.topic.title === path.subtopic.title ? path.topic.title : `${path.topic.title}: ${path.subtopic.title}`) : "A topic";
-  };
+  const title = (w: SetWork) => workTitle(w, curriculum);
   const when = (iso: string) => new Date(iso).toLocaleDateString(localeOf(curriculum), { day: "numeric", month: "short" });
 
   return (
@@ -114,21 +144,14 @@ export function SetWorkCard({ profile }: { profile: LearnerProfile }) {
                     <div className="small muted">
                       {subjectName(w.subject, curriculum)}
                       {w.atSchool && " · doing at school"}
+                      {w.homework && " · homework"}
                       {w.note && <> · &ldquo;{w.note}&rdquo;</>}
                     </div>
                   </td>
                   <td className="small">
                     {w.setBy ?? "Someone"}, {when(w.createdAt)}
                   </td>
-                  <td>
-                    {w.doneAt ? (
-                      <span className={`pill ${w.right! / w.total! > 0.75 ? "good" : "warn"}`}>
-                        {w.right} of {w.total} right first go
-                      </span>
-                    ) : (
-                      <span className="pill">To do</span>
-                    )}
-                  </td>
+                  <td>{w.doneAt ? <WorkResult work={w} /> : <span className="pill">To do</span>}</td>
                   <td>
                     {canSet && !w.doneAt && (
                       <button
