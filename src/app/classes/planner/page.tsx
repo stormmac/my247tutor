@@ -321,7 +321,14 @@ function ActivityBox({
   );
 }
 
-/** A score as "8/10", green over 75% right first go. */
+/** How a finished activity went: green over 75% right first go, yellow 50 to 75%, red under 50%. */
+function band(work: SetWork): "good" | "warn" | "bad" {
+  if (!work.total) return "good";
+  const score = work.right! / work.total;
+  return score > 0.75 ? "good" : score >= 0.5 ? "warn" : "bad";
+}
+
+/** A score as "8/10", coloured by how it went. */
 function Score({ work }: { work: SetWork }) {
   if (!work.total)
     return (
@@ -330,14 +337,24 @@ function Score({ work }: { work: SetWork }) {
       </span>
     );
   return (
-    <span className={`pill ${work.right! / work.total > 0.75 ? "good" : "warn"}`} title={`${work.right} of ${work.total} right first go`}>
+    <span className={`pill ${band(work)}`} title={`${work.right} of ${work.total} right first go`}>
       {work.right}/{work.total}
     </span>
   );
 }
 
 /** A dialog that opens as soon as it's on the page, and tells its parent when it closes. */
-function Dialog({ label, onClose, children }: { label: string; onClose: () => void; children: (close: () => void) => React.ReactNode }) {
+function Dialog({
+  label,
+  onClose,
+  children,
+  wide = false,
+}: {
+  wide?: boolean;
+  label: string;
+  onClose: () => void;
+  children: (close: () => void) => React.ReactNode;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
@@ -346,7 +363,7 @@ function Dialog({ label, onClose, children }: { label: string; onClose: () => vo
   return (
     <dialog
       ref={ref}
-      className="preview-dialog planner-dialog"
+      className={`preview-dialog planner-dialog ${wide ? "planner-history-dialog" : ""}`.trim()}
       aria-label={label}
       onClose={onClose}
       onClick={(e) => e.target === ref.current && ref.current.close()}
@@ -564,7 +581,7 @@ function HistoryDialog({ student, week, onClose }: { student: PlannerStudent; we
   const total = scored.reduce((n, w) => n + w.total!, 0);
 
   return (
-    <Dialog label={`${student.name}'s last four weeks`} onClose={onClose}>
+    <Dialog label={`${student.name}'s last four weeks`} onClose={onClose} wide>
       {(close) => (
         <div className="stack">
           <div className="row spread" style={{ flexWrap: "nowrap", alignItems: "flex-start" }}>
@@ -583,32 +600,41 @@ function HistoryDialog({ student, week, onClose }: { student: PlannerStudent; we
           </div>
           {error && <div className="feedback bad">{error}</div>}
           {!weeks && !error && <p className="muted">Loading…</p>}
-          {weeks?.map((w) => (
-            <div key={w.week} className="stack planner-history-week" style={{ gap: 6 }}>
-              <strong className="small">Week of {shortDate(w.week)}</strong>
-              {w.work.length === 0 ? (
-                <p className="small muted" style={{ margin: 0 }}>
-                  Nothing set.
-                </p>
-              ) : (
-                <div className="planner-history-boxes">
-                  {w.work.map((x) => {
-                    const { title, topic } = boxTitle(x, curriculum);
+          {weeks?.map((w) => {
+            const done = w.work.filter((x) => x.doneAt);
+            return (
+              <div key={w.week} className="planner-history-week">
+                <div className="planner-history-label">
+                  <strong className="small">{shortDate(w.week)}</strong>
+                  <span className="small muted">{done.length ? `${done.length} done` : "Nothing done"}</span>
+                </div>
+                <div className="planner-history-row">
+                  {done.map((x) => {
+                    const { title } = boxTitle(x, curriculum);
                     return (
-                      <div key={x.id} className={`planner-box filled${x.homework ? " homework" : ""}${x.doneAt ? " done" : ""}`}>
-                        <span className="planner-box-title">{title}</span>
-                        {topic && <span className="planner-box-topic">{topic}</span>}
-                        <span className="planner-box-foot">
-                          {x.homework && <span title="Homework">🏠</span>}
-                          {x.doneAt ? <Score work={x} /> : <span className="small muted">Not done</span>}
+                      <div
+                        key={x.id}
+                        className={`planner-history-box ${band(x)}`}
+                        title={x.total ? `${x.right} of ${x.total} right first go` : "Nothing to redo"}
+                      >
+                        <span className="planner-box-title">{x.kind === "mistakes" ? "Redo wrong" : title}</span>
+                        <span className="planner-history-score">
+                          {x.homework && <span title="Homework">🏠 </span>}
+                          {x.total ? (
+                            <>
+                              {Math.round((x.right! / x.total) * 100)}% <small>{`${x.right}/${x.total}`}</small>
+                            </>
+                          ) : (
+                            "Nothing to redo"
+                          )}
                         </span>
                       </div>
                     );
                   })}
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       )}
     </Dialog>

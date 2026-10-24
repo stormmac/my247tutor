@@ -2848,12 +2848,68 @@ button.planner-box.filled:hover {
   max-height: 45vh;
   overflow-y: auto;
 }
+.planner-history-dialog {
+  width: min(980px, calc(100vw - 32px));
+}
+/* One row a week: the week on the left, then each finished activity, coloured by its score. */
 .planner-history-week {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+  align-items: start;
   padding-top: 10px;
   border-top: 1px solid var(--border);
 }
-.planner-history-boxes {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+.planner-history-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+}
+.planner-history-row {
+  display: flex;
   gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  min-height: 40px;
+}
+.planner-history-box {
+  /* Up to nine in a row (eight activities and the redo) fit the pop-up; more scroll. */
+  flex: 1 0 0;
+  min-width: 86px;
+  max-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 84px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 2px solid;
+  font-size: 0.8rem;
+}
+.planner-history-box.good {
+  background: var(--good-tint);
+  border-color: var(--good);
+}
+.planner-history-box.warn {
+  background: var(--warn-tint);
+  border-color: var(--warn-text);
+}
+.planner-history-box.bad {
+  background: var(--bad-tint);
+  border-color: var(--bad);
+}
+.planner-history-box .planner-box-title {
+  font-size: 0.78rem;
+  overflow-wrap: normal;
+  hyphens: none;
+}
+.planner-history-score {
+  margin-top: auto;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.planner-history-score small {
+  font-weight: 400;
+  font-size: 0.75rem;
 }
