@@ -3,11 +3,15 @@ import {
   answerOf,
   answerOfFact,
   bestKey,
+  bestScores,
   describeTables,
   factOf,
+  gameMs,
   MAX_GAMES,
+  minutesOf,
   newTables,
   nextQuestion,
+  parseBestKey,
   recordGame,
   SPEEDS,
   tablesOf,
@@ -66,7 +70,7 @@ describe("times tables scores", () => {
     expect(r.newBest).toBe(true);
     expect(r.record.best).toEqual({ [bestKey([7], "medium")]: 10, [bestKey([7], "fast")]: 9 });
     expect(bestKey([7, 3], "slow")).toBe(bestKey([3, 7], "slow"));
-    expect(r.record.last).toEqual({ tables: [7], speed: "fast" });
+    expect(r.record.last).toEqual({ tables: [7], speed: "fast", minutes: 2 });
   });
 
   it("keeps the last 30 games, and old profiles start with none", () => {
@@ -89,5 +93,46 @@ describe("times tables scores", () => {
     expect(describeTables([7])).toBe("the 7s");
     expect(describeTables([5, 2, 3])).toBe("2s, 3s and 5s");
     expect(describeTables([2, 3, 4, 5, 6, 7, 8, 9, 10])).toBe("all tables");
+  });
+});
+
+describe("one or two minute games", () => {
+  it("lasts one or two minutes, and old games were two", () => {
+    expect(gameMs(1)).toBe(60_000);
+    expect(gameMs(2)).toBe(120_000);
+    expect(minutesOf(game())).toBe(2);
+    expect(minutesOf(game({ minutes: 1 }))).toBe(1);
+  });
+
+  it("keeps one-minute bests apart, and two-minute bests where they were", () => {
+    expect(bestKey([7], "fast", 2)).toBe(bestKey([7], "fast"));
+    expect(bestKey([7], "fast", 1)).not.toBe(bestKey([7], "fast"));
+    expect(parseBestKey(bestKey([3, 7], "slow", 1))).toEqual({ tables: [3, 7], speed: "slow", minutes: 1 });
+    expect(parseBestKey(bestKey([7], "medium"))).toEqual({ tables: [7], speed: "medium", minutes: 2 });
+    let r = recordGame(newTables(), game({ right: 12 }));
+    r = recordGame(r.record, game({ right: 5, minutes: 1 }));
+    expect(r.newBest).toBe(true);
+    expect(r.best).toBe(5);
+    expect(r.record.last.minutes).toBe(1);
+  });
+
+  it("lists the best scores: each table, then the mixes played, by speed", () => {
+    let record = newTables();
+    for (const g of [
+      game({ right: 12 }),
+      game({ right: 15, speed: "fast" }),
+      game({ right: 6, minutes: 1 }),
+      game({ tables: [2, 3, 4, 5, 6, 7, 8, 9, 10], right: 20, speed: "slow" }),
+      game({ tables: [3, 4], right: 9 }),
+    ])
+      record = recordGame(record, g).record;
+    const two = bestScores(record, 2);
+    expect(two.slice(0, 9).map((r) => r.tables[0])).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(two.find((r) => r.tables.join() === "7")?.best).toEqual({ medium: 12, fast: 15 });
+    expect(two.slice(9).map((r) => r.tables.length)).toEqual([9, 2]);
+    expect(two[9].best).toEqual({ slow: 20 });
+    const one = bestScores(record, 1);
+    expect(one).toHaveLength(9);
+    expect(one.find((r) => r.tables.join() === "7")?.best).toEqual({ medium: 6 });
   });
 });

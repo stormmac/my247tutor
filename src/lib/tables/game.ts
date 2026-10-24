@@ -1,12 +1,18 @@
 /**
- * The times tables game: two minutes of questions from the tables the student picked, with a short
- * pause after each answer (slow, medium or fast) before the next question shows.
+ * The times tables game: one or two minutes of questions from the tables the student picked, with
+ * a short pause after each answer (slow, medium or fast) before the next question shows.
  */
 
 export const TABLES = [2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 /** Each table goes from 1 × to 10 ×, as in the NSW syllabus. */
 export const MULTIPLIERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
-export const GAME_MS = 2 * 60 * 1000;
+
+/** How long a game can last, in minutes. */
+export const GAME_MINUTES = [1, 2] as const;
+export type Minutes = (typeof GAME_MINUTES)[number];
+/** Games saved before there was a choice were two minutes. */
+export const minutesOf = (game: { minutes?: Minutes }): Minutes => game.minutes ?? 2;
+export const gameMs = (minutes: Minutes) => minutes * 60 * 1000;
 
 export type Speed = "slow" | "medium" | "fast";
 /** How long the answer stays on screen before the next question. */
@@ -41,6 +47,8 @@ export interface TablesGame {
   at: number;
   tables: number[];
   speed: Speed;
+  /** How long it lasted. Missing on games from before there was a choice, which were two minutes. */
+  minutes?: Minutes;
   right: number;
   asked: number;
   /** The facts answered wrongly, like "7 × 8". */
@@ -49,10 +57,10 @@ export interface TablesGame {
 
 export interface TablesRecord {
   games: TablesGame[];
-  /** Best score for each choice of tables and speed. */
+  /** Best score for each choice of tables, speed and length. */
   best: Record<string, number>;
   /** What was picked last time, to start there next time. */
-  last: { tables: number[]; speed: Speed };
+  last: { tables: number[]; speed: Speed; minutes?: Minutes };
 }
 
 export const MAX_GAMES = 30;
@@ -64,18 +72,27 @@ export function tablesOf(profile: { tables?: Partial<TablesRecord> }): TablesRec
   return { ...newTables(), ...(t ?? {}), best: { ...(t?.best ?? {}) }, games: [...(t?.games ?? [])] };
 }
 
-export const bestKey = (tables: number[], speed: Speed) => `${[...tables].sort((a, b) => a - b).join(",")}:${speed}`;
+/** Where a best score is kept. Two-minute games keep the key they had before there was a choice. */
+export const bestKey = (tables: number[], speed: Speed, minutes: Minutes = 2) =>
+  `${[...tables].sort((a, b) => a - b).join(",")}:${speed}${minutes === 2 ? "" : `:${minutes}m`}`;
 
-/** Saves a finished game. A new best is a higher score than before on the same tables and speed. */
+/** The tables, speed and length a best score is for, from its key. */
+export function parseBestKey(key: string): { tables: number[]; speed: Speed; minutes: Minutes } | null {
+  const [tables, speed, minutes] = key.split(":");
+  if (!tables || !(speed in SPEEDS)) return null;
+  return { tables: tables.split(",").map(Number), speed: speed as Speed, minutes: minutes === "1m" ? 1 : 2 };
+}
+
+/** Saves a finished game. A new best is a higher score than before on the same tables, speed and length. */
 export function recordGame(record: TablesRecord, game: TablesGame): { record: TablesRecord; newBest: boolean; best: number } {
-  const key = bestKey(game.tables, game.speed);
+  const key = bestKey(game.tables, game.speed, minutesOf(game));
   const before = record.best[key] ?? 0;
   const newBest = game.right > before;
   return {
     record: {
       games: [...record.games, game].slice(-MAX_GAMES),
       best: { ...record.best, [key]: Math.max(before, game.right) },
-      last: { tables: game.tables, speed: game.speed },
+      last: { tables: game.tables, speed: game.speed, minutes: minutesOf(game) },
     },
     newBest,
     best: Math.max(before, game.right),
@@ -99,4 +116,29 @@ export function trickyFacts(record: TablesRecord, count = 5): string[] {
     .sort((a, b) => b[1] - a[1])
     .slice(0, count)
     .map(([f]) => f);
+}
+
+/** A row of the best scores table: one choice of tables, and the best at each speed. */
+export interface BestRow {
+  tables: number[];
+  best: Partial<Record<Speed, number>>;
+}
+
+/**
+ * The best scores for games of this length: a row for each single table, then each mix of tables
+ * played, with the best at each speed.
+ */
+export function bestScores(record: TablesRecord, minutes: Minutes): BestRow[] {
+  const rows = new Map<string, BestRow>(TABLES.map((t) => [String(t), { tables: [t], best: {} }]));
+  for (const [key, score] of Object.entries(record.best)) {
+    const parsed = parseBestKey(key);
+    if (!parsed || parsed.minutes !== minutes || !score) continue;
+    const id = parsed.tables.join(",");
+    const row = rows.get(id) ?? { tables: parsed.tables, best: {} };
+    row.best[parsed.speed] = Math.max(row.best[parsed.speed] ?? 0, score);
+    rows.set(id, row);
+  }
+  const single = [...rows.values()].filter((r) => r.tables.length === 1);
+  const mixed = [...rows.values()].filter((r) => r.tables.length > 1).sort((a, b) => b.tables.length - a.tables.length);
+  return [...single, ...mixed];
 }
