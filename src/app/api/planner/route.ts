@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
-import { planMistakesHomework, plannerWeek, planSlot } from "@/lib/auth/planner";
-import { PlanWorkSchema } from "@/lib/auth/rules";
+import { planMistakesHomework, plannerWeek, planSlot, unplanSlot } from "@/lib/auth/planner";
+import { PlanWorkSchema, UnplanWorkSchema } from "@/lib/auth/rules";
 import { requireUser } from "@/lib/auth/users";
 import { weekOf } from "@/lib/learner/lesson";
 
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   return Response.json({ week, classes });
 }
 
-/** Puts an activity in a session box, or plans homework redoing the questions got wrong, for students in a session. */
+/** Puts an activity in a session box, or homework redoing the questions got wrong in a homework box, for students in a session. */
 export async function POST(request: NextRequest) {
   const result = await requireUser(request);
   if ("response" in result) return result.response;
@@ -30,4 +30,15 @@ export async function POST(request: NextRequest) {
       : await planMistakesHomework(result.user, { ...plan, note: plan.note || null });
   if ("error" in added) return Response.json({ error: added.error }, { status: added.status });
   return Response.json(added);
+}
+
+/** Empties a session box for students in a session. */
+export async function DELETE(request: NextRequest) {
+  const result = await requireUser(request);
+  if ("response" in result) return result.response;
+  const parsed = UnplanWorkSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return Response.json({ error: parsed.error.issues[0]?.message ?? "Check the details." }, { status: 400 });
+  const removed = await unplanSlot(result.user, parsed.data);
+  if ("error" in removed) return Response.json({ error: removed.error }, { status: removed.status });
+  return Response.json(removed);
 }

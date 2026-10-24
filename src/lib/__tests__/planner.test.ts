@@ -2,8 +2,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { openNow, redoOf, type SetWork } from "../../components/SetWork";
-import { PLANNER_SQL } from "../auth/familySchema";
-import { FinishWorkSchema, MAX_SESSION_ACTIVITIES, PlanWorkSchema } from "../auth/rules";
+import { PLANNER_HOMEWORK_SQL, PLANNER_SQL } from "../auth/familySchema";
+import {
+  FinishWorkSchema,
+  homeworkSlot,
+  MAX_SESSION_ACTIVITIES,
+  MAX_SESSION_HOMEWORK,
+  PlanWorkSchema,
+  UnplanWorkSchema,
+} from "../auth/rules";
 import { addSetWork, buildLesson, mistakesOf, syncSetWork } from "../content/lesson";
 import { addWeeks, dayOfWeek } from "../learner/lesson";
 import { newProfile } from "../learner/model";
@@ -35,21 +42,29 @@ const work = (over: Partial<SetWork>): SetWork => ({
 describe("the lesson planner", () => {
   it("has a migration file matching the app's own SQL", () => {
     expect(readFileSync(join(__dirname, "../../../database/027_my247tutor_lesson_planner.sql"), "utf8")).toContain(PLANNER_SQL);
+    expect(readFileSync(join(__dirname, "../../../database/028_my247tutor_planner_homework.sql"), "utf8")).toContain(PLANNER_HOMEWORK_SQL);
   });
 
-  it("plans one of eight boxes for a session's Monday", () => {
+  it("plans one of eight activity boxes or three homework boxes for a session's Monday", () => {
     const ok = { kind: "slot", classId: CLASS, week: "2026-10-19", learnerIds: [LEARNER], slot: 1, subject: "maths", subtopicId: AREA_Y4 };
     expect(PlanWorkSchema.safeParse(ok).success).toBe(true);
     expect(PlanWorkSchema.safeParse({ ...ok, slot: MAX_SESSION_ACTIVITIES }).success).toBe(true);
-    expect(PlanWorkSchema.safeParse({ ...ok, slot: MAX_SESSION_ACTIVITIES + 1 }).success).toBe(false);
+    expect(PlanWorkSchema.safeParse({ ...ok, slot: MAX_SESSION_ACTIVITIES + MAX_SESSION_HOMEWORK }).success).toBe(true);
+    expect(PlanWorkSchema.safeParse({ ...ok, slot: MAX_SESSION_ACTIVITIES + MAX_SESSION_HOMEWORK + 1 }).success).toBe(false);
+    expect(homeworkSlot(MAX_SESSION_ACTIVITIES)).toBe(false);
+    expect(homeworkSlot(MAX_SESSION_ACTIVITIES + 1)).toBe(true);
     expect(PlanWorkSchema.safeParse({ ...ok, slot: 0 }).success).toBe(false);
     expect(PlanWorkSchema.safeParse({ ...ok, subtopicId: "" }).success).toBe(false);
     // A Tuesday isn't a week.
     expect(PlanWorkSchema.safeParse({ ...ok, week: "2026-10-20" }).success).toBe(false);
     expect(PlanWorkSchema.safeParse({ ...ok, learnerIds: [] }).success).toBe(false);
-    expect(
-      PlanWorkSchema.safeParse({ kind: "mistakes", classId: CLASS, week: "2026-10-19", learnerIds: [LEARNER], subject: "english" }).success,
-    ).toBe(true);
+    // Redoing the questions got wrong goes in a homework box.
+    const redo = { kind: "mistakes", classId: CLASS, week: "2026-10-19", learnerIds: [LEARNER], subject: "english" };
+    expect(PlanWorkSchema.safeParse({ ...redo, slot: MAX_SESSION_ACTIVITIES + 1 }).success).toBe(true);
+    expect(PlanWorkSchema.safeParse({ ...redo, slot: MAX_SESSION_ACTIVITIES }).success).toBe(false);
+    expect(PlanWorkSchema.safeParse(redo).success).toBe(false);
+    expect(UnplanWorkSchema.safeParse({ classId: CLASS, week: "2026-10-19", learnerIds: [LEARNER], slot: 11 }).success).toBe(true);
+    expect(UnplanWorkSchema.safeParse({ classId: CLASS, week: "2026-10-19", learnerIds: [], slot: 4 }).success).toBe(false);
   });
 
   it("finishes redo homework with nothing to redo, but never more right than asked", () => {
@@ -71,7 +86,7 @@ describe("the lesson planner", () => {
     expect(openNow(work({ week: null, classId: null }), "2026-10-19")).toBe(true);
   });
 
-  it("redoes the session's activities in the homework's subject only", () => {
+  it("redoes the session's class activities in the homework's subject only, not its other homework", () => {
     const all = [
       work({ id: "a" }),
       work({ id: "b", homework: true }),
@@ -80,7 +95,7 @@ describe("the lesson planner", () => {
       work({ id: "e", classId: null, week: null }),
       work({ id: "m", kind: "mistakes", homework: true, subtopicId: "" }),
     ];
-    expect(redoOf(all[5], all)).toEqual(["a", "b"]);
+    expect(redoOf(all[5], all)).toEqual(["a"]);
   });
 
   it("makes homework of the questions not right first go, once the activities are done", () => {

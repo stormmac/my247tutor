@@ -47,3 +47,13 @@ ALTER TABLE set_work ADD COLUMN IF NOT EXISTS slot SMALLINT CHECK (slot BETWEEN 
 -- 'topic': ten questions on a subtopic. 'mistakes': redo the questions not right first go in the session's activities.
 ALTER TABLE set_work ADD COLUMN IF NOT EXISTS kind VARCHAR(10) NOT NULL DEFAULT 'topic' CHECK (kind IN ('topic', 'mistakes'));
 CREATE INDEX IF NOT EXISTS idx_set_work_class_week ON set_work(class_id, week);`;
+
+/** Three homework boxes after the session's eight: slots 9 to 11. */
+export const PLANNER_HOMEWORK_SQL = `-- Boxes 1 to 8 are the session's activities, 9 to 11 its homework.
+ALTER TABLE set_work DROP CONSTRAINT IF EXISTS set_work_slot_check;
+ALTER TABLE set_work ADD CONSTRAINT set_work_slot_check CHECK (slot BETWEEN 1 AND 11);
+-- Homework redoing a session's mistakes, planned before there were homework boxes, goes in the first ones.
+UPDATE set_work w SET slot = 8 + m.n
+FROM (SELECT id, row_number() OVER (PARTITION BY learner_id, class_id, week ORDER BY created_at) AS n
+      FROM set_work WHERE kind = 'mistakes' AND slot IS NULL AND class_id IS NOT NULL) m
+WHERE w.id = m.id AND m.n <= 3;`;

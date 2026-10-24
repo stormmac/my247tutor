@@ -7,7 +7,7 @@ import { practiseable } from "@/lib/content/program";
 import { subtopicPath } from "@/lib/content/tree";
 import { type Curriculum, curriculumOf, subjectName, yearName } from "@/lib/curriculum/curricula";
 import { YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
-import { CLASS_SUBJECTS, describeTime, MAX_SESSION_ACTIVITIES, type ClassTime } from "@/lib/auth/rules";
+import { CLASS_SUBJECTS, describeTime, homeworkSlot, MAX_SESSION_ACTIVITIES, MAX_SESSION_HOMEWORK, type ClassTime } from "@/lib/auth/rules";
 import { autoSlots, type AutoActivity } from "@/lib/learner/autoActivities";
 import { addWeeks, dayOfWeek, weekOf } from "@/lib/learner/lesson";
 import type { LearnerProfile } from "@/lib/learner/model";
@@ -35,16 +35,22 @@ interface PlannerClass {
 }
 
 const SLOTS = Array.from({ length: MAX_SESSION_ACTIVITIES }, (_, i) => i + 1);
+/** The homework boxes, after the session's activities. */
+const HOMEWORK_SLOTS = Array.from({ length: MAX_SESSION_HOMEWORK }, (_, i) => MAX_SESSION_ACTIVITIES + i + 1);
+
+/** A box's name: "activity 5", or "homework 2" for the boxes after the session's eight. */
+const slotName = (slot: number) => (homeworkSlot(slot) ? `homework ${slot - MAX_SESSION_ACTIVITIES}` : `activity ${slot}`);
 
 const shortDate = (date: string) =>
   new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
-const inBox = (s: PlannerStudent, slot: number) => s.planned.find((w) => w.kind === "topic" && w.slot === slot);
-const filled = (s: PlannerStudent) => s.planned.filter((w) => w.kind === "topic" && w.slot).length;
+const inBox = (s: PlannerStudent, slot: number) => s.planned.find((w) => w.slot === slot);
+const filled = (s: PlannerStudent, slots: number[]) => slots.filter((slot) => inBox(s, slot)).length;
 
 /** The subtopic's own name, short enough for a box ("Equivalent fractions"), with its topic underneath. */
 function boxTitle(w: SetWork, curriculum: Curriculum): { title: string; topic: string | null } {
   const path = w.kind === "topic" ? subtopicPath(w.subtopicId, curriculum) : null;
+  if (w.kind === "mistakes") return { title: "Redo wrong", topic: "From class" };
   if (!path) return { title: workTitle(w, curriculum), topic: null };
   return { title: path.subtopic.title, topic: path.topic.title === path.subtopic.title ? null : path.topic.title };
 }
@@ -63,9 +69,9 @@ async function send(url: string, method: string, body?: unknown): Promise<string
 
 /**
  * The lesson planner: each class's weekly session as a grid, students down the left and their
- * eight activity boxes across. Click a box to put an activity in it or change it; click a student
- * to see their last four weeks and how they went. Homework is an activity marked 🏠, or a redo of
- * the questions the student didn't get right first go.
+ * eight activity boxes across, then three homework boxes. Click a box to put an activity in it,
+ * change it or delete it; click a student to see their last four weeks and how they went. Homework
+ * is an activity, or a redo of the questions the student didn't get right first go.
  */
 export default function PlannerPage() {
   const [week, setWeek] = useState(() => weekOf());
@@ -92,7 +98,8 @@ export default function PlannerPage() {
         </Link>
         <h1 style={{ margin: "6px 0 0" }}>Lesson planner</h1>
         <p className="muted" style={{ margin: 0 }}>
-          Click a box to choose or change an activity (ten questions). Click a student to see their last four weeks.
+          Click a box to choose, change or delete an activity (ten questions). After the eight activities come up to three pieces of
+          homework. Click a student to see their last four weeks.
         </p>
       </div>
       <div className="row planner-week" role="group" aria-label="Week">
@@ -137,17 +144,6 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
   // The first boxes are the weekly lessons, which fill themselves.
   const autoCount = autoSlots(c.subject);
   const [history, setHistory] = useState<PlannerStudent | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const redoFor = (s: PlannerStudent, subject: Subject) => s.planned.find((w) => w.kind === "mistakes" && w.subject === subject);
-  const canRedo = (s: PlannerStudent, subject: Subject) =>
-    !redoFor(s, subject) && s.planned.some((w) => w.kind === "topic" && w.subject === subject);
-  async function act(url: string, method: string, body?: unknown) {
-    setError(await send(url, method, body));
-    await reload();
-  }
-  const addRedo = (learners: PlannerStudent[], subject: Subject) =>
-    act("/api/planner", "POST", { kind: "mistakes", classId: c.id, week, learnerIds: learners.map((s) => s.id), subject });
 
   return (
     <section className="card stack planner-class" aria-labelledby={`class-${c.id}`}>
@@ -163,14 +159,9 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
         <p className="small" style={{ margin: "4px 0 0" }}>
           Boxes 1 to {autoCount} fill themselves from each student&apos;s weekly{" "}
           {c.subject === "english" ? "English" : c.subject === "maths" ? "maths" : "maths and English"} lessons. Add your own from box{" "}
-          {autoCount + 1}.
+          {autoCount + 1}. The 🏠 boxes after them are homework.
         </p>
       </div>
-      {error && (
-        <div className="feedback bad" role="alert">
-          {error}
-        </div>
-      )}
       {students.length === 0 ? (
         <p className="muted" style={{ margin: 0 }}>
           No students in this class yet.
@@ -200,9 +191,17 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
                     )}
                   </th>
                 ))}
-                <th scope="col" className="planner-redo-head">
-                  🏠 Redo wrong
-                </th>
+                {HOMEWORK_SLOTS.map((slot) => (
+                  <th key={slot} scope="col">
+                    <button
+                      className="planner-head homework"
+                      title={`Choose ${slotName(slot)} for the whole class`}
+                      onClick={() => setEditing({ slot, students })}
+                    >
+                      🏠 {slot - MAX_SESSION_ACTIVITIES} <span aria-hidden>▾</span>
+                    </button>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -212,11 +211,16 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
                     <button className="planner-student-button" onClick={() => setHistory(s)}>
                       <strong>{s.name}</strong>
                       <span className="small muted">
-                        {Math.min(autoCount, s.auto.length) + filled(s)} of {MAX_SESSION_ACTIVITIES}
+                        {Math.min(autoCount, s.auto.length) + filled(s, SLOTS)} of {MAX_SESSION_ACTIVITIES}
+                        {filled(s, HOMEWORK_SLOTS) > 0 && (
+                          <span style={{ display: "block" }} title="Homework">
+                            🏠 {filled(s, HOMEWORK_SLOTS)}
+                          </span>
+                        )}
                       </span>
                     </button>
                   </th>
-                  {SLOTS.map((slot) => {
+                  {[...SLOTS, ...HOMEWORK_SLOTS].map((slot) => {
                     if (slot <= autoCount)
                       return (
                         <td key={slot}>
@@ -230,60 +234,16 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
                           work={w}
                           curriculum={curriculumOf(s.curriculum)}
                           showSubject={subjects.length > 1}
-                          label={`${s.name}, activity ${slot}`}
+                          label={`${s.name}, ${slotName(slot)}`}
                           onClick={() => setEditing({ slot, students: [s] })}
                         />
                       </td>
                     );
                   })}
-                  <td>
-                    <div className="stack" style={{ gap: 4 }}>
-                      {subjects.map((subject) => {
-                        const redo = redoFor(s, subject);
-                        const name = subjects.length > 1 ? `${subjectName(subject, curriculum)} ` : "";
-                        if (redo)
-                          return (
-                            <div key={subject} className="planner-box filled homework">
-                              <span className="planner-box-title">🏠 Redo {name}wrong</span>
-                              {redo.doneAt ? (
-                                <Score work={redo} />
-                              ) : (
-                                <button
-                                  className="link-button small"
-                                  onClick={() => {
-                                    if (confirm(`Take the redo homework off ${s.name}'s plan?`))
-                                      void act(`/api/set-work/${redo.id}?learner=${s.id}`, "DELETE");
-                                  }}
-                                >
-                                  Take off
-                                </button>
-                              )}
-                            </div>
-                          );
-                        return canRedo(s, subject) ? (
-                          <button key={subject} className="planner-box empty" onClick={() => void addRedo([s], subject)}>
-                            + Redo {name}wrong
-                          </button>
-                        ) : null;
-                      })}
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-      {subjects.some((subject) => students.filter((s) => canRedo(s, subject)).length > 1) && (
-        <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-          {subjects.map((subject) => {
-            const who = students.filter((s) => canRedo(s, subject));
-            return who.length > 1 ? (
-              <button key={subject} className="btn secondary small" onClick={() => void addRedo(who, subject)}>
-                🏠 Homework for everyone: redo {subjects.length > 1 ? `${subjectName(subject, curriculum)} ` : ""}questions got wrong
-              </button>
-            ) : null;
-          })}
         </div>
       )}
       {editing && (
@@ -438,7 +398,10 @@ function Dialog({
   );
 }
 
-/** Chooses or changes the activity in one box, for one student or the whole class. */
+/**
+ * Chooses, changes or deletes the activity in one box, for one student or the whole class. A
+ * homework box can also redo the questions got wrong in the session.
+ */
 function BoxEditor({
   classId,
   week,
@@ -461,14 +424,18 @@ function BoxEditor({
   const curriculum = curriculumOf(students[0]?.curriculum);
   const [subject, setSubject] = useState<Subject>(current?.subject ?? subjects[0]);
   const [year, setYear] = useState<YearLevel>(yearLevel as YearLevel);
-  const [picked, setPicked] = useState<string>(current?.subtopicId ?? "");
-  const [homework, setHomework] = useState(current?.homework ?? false);
+  const homework = homeworkSlot(slot);
+  // A subtopic's id, or "redo:" and a subject for homework redoing the questions got wrong.
+  const [picked, setPicked] = useState<string>(current?.kind === "mistakes" ? `redo:${current.subject}` : (current?.subtopicId ?? ""));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const saved = useRef(false);
   const topics = practiseable(subject, year, curriculum).filter((t) => t.subtopics.length);
   const done = students.filter((s) => inBox(s, slot)?.doneAt);
+  const withWork = students.filter((s) => inBox(s, slot));
   const who = one ? one.name : "the whole class";
+  const name = slotName(slot);
+  const Name = name[0].toUpperCase() + name.slice(1);
   const closer = useRef<() => void>(() => {});
   const close = (didSave: boolean) => {
     saved.current = didSave;
@@ -478,38 +445,37 @@ function BoxEditor({
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const err = await send("/api/planner", "POST", {
-      kind: "slot",
-      classId,
-      week,
-      slot,
-      learnerIds: students.map((s) => s.id),
-      subject,
-      subtopicId: picked,
-      homework,
-    });
+    const learnerIds = students.map((s) => s.id);
+    const err = picked.startsWith("redo:")
+      ? await send("/api/planner", "POST", { kind: "mistakes", classId, week, slot, learnerIds, subject: picked.slice(5) })
+      : await send("/api/planner", "POST", { kind: "slot", classId, week, slot, learnerIds, subject, subtopicId: picked });
     setBusy(false);
     if (err) return setError(err);
     close(true);
   }
-  async function takeOff() {
-    if (!current || !one) return;
+  async function remove() {
+    const scored = done.length
+      ? ` ${done.map((s) => s.name).join(", ")} ${done.length === 1 ? "has" : "have"} done it, and the score goes too.`
+      : "";
+    if (!confirm(`Delete ${name} for ${one ? one.name : `${withWork.length} ${withWork.length === 1 ? "student" : "students"}`}?${scored}`))
+      return;
     setBusy(true);
-    const err = await send(`/api/set-work/${current.id}?learner=${one.id}`, "DELETE");
+    const err = await send("/api/planner", "DELETE", { classId, week, slot, learnerIds: withWork.map((s) => s.id) });
     setBusy(false);
     if (err) return setError(err);
     close(true);
   }
 
   return (
-    <Dialog label={`Activity ${slot} for ${who}`} onClose={() => onClose(saved.current)}>
+    <Dialog label={`${Name} for ${who}`} onClose={() => onClose(saved.current)}>
       {(closeDialog) => {
         closer.current = closeDialog;
         return (
           <div className="stack">
             <div className="row spread" style={{ flexWrap: "nowrap", alignItems: "flex-start" }}>
               <h2 style={{ margin: 0 }}>
-                Activity {slot} for {who}
+                {homework && "🏠 "}
+                {Name} for {who}
               </h2>
               <button type="button" className="btn secondary small" onClick={() => close(false)}>
                 Close
@@ -525,8 +491,18 @@ function BoxEditor({
                   Done: <WorkResult work={current} />
                 </p>
                 <p className="small muted" style={{ margin: 0 }}>
-                  {one!.name} has done this one, so it stays as it is.
+                  {one!.name} has done this one, so it can&apos;t be changed. Deleting it takes its score away too.
                 </p>
+                {error && (
+                  <div className="feedback bad" role="alert">
+                    {error}
+                  </div>
+                )}
+                <div className="row">
+                  <button type="button" className="btn secondary" disabled={busy} onClick={() => void remove()}>
+                    Delete it
+                  </button>
+                </div>
               </>
             ) : (
               <form className="stack" onSubmit={save} style={{ gap: 10 }}>
@@ -537,8 +513,8 @@ function BoxEditor({
                 )}
                 {!one && done.length > 0 && (
                   <p className="small muted" style={{ margin: 0 }}>
-                    {done.map((s) => s.name).join(", ")} {done.length === 1 ? "has" : "have"} done activity {slot}, so theirs stays as it
-                    is.
+                    {done.map((s) => s.name).join(", ")} {done.length === 1 ? "has" : "have"} done {name}, so changing it leaves theirs as
+                    it is.
                   </p>
                 )}
                 <div className="row" style={{ flexWrap: "wrap" }}>
@@ -572,8 +548,25 @@ function BoxEditor({
                     </select>
                   </label>
                 </div>
+                {homework && (
+                  <fieldset className="stack" style={{ gap: 4, margin: 0 }}>
+                    <legend className="small muted">Redo the questions got wrong in this session&apos;s activities</legend>
+                    {subjects.map((s) => (
+                      <label key={s} className="row small" style={{ fontWeight: 400, margin: 0, gap: 6 }}>
+                        <input
+                          type="radio"
+                          name={`activity-${slot}`}
+                          checked={picked === `redo:${s}`}
+                          onChange={() => setPicked(`redo:${s}`)}
+                          style={{ width: "auto" }}
+                        />
+                        Redo {subjects.length > 1 ? `${subjectName(s, curriculum)} ` : ""}questions got wrong
+                      </label>
+                    ))}
+                  </fieldset>
+                )}
                 <fieldset className="stack planner-topics" style={{ gap: 8, margin: 0 }}>
-                  <legend className="small muted">Choose an activity: ten questions, easy to hard</legend>
+                  <legend className="small muted">{homework ? "Or choose" : "Choose"} an activity: ten questions, easy to hard</legend>
                   {topics.map(({ topic, subtopics }) => (
                     <div key={topic.id}>
                       <strong className="small">{topic.title}</strong>
@@ -594,10 +587,6 @@ function BoxEditor({
                     </div>
                   ))}
                 </fieldset>
-                <label className="row small" style={{ fontWeight: 400, margin: 0, gap: 6 }}>
-                  <input type="checkbox" checked={homework} onChange={(e) => setHomework(e.target.checked)} style={{ width: "auto" }} />
-                  🏠 Homework (do it at home after class)
-                </label>
                 {error && (
                   <div className="feedback bad" role="alert">
                     {error}
@@ -605,11 +594,11 @@ function BoxEditor({
                 )}
                 <div className="row" style={{ flexWrap: "wrap" }}>
                   <button className="btn" disabled={busy || !picked}>
-                    {busy ? "Saving…" : current ? "Change activity" : "Add activity"}
+                    {busy ? "Saving…" : current ? "Change it" : homework ? "Add homework" : "Add activity"}
                   </button>
-                  {current && (
-                    <button type="button" className="btn secondary" disabled={busy} onClick={() => void takeOff()}>
-                      Take it off
+                  {withWork.length > 0 && (
+                    <button type="button" className="btn secondary" disabled={busy} onClick={() => void remove()}>
+                      {one ? "Delete it" : `Delete for ${withWork.length === 1 ? withWork[0].name : `all ${withWork.length}`}`}
                     </button>
                   )}
                 </div>
