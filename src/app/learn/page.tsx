@@ -71,8 +71,13 @@ function StudentHome({ profile, signedIn }: { profile: LearnerProfile; signedIn:
       </div>
 
       {(teacherWork.length > 0 || session) && (
-        <section className="stack home-section" aria-labelledby="teacher-lessons">
-          <h2 id="teacher-lessons">🧑‍🏫 Teacher lessons this week</h2>
+        <section className="stack home-section section-teacher" aria-labelledby="teacher-lessons">
+          <h2 id="teacher-lessons">
+            <span className="section-icon" aria-hidden>
+              🧑‍🏫
+            </span>{" "}
+            Teacher lessons this week
+          </h2>
           {session && (
             <p className="small" style={{ margin: 0 }}>
               Learning with {session.teacherName ?? "your teacher"}: {sessionTimes(session)}
@@ -92,8 +97,13 @@ function StudentHome({ profile, signedIn }: { profile: LearnerProfile; signedIn:
         </section>
       )}
 
-      <section className="stack home-section" aria-labelledby="diy-lessons">
-        <h2 id="diy-lessons">📅 My DIY lessons this week</h2>
+      <section className="stack home-section section-diy" aria-labelledby="diy-lessons">
+        <h2 id="diy-lessons">
+          <span className="section-icon" aria-hidden>
+            📅
+          </span>{" "}
+          My DIY lessons this week
+        </h2>
         <div className={subjects.length > 1 ? "grid grid-2" : "grid"}>
           {subjects.map((s) => (
             <LessonCard key={s} profile={profile} subject={s} title={subjectName(s, curriculum)} />
@@ -102,8 +112,13 @@ function StudentHome({ profile, signedIn }: { profile: LearnerProfile; signedIn:
         {reading && <ReadingWeekCard profile={profile} />}
       </section>
 
-      <section className="stack home-section" aria-labelledby="practice">
-        <h2 id="practice">✏️ Practice activities</h2>
+      <section className="stack home-section section-practice" aria-labelledby="practice">
+        <h2 id="practice">
+          <span className="section-icon" aria-hidden>
+            ✏️
+          </span>{" "}
+          Practice activities
+        </h2>
         <div className={subjects.length > 1 ? "grid grid-2" : "grid"}>
           {subjects.map((s) => (
             <PracticeCard key={s} profile={profile} subject={s} title={subjectName(s, curriculum)} />
@@ -127,8 +142,13 @@ function StudentHome({ profile, signedIn }: { profile: LearnerProfile; signedIn:
         {reading && <ReadingPracticeCard profile={profile} />}
       </section>
 
-      <section className="stack home-section" aria-labelledby="games">
-        <h2 id="games">🎮 Games and rewards</h2>
+      <section className="stack home-section section-games" aria-labelledby="games">
+        <h2 id="games">
+          <span className="section-icon" aria-hidden>
+            🎮
+          </span>{" "}
+          Games and rewards
+        </h2>
         <div className={subjects.includes("maths") ? "grid grid-2" : "grid"}>
           {subjects.includes("maths") && <TablesCard profile={profile} />}
           <RewardsCard profile={profile} signedIn={signedIn} />
