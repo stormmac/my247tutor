@@ -1,6 +1,6 @@
 import "server-only";
 import { ready } from "./db";
-import { addGrownUpNotes, checkinDue, moodNote, type GrownUpNote, type Mood } from "../tutor/memory";
+import { addGrownUpNotes, checkinDue, moodNote, notesForGrownUps, type GrownUpNote, type Mood } from "../tutor/memory";
 import { noteLearning } from "../tutor/claude";
 
 /** A child's check-in at the start of a visit. */
@@ -29,7 +29,7 @@ export async function learnerName(learnerId: string): Promise<string> {
 
 export async function notesFor(learnerId: string): Promise<SuniNotes> {
   const { rows } = await (await ready()).query(`SELECT for_suni, for_grown_ups FROM suni_notes WHERE learner_id = $1`, [learnerId]);
-  return { forSuni: (rows[0]?.for_suni as string) ?? "", forGrownUps: (rows[0]?.for_grown_ups as GrownUpNote[]) ?? [] };
+  return { forSuni: (rows[0]?.for_suni as string) ?? "", forGrownUps: notesForGrownUps((rows[0]?.for_grown_ups as GrownUpNote[]) ?? []) };
 }
 
 /** Notes for grown-ups about several children at once, by child. */
@@ -38,7 +38,7 @@ export async function grownUpNotesFor(learnerIds: string[]): Promise<Map<string,
   const { rows } = await (
     await ready()
   ).query(`SELECT learner_id, for_grown_ups FROM suni_notes WHERE learner_id = ANY($1::uuid[])`, [learnerIds]);
-  return new Map(rows.map((r) => [r.learner_id as string, r.for_grown_ups as GrownUpNote[]]));
+  return new Map(rows.map((r) => [r.learner_id as string, notesForGrownUps((r.for_grown_ups as GrownUpNote[]) ?? [])]));
 }
 
 /** A child's check-ins over the last `days`, newest first. */

@@ -2,6 +2,16 @@ import "server-only";
 import { ready } from "./db";
 import { canSeeLearner } from "./family";
 import { audit, type User } from "./users";
+import { SUNI_BUSY_REPLY, SUNI_ERROR_REPLY } from "../tutor/claude";
+import { technicalTalk } from "../tutor/memory";
+
+/** What Suni says, or used to say, to the child when it couldn't answer. */
+const SUNI_TROUBLE = [
+  SUNI_ERROR_REPLY,
+  SUNI_BUSY_REPLY,
+  "I'd love to chat, but my chatting wings aren't switched on yet. Ask a grown-up to turn me on, and I'll be right here.",
+  "The tutor chat isn't switched on yet. Ask a grown-up to add the API key.",
+];
 
 export const CHAT_FLAGS = ["wellbeing", "inappropriate", "personal_info", "grown_up", "technical"] as const;
 export type ChatFlag = (typeof CHAT_FLAGS)[number];
@@ -95,8 +105,12 @@ export async function saveChat(chat: {
  * hidden, and a chat Suni couldn't answer at all is left out.
  */
 export function forGrownUps(chat: SuniChat): SuniChat | null {
-  if (chat.flag !== "technical") return chat;
-  return chat.reply.trim() ? { ...chat, flag: null, flagReason: null } : null;
+  // Older chats kept Suni's "my wings got in a tangle" messages as the reply.
+  const reply = SUNI_TROUBLE.reduce((r, line) => r.replace(line, ""), chat.reply).trim();
+  const technical = chat.flag === "technical" || (chat.flagReason !== null && technicalTalk(chat.flagReason));
+  if (!reply && (technical || reply !== chat.reply.trim())) return null;
+  if (!technical && reply === chat.reply.trim()) return chat;
+  return { ...chat, reply, ...(technical ? { flag: null, flagReason: null } : {}) };
 }
 
 /** A child's chats, newest first. Admins see technical problems too. */

@@ -71,9 +71,36 @@ export interface GrownUpNote {
 export const MAX_GROWN_UP_NOTES = 40;
 
 export function addGrownUpNotes(existing: GrownUpNote[], added: Omit<GrownUpNote, "at">[], now = Date.now()): GrownUpNote[] {
-  const fresh = added.map((n) => ({ ...n, text: n.text.trim().slice(0, 400), at: now })).filter((n) => n.text);
+  const fresh = added.map((n) => ({ ...n, text: n.text.trim().slice(0, 400), at: now })).filter((n) => n.text && !technicalTalk(n.text));
   return [...existing, ...fresh].slice(-MAX_GROWN_UP_NOTES);
 }
+
+/**
+ * Talk of the app or Suni going wrong. That's for the site's admin only, never for parents or
+ * teachers, so notes like it are dropped (including ones kept before this rule).
+ */
+const TECHNICAL_TALK = new RegExp(
+  [
+    String.raw`\btechnical\b`,
+    String.raw`\bglitch`,
+    String.raw`\b(?:bug|crash)(?:es|ed|s)? (?:in|with|on) (?:the )?(?:app|site|website|system|page|chat|suni|my247tutor)`,
+    String.raw`\b(?:app|site|website|system|page|chat|suni|my247tutor) (?:crash|froze|freez)`,
+    String.raw`\b(?:an|the|some|technical) (?:error|issue|problem|fault)s?\b(?= (?:with|in|on|from) (?:the )?(?:app|site|website|system|page|chat|suni|my247tutor))`,
+    String.raw`\berror (?:message|code)s?\b`,
+    String.raw`\b(?:app|site|website|system|page|chat|connection|server|suni|my247tutor)(?:'s)? (?:had|has|was having|kept having|is having|ran into|hit) (?:an? |some )?(?:error|issue|problem|trouble|fault|glitch)`,
+    String.raw`\b(?:app|site|website|system|page|chat|connection|server|suni)(?: was| is| kept)? (?:not|n't|never) (?:working|loading|responding|answering|replying|connecting)`,
+    String.raw`\b(?:app|site|website|system|page|chat|connection|server|suni) (?:wasn't|isn't|didn't|couldn't|wouldn't|won't|stopped|failed to) (?:work|load|respond|answer|reply|connect|working|loading|responding|answering|replying)`,
+    String.raw`\b(?:couldn't|could not|was unable to|wasn't able to) (?:get an? )?(?:answer|response|reply) from suni`,
+    String.raw`\bsuni (?:couldn't|could not|was unable to|wasn't able to) (?:answer|respond|reply|help)`,
+    String.raw`\b(?:outage|api key|timed out)\b`,
+    String.raw`\bwent wrong with (?:the )?(?:app|site|website|system|page|chat|suni)`,
+  ].join("|"),
+  "i",
+);
+export const technicalTalk = (text: string): boolean => TECHNICAL_TALK.test(text);
+
+/** The notes a parent or teacher sees: no talk of technical problems. */
+export const notesForGrownUps = (notes: GrownUpNote[]): GrownUpNote[] => notes.filter((n) => !technicalTalk(n.text));
 
 /** The note a worried or sad check-in leaves for grown-ups, without waiting for Suni to read the chats. */
 export function moodNote(name: string, mood: Mood): Omit<GrownUpNote, "at"> | null {
