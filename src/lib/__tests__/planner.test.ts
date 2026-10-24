@@ -6,6 +6,7 @@ import { PLANNER_HOMEWORK_SQL, PLANNER_SQL } from "../auth/familySchema";
 import {
   FinishWorkSchema,
   homeworkSlot,
+  MoveWorkSchema,
   MAX_SESSION_ACTIVITIES,
   MAX_SESSION_HOMEWORK,
   PlanWorkSchema,
@@ -166,5 +167,22 @@ describe("the lesson planner", () => {
     const after = syncSetWork(started, [], profile);
     expect(after.parts.map((p) => p.setWorkId).filter(Boolean)).toEqual(["b"]);
     expect(syncSetWork(started, [{ ...b, subtopicId: PLACE }], profile).parts.find((p) => p.setWorkId === "b")!.subtopicId).toBe(AREA_Y4);
+  });
+
+  it("moves a started activity to homework, keeping what's been answered", () => {
+    const profile = { ...newProfile("Ava", 4, NOW), id: LEARNER };
+    const b = { id: "b", subtopicId: AREA_Y4, setBy: "Ms Lee", note: null };
+    const lesson = addSetWork(buildLesson(profile, "maths", NOW), [b], profile);
+    const started = { ...lesson, parts: lesson.parts.map((p) => (p.setWorkId === "b" ? { ...p, results: [1, 0] } : p)) };
+    const moved = syncSetWork(started, [{ ...b, homework: true }], profile).parts.find((p) => p.setWorkId === "b")!;
+    expect(moved).toMatchObject({ homework: true, results: [1, 0], subtopicId: AREA_Y4 });
+  });
+
+  it("moves a session's activity to a homework box, never homework to homework", () => {
+    const ok = { classId: CLASS, week: "2026-10-19", learnerIds: [LEARNER], slot: 5 };
+    expect(MoveWorkSchema.safeParse(ok).success).toBe(true);
+    expect(MoveWorkSchema.safeParse({ ...ok, to: MAX_SESSION_ACTIVITIES + 1 }).success).toBe(true);
+    expect(MoveWorkSchema.safeParse({ ...ok, to: MAX_SESSION_ACTIVITIES }).success).toBe(false);
+    expect(MoveWorkSchema.safeParse({ ...ok, slot: MAX_SESSION_ACTIVITIES + 1 }).success).toBe(false);
   });
 });

@@ -7,7 +7,7 @@ import { centreOf, listClasses, studentForViewer, type CentreClass } from "./cen
 import { ready } from "./db";
 import { MAX_OPEN_WORK, SET_WORK_SELECT, setWorkOf, type SetWork } from "./family";
 import { CHILD_CURRICULUM } from "./learners";
-import { homeworkSlot } from "./rules";
+import { homeworkSlot, MAX_SESSION_ACTIVITIES, MAX_SESSION_HOMEWORK } from "./rules";
 import { audit, type User } from "./users";
 
 /**
@@ -219,6 +219,56 @@ export async function planMistakesHomework(
   }
   await audit(viewer.id, "plan_mistakes_homework", plan.classId, { week: plan.week, slot: plan.slot, students: rows.length });
   return { added: rows.length };
+}
+
+export type MoveResult = { moved: number; done: number; full: number } | { error: string; status: number };
+
+/**
+ * Moves the activity in one of the session's boxes to homework, for each of these students who
+ * hasn't finished it: into the homework box given, or their first empty one. What they've answered
+ * so far comes too. Students who've finished it, or whose homework box is taken, are left as they are.
+ */
+export async function moveToHomework(viewer: User, move: Box & { to?: number }): Promise<MoveResult> {
+  const found = await plannableBox(viewer, move);
+  if ("error" in found) return found;
+  const pool = await ready();
+  const { rows } = await pool.query(
+    `SELECT w.id, w.learner_id, w.slot, w.done_at IS NOT NULL AS done FROM set_work w
+     WHERE w.learner_id = ANY($1::uuid[]) AND w.class_id = $2 AND w.week = $3::date AND (w.slot = $4 OR w.slot > $5)`,
+    [move.learnerIds, move.classId, move.week, move.slot, MAX_SESSION_ACTIVITIES],
+  );
+  const homeworkBoxes = Array.from({ length: MAX_SESSION_HOMEWORK }, (_, i) => MAX_SESSION_ACTIVITIES + i + 1);
+  let moved = 0,
+    done = 0,
+    full = 0;
+  for (const learnerId of new Set(move.learnerIds)) {
+    const mine = rows.filter((r) => r.learner_id === learnerId);
+    const work = mine.find((r) => r.slot === move.slot);
+    if (!work) continue;
+    if (work.done) {
+      done++;
+      continue;
+    }
+    const taken = new Set(mine.map((r) => r.slot as number));
+    const to = move.to ?? homeworkBoxes.find((slot) => !taken.has(slot));
+    if (!to || taken.has(to)) {
+      full++;
+      continue;
+    }
+    await pool.query(`UPDATE set_work SET slot = $2, homework = TRUE WHERE id = $1 AND done_at IS NULL`, [work.id, to]);
+    moved++;
+  }
+  if (!moved)
+    return {
+      error: done
+        ? "They've finished it already, so it stays in class."
+        : full
+          ? `There's no room: ${move.to ? "that homework box is" : "all three homework boxes are"} taken. Delete one first.`
+          : "There's nothing in that box to move.",
+      status: 400,
+    };
+  await audit(viewer.id, "move_to_homework", move.classId, { week: move.week, slot: move.slot, to: move.to ?? null, moved, done, full });
+  return { moved, done, full };
 }
 
 /** Empties one of the session's boxes for each of these students, done or not: its score goes with it. */

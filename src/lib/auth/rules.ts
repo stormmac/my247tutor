@@ -232,6 +232,18 @@ export const PlanWorkSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+/**
+ * Moves the activity in one of a session's boxes, for students who haven't finished it, into a
+ * homework box: the one given, or each student's first empty one.
+ */
+export const MoveWorkSchema = z.object({
+  classId: z.uuid(),
+  week: MondaySchema,
+  learnerIds: LearnersSchema,
+  slot: SlotSchema.refine((slot) => !homeworkSlot(slot), "That's already homework."),
+  to: SlotSchema.refine(homeworkSlot, "Move it to a homework box.").optional(),
+});
+
 /** Empties one of a session's boxes for some of a class's students. */
 export const UnplanWorkSchema = z.object({
   classId: z.uuid(),

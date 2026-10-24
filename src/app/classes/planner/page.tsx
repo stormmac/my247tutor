@@ -67,6 +67,30 @@ async function send(url: string, method: string, body?: unknown): Promise<string
   return json?.error ?? "That didn't work. Try again.";
 }
 
+type Moved = { moved: number; done: number; full: number };
+
+/** Moves an activity students haven't finished to homework: into the box given, or each one's first empty one. */
+async function moveToHomework(body: { classId: string; week: string; learnerIds: string[]; slot: number; to?: number }) {
+  const res = await fetch("/api/planner", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).catch(() => null);
+  const json = (await res?.json().catch(() => ({}))) as Partial<Moved> & { error?: string };
+  if (res?.ok) return json as Moved;
+  return json?.error ?? "That didn't work. Try again.";
+}
+
+/** What happened when work was moved to homework, in a sentence. */
+function movedText(m: Moved, one: string | null): string {
+  const who = one ?? `${m.moved} ${m.moved === 1 ? "student" : "students"}`;
+  const left = [
+    m.done ? `${m.done} had finished it, so theirs stays in class` : "",
+    m.full ? `${m.full} had no empty homework box` : "",
+  ].filter(Boolean);
+  return `Moved to homework for ${who}.${left.length ? ` ${left.join(", and ")}.` : ""}`;
+}
+
 /**
  * The lesson planner: each class's weekly session as a grid, students down the left and their
  * eight activity boxes across, then three homework boxes. Click a box to put an activity in it,
@@ -99,7 +123,8 @@ export default function PlannerPage() {
         <h1 style={{ margin: "6px 0 0" }}>Lesson planner</h1>
         <p className="muted" style={{ margin: 0 }}>
           Click a box to choose, change or delete an activity (ten questions). After the eight activities come up to three pieces of
-          homework. Click a student to see their last four weeks.
+          homework: drag an activity a student didn&apos;t finish into a 🏠 box to make it homework. Click a student to see their last four
+          weeks.
         </p>
       </div>
       <div className="row planner-week" role="group" aria-label="Week">
@@ -134,6 +159,8 @@ export default function PlannerPage() {
 }
 
 type Editing = { slot: number; students: PlannerStudent[] };
+/** What's being dragged to homework: one student's box, or a whole column. */
+type Dragging = { slot: number; student: PlannerStudent | null };
 
 /** One class's session: when it meets, and the grid of students and boxes. */
 function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; reload: () => Promise<void> }) {
@@ -144,6 +171,56 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
   // The first boxes are the weekly lessons, which fill themselves.
   const autoCount = autoSlots(c.subject);
   const [history, setHistory] = useState<PlannerStudent | null>(null);
+  const [dragging, setDragging] = useState<Dragging | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; bad: boolean } | null>(null);
+
+  async function move(from: Dragging, to: number) {
+    setDragging(null);
+    setOver(null);
+    const moved = await moveToHomework({
+      classId: c.id,
+      week,
+      slot: from.slot,
+      to,
+      learnerIds: (from.student ? [from.student] : students).map((s) => s.id),
+    });
+    if (typeof moved === "string") return setNotice({ text: moved, bad: true });
+    setNotice({ text: movedText(moved, from.student?.name ?? null), bad: false });
+    await reload();
+  }
+  /** Drop handlers for a homework box: a box in a student's row, or a whole column's heading. */
+  const dropOn = (slot: number, student: PlannerStudent | null) => {
+    const key = `${student?.id ?? "all"}-${slot}`;
+    const fits = dragging && (student ? dragging.student?.id === student.id && !inBox(student, slot) : !dragging.student);
+    if (!fits) return {};
+    return {
+      className: over === key ? "planner-drop over" : "planner-drop",
+      onDragOver: (e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (over !== key) setOver(key);
+      },
+      onDragLeave: () => setOver((o) => (o === key ? null : o)),
+      onDrop: (e: React.DragEvent) => {
+        e.preventDefault();
+        void move(dragging, slot);
+      },
+    };
+  };
+  /** Drag handlers for an activity that can go to homework. */
+  const dragFrom = (slot: number, student: PlannerStudent | null) => ({
+    draggable: true,
+    onDragStart: (e: React.DragEvent) => {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", `${slot}`);
+      setDragging({ slot, student });
+    },
+    onDragEnd: () => {
+      setDragging(null);
+      setOver(null);
+    },
+  });
 
   return (
     <section className="card stack planner-class" aria-labelledby={`class-${c.id}`}>
@@ -159,9 +236,14 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
         <p className="small" style={{ margin: "4px 0 0" }}>
           Boxes 1 to {autoCount} fill themselves from each student&apos;s weekly{" "}
           {c.subject === "english" ? "English" : c.subject === "maths" ? "maths" : "maths and English"} lessons. Add your own from box{" "}
-          {autoCount + 1}. The 🏠 boxes after them are homework.
+          {autoCount + 1}. The 🏠 boxes after them are homework: drag an unfinished activity there to make it homework.
         </p>
       </div>
+      {notice && (
+        <div className={`feedback ${notice.bad ? "bad" : "good"}`} role="status">
+          {notice.text}
+        </div>
+      )}
       {students.length === 0 ? (
         <p className="muted" style={{ margin: 0 }}>
           No students in this class yet.
@@ -183,8 +265,9 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
                     ) : (
                       <button
                         className="planner-head"
-                        title={`Choose activity ${slot} for the whole class`}
+                        title={`Choose activity ${slot} for the whole class, or drag it to a 🏠 box to make it homework for everyone who hasn't finished it`}
                         onClick={() => setEditing({ slot, students })}
+                        {...(students.some((s) => inBox(s, slot) && !inBox(s, slot)!.doneAt) ? dragFrom(slot, null) : {})}
                       >
                         {slot} <span aria-hidden>▾</span>
                       </button>
@@ -192,7 +275,7 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
                   </th>
                 ))}
                 {HOMEWORK_SLOTS.map((slot) => (
-                  <th key={slot} scope="col">
+                  <th key={slot} scope="col" {...dropOn(slot, null)}>
                     <button
                       className="planner-head homework"
                       title={`Choose ${slotName(slot)} for the whole class`}
@@ -228,9 +311,11 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
                         </td>
                       );
                     const w = inBox(s, slot);
+                    const canMove = w && !w.doneAt && !homeworkSlot(slot);
                     return (
-                      <td key={slot}>
+                      <td key={slot} {...(homeworkSlot(slot) ? dropOn(slot, s) : {})}>
                         <ActivityBox
+                          drag={canMove ? dragFrom(slot, s) : undefined}
                           work={w}
                           curriculum={curriculumOf(s.curriculum)}
                           showSubject={subjects.length > 1}
@@ -272,7 +357,10 @@ function ActivityBox({
   showSubject,
   label,
   onClick,
+  drag,
 }: {
+  /** Drag handlers, when the activity can be dragged to homework. */
+  drag?: React.HTMLAttributes<HTMLButtonElement> & { draggable: boolean };
   work: SetWork | undefined;
   curriculum: Curriculum;
   showSubject: boolean;
@@ -288,9 +376,11 @@ function ActivityBox({
   const { title, topic } = boxTitle(work, curriculum);
   return (
     <button
-      className={`planner-box filled${work.homework ? " homework" : ""}${work.doneAt ? " done" : ""}`}
+      className={`planner-box filled${work.homework ? " homework" : ""}${work.doneAt ? " done" : ""}${drag ? " draggable" : ""}`}
       aria-label={`${label}: ${title}`}
+      title={drag ? "Drag to a 🏠 box to make it homework" : undefined}
       onClick={onClick}
+      {...drag}
     >
       {showSubject && <span className="planner-box-topic">{subjectName(work.subject, curriculum)}</span>}
       <span className="planner-box-title">{title}</span>
@@ -453,6 +543,15 @@ function BoxEditor({
     if (err) return setError(err);
     close(true);
   }
+  // Session work the students haven't finished, which can go to homework instead.
+  const unfinished = homework ? [] : withWork.filter((s) => !inBox(s, slot)!.doneAt);
+  async function toHomework() {
+    setBusy(true);
+    const moved = await moveToHomework({ classId, week, slot, learnerIds: unfinished.map((s) => s.id) });
+    setBusy(false);
+    if (typeof moved === "string") return setError(moved);
+    close(true);
+  }
   async function remove() {
     const scored = done.length
       ? ` ${done.map((s) => s.name).join(", ")} ${done.length === 1 ? "has" : "have"} done it, and the score goes too.`
@@ -596,6 +695,14 @@ function BoxEditor({
                   <button className="btn" disabled={busy || !picked}>
                     {busy ? "Saving…" : current ? "Change it" : homework ? "Add homework" : "Add activity"}
                   </button>
+                  {unfinished.length > 0 && (
+                    <button type="button" className="btn secondary" disabled={busy} onClick={() => void toHomework()}>
+                      🏠{" "}
+                      {one
+                        ? "Move to homework"
+                        : `Move to homework for ${unfinished.length === 1 ? unfinished[0].name : `${unfinished.length} who haven't finished`}`}
+                    </button>
+                  )}
                   {withWork.length > 0 && (
                     <button type="button" className="btn secondary" disabled={busy} onClick={() => void remove()}>
                       {one ? "Delete it" : `Delete for ${withWork.length === 1 ? withWork[0].name : `all ${withWork.length}`}`}
