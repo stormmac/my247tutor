@@ -1,5 +1,6 @@
 "use client";
 
+import { BackToStudent } from "@/components/BackToStudent";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Suni } from "@/components/Suni";
@@ -117,6 +118,7 @@ export default function TablesPage() {
             Change tables
           </button>
         </div>
+        <BackToStudent className="centred" />
       </div>
     );
   }
@@ -154,6 +156,9 @@ function Setup({
 
   return (
     <div className="stack tables-setup">
+      <div className="row">
+        <BackToStudent />
+      </div>
       <div className="row" style={{ gap: 16, flexWrap: "nowrap" }}>
         <div>
           <h1>Times tables</h1>
@@ -253,9 +258,6 @@ function Setup({
           Tricky ones lately: {tricky.join(", ")}.
         </p>
       )}
-      <Link className="btn secondary small" href="/learn" style={{ alignSelf: "flex-start" }}>
-        Back to Learn
-      </Link>
     </div>
   );
 }
@@ -379,6 +381,9 @@ function Game({ tables, speed, minutes, onFinish }: Choice & { onFinish: (game: 
   const seconds = Math.ceil(left / 1000);
   return (
     <div className="card narrow stack tables-game" data-suni-avoid>
+      <div className="row">
+        <BackToStudent />
+      </div>
       <div className="row spread">
         <span className={`tables-clock ${seconds <= 10 ? "ending" : ""}`} aria-label={`${seconds} seconds left`}>
           ⏱ {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}

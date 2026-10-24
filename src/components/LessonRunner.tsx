@@ -198,6 +198,7 @@ export function LessonRunner({
           {result.right} out of {result.total} right.
         </p>
         {renderFinished(result, again)}
+        <BackToStudent className="centred" />
       </div>
     );
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { BackToStudent } from "@/components/BackToStudent";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Suni } from "@/components/Suni";
@@ -124,6 +125,7 @@ export default function ReadingCheckPage() {
     const before = readingOf(profile);
     return (
       <div className="card narrow stack">
+        <BackToStudent />
         <div className="row" style={{ gap: 14, flexWrap: "nowrap" }}>
           <Suni size={80} wave />
           <h1 style={{ margin: 0 }}>Reading check</h1>
@@ -147,6 +149,7 @@ export default function ReadingCheckPage() {
 
   return (
     <div className="card narrow stack" style={{ textAlign: "center" }}>
+      <BackToStudent />
       <p className="muted small" style={{ margin: 0 }}>
         Word {state.index + 1}
       </p>

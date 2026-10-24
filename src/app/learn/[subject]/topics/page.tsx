@@ -1,5 +1,6 @@
 "use client";
 
+import { BackToStudent } from "@/components/BackToStudent";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -69,6 +70,9 @@ function Topics() {
 
   return (
     <div className="stack">
+      <div className="row">
+        <BackToStudent />
+      </div>
       <nav className="small muted" aria-label="Where you are">
         {path.country.name} › {path.state.name} › {path.subject.name}
       </nav>

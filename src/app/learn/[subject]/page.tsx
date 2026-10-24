@@ -92,6 +92,7 @@ function SubjectLearning() {
 function AssessmentThanks({ name, record, onContinue }: { name: string; record: AssessmentRecord; onContinue: () => void }) {
   return (
     <div className="card narrow stack" style={{ margin: "0 auto" }}>
+      <BackToStudent />
       <h1>All done, {name}!</h1>
       <p style={{ margin: 0 }}>
         You answered {record.answers.length} questions. Now we know where to start, so your lessons will be just right for you.
@@ -121,6 +122,7 @@ function AssessmentDone({
   if (finished)
     return (
       <div className="card narrow stack" style={{ margin: "0 auto" }}>
+        <BackToStudent />
         <h1>All done, {profile.name}!</h1>
         <p style={{ margin: 0 }}>
           You answered {finished.answers.length} questions. Now we know where to start, so your practice will be just right for you.
@@ -173,6 +175,7 @@ function Assessment({
   if (!started)
     return (
       <div className="card narrow stack" style={{ margin: "0 auto" }}>
+        <BackToStudent />
         <h1>Starting check: {title}</h1>
         <p style={{ margin: 0 }}>
           Hi {name}! Let&apos;s find the right place for you to start. The first questions are easy, and they get harder as you go. When
@@ -189,6 +192,7 @@ function Assessment({
 
   return (
     <div className="narrow stack" style={{ margin: "0 auto" }}>
+      <BackToStudent />
       <div className="row spread">
         <h1 style={{ margin: 0 }}>Starting check: {title}</h1>
         <span className="pill">Question {state.answers.length + (state.done ? 0 : 1)}</span>

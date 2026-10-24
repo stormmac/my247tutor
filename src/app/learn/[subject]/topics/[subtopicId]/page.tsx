@@ -1,5 +1,6 @@
 "use client";
 
+import { BackToStudent } from "@/components/BackToStudent";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FocusedPractice } from "@/components/FocusedPractice";
@@ -43,6 +44,9 @@ export default function SubtopicPage() {
 
   return (
     <div className="stack">
+      <div className="row">
+        <BackToStudent />
+      </div>
       <nav className="small muted" aria-label="Where you are">
         <Link href={back}>
           {subjectRecord.name} › {year.name}
