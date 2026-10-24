@@ -213,6 +213,10 @@ main {
   padding: 6px 14px;
   font-size: 0.9rem;
 }
+/* The way out of a lesson, back to the Student page. */
+.back-to-student {
+  align-self: flex-start;
+}
 
 input[type="text"],
 input[type="number"],

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BackToStudent } from "@/components/BackToStudent";
 import { useEffect, useMemo, useState } from "react";
 import { ReadAloud } from "@/components/ReadAloud";
 import { SayTheSound } from "@/components/SayTheSound";
@@ -204,9 +205,12 @@ export function LessonRunner({
   return (
     <div className="stack lesson">
       <div className="row spread">
-        <Link href={backHref} className="small">
-          ← {backLabel}
-        </Link>
+        <div className="row" style={{ gap: 12 }}>
+          <Link href={backHref} className="small">
+            ← {backLabel}
+          </Link>
+          <BackToStudent />
+        </div>
         <span className="muted small">
           {title} · step {index + 1} of {steps.length}
         </span>
@@ -214,7 +218,9 @@ export function LessonRunner({
       <div className="progress" aria-hidden>
         <div style={{ width: `${(index / steps.length) * 100}%` }} />
       </div>
-      <div className="card stack lesson-card" data-suni-avoid>{step && <Step step={step} picked={picked} onAnswer={answer} onNext={next} say={say} />}</div>
+      <div className="card stack lesson-card" data-suni-avoid>
+        {step && <Step step={step} picked={picked} onAnswer={answer} onNext={next} say={say} />}
+      </div>
       {!voice.supported && (
         <p className="muted small">This device can&apos;t speak, so a grown-up will need to say the sounds and words.</p>
       )}
