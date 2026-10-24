@@ -186,6 +186,17 @@ export const FinishWorkSchema = z
 
 /** Activities a teacher can plan for each student in one weekly session of a class. */
 export const MAX_SESSION_ACTIVITIES = 8;
+/** Homework a teacher can plan after a session: the boxes after its activities, 9 to 11. */
+export const MAX_SESSION_HOMEWORK = 3;
+/** Whether one of a session's boxes is homework rather than an activity in class. */
+export const homeworkSlot = (slot: number) => slot > MAX_SESSION_ACTIVITIES;
+
+const SlotSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(MAX_SESSION_ACTIVITIES + MAX_SESSION_HOMEWORK);
+const LearnersSchema = z.array(z.uuid()).min(1, "Choose at least one student.").max(30);
 
 /** A session's Monday, as yyyy-mm-dd. */
 const MondaySchema = z
@@ -193,29 +204,41 @@ const MondaySchema = z
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .refine((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === 1, "Pick the Monday of the week.");
 
-/** The lesson planner: one of a session's boxes for some of a class's students, or homework redoing their mistakes. */
+/**
+ * The lesson planner: an activity in one of a session's boxes for some of a class's students, or
+ * homework redoing the questions they got wrong. Boxes 1 to 8 are the session, 9 to 11 homework.
+ */
 export const PlanWorkSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("slot"),
     classId: z.uuid(),
     week: MondaySchema,
-    learnerIds: z.array(z.uuid()).min(1, "Choose at least one student.").max(30),
-    /** The box, 1 to 8, left to right. */
-    slot: z.number().int().min(1).max(MAX_SESSION_ACTIVITIES),
+    learnerIds: LearnersSchema,
+    /** The box, left to right. */
+    slot: SlotSchema,
     subject: z.enum(["maths", "english"]),
     subtopicId: z.string().regex(/^[0-9a-f-]{36}$/, "Choose an activity."),
-    homework: z.boolean().default(false),
     note: z.string().trim().max(200).optional(),
   }),
   z.object({
     kind: z.literal("mistakes"),
     classId: z.uuid(),
     week: MondaySchema,
-    learnerIds: z.array(z.uuid()).min(1, "Choose at least one student.").max(30),
+    learnerIds: LearnersSchema,
+    /** A homework box. */
+    slot: SlotSchema.refine(homeworkSlot, "Redoing questions got wrong is homework."),
     subject: z.enum(["maths", "english"]),
     note: z.string().trim().max(200).optional(),
   }),
 ]);
+
+/** Empties one of a session's boxes for some of a class's students. */
+export const UnplanWorkSchema = z.object({
+  classId: z.uuid(),
+  week: MondaySchema,
+  learnerIds: LearnersSchema,
+  slot: SlotSchema,
+});
 
 const YearSchema = z.union(
   [z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6), z.literal(7), z.literal(8)],

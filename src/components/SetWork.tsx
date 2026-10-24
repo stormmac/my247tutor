@@ -36,9 +36,11 @@ export interface SetWork {
 /** Work that's open now: not for a session in a later week. */
 export const openNow = (w: SetWork, week: string) => !w.week || w.week <= week;
 
-/** The pieces of set work a "mistakes" homework redoes: the session's activities in its subject. */
+/** The pieces of set work a "mistakes" homework redoes: the session's class activities (not its homework) in its subject. */
 export const redoOf = (w: SetWork, all: SetWork[]) =>
-  all.filter((a) => a.kind === "topic" && a.classId === w.classId && a.week === w.week && a.subject === w.subject).map((a) => a.id);
+  all
+    .filter((a) => a.kind === "topic" && !a.homework && a.classId === w.classId && a.week === w.week && a.subject === w.subject)
+    .map((a) => a.id);
 
 /**
  * The work set for a child, and whether this person can set more. Empty for a child without an

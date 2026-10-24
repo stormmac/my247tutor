@@ -7,12 +7,14 @@ import { centreOf, listClasses, studentForViewer, type CentreClass } from "./cen
 import { ready } from "./db";
 import { MAX_OPEN_WORK, SET_WORK_SELECT, setWorkOf, type SetWork } from "./family";
 import { CHILD_CURRICULUM } from "./learners";
+import { homeworkSlot } from "./rules";
 import { audit, type User } from "./users";
 
 /**
  * The teacher's lesson planner. Each class meets once a week; for each session the teacher plans up
- * to eight activities per student (ten questions on a subtopic each), and homework: one of the
- * activities, or a redo of the questions the student didn't get right first go in the session.
+ * to eight activities per student (ten questions on a subtopic each), and up to three pieces of
+ * homework after them: an activity, or a redo of the questions the student didn't get right first go
+ * in the session.
  * Planned work is set work with the class and the session's Monday on it, so it joins the
  * student's weekly lesson like any other.
  */
@@ -96,43 +98,63 @@ const subjectOk = (c: CentreClass, subject: SetWork["subject"]) => c.subject ===
 
 export type PlanResult = { added: number; changed?: number; skipped?: number } | { error: string; status: number };
 
+type Box = { classId: string; week: string; learnerIds: string[]; slot: number };
+
+/** Each student's work in one of the session's boxes, if any, and how much work they have still to do. */
+async function boxes(box: Box) {
+  const { rows } = await (
+    await ready()
+  ).query(
+    `SELECT l.id, l.name, w.id AS work_id, w.done_at IS NOT NULL AS done,
+       (SELECT COUNT(*) FROM set_work o WHERE o.learner_id = l.id AND o.done_at IS NULL) AS open
+     FROM learners l
+     LEFT JOIN LATERAL (
+       SELECT id, done_at FROM set_work w WHERE w.learner_id = l.id AND w.class_id = $2 AND w.week = $3::date AND w.slot = $4
+       ORDER BY w.created_at LIMIT 1
+     ) w ON TRUE
+     WHERE l.id = ANY($1::uuid[])`,
+    [box.learnerIds, box.classId, box.week, box.slot],
+  );
+  return rows as { id: string; name: string; work_id: string | null; done: boolean | null; open: string }[];
+}
+
+/** The first student a new piece of work would take over the most they can have to do, as an error. */
+function tooBusy(rows: Awaited<ReturnType<typeof boxes>>): PlanResult | null {
+  const busy = rows.find((r) => !r.work_id && Number(r.open) + 1 > MAX_OPEN_WORK);
+  return busy
+    ? {
+        error: `${busy.name} can have up to ${MAX_OPEN_WORK} pieces of work still to do. Wait for some to be finished first.`,
+        status: 400,
+      }
+    : null;
+}
+
+/** The class, when it's the viewer's and has these students, and the box isn't one the weekly lessons fill. */
+async function plannableBox(viewer: User, box: Box): Promise<CentreClass | { error: string; status: number }> {
+  const found = await viewerClass(viewer, box.classId, box.learnerIds);
+  if (!found) return { error: "No such class or student.", status: 404 };
+  if (box.slot <= autoSlots(found.subject))
+    return { error: "The first boxes are the student's weekly lessons, which are added by themselves.", status: 400 };
+  return found;
+}
+
 /**
  * Puts an activity in one of the session's boxes for each of these students: a new one in an empty
- * box, or a change to one not done yet. A box whose activity is done stays as it is.
+ * box, or a change to one not done yet. A box whose work is done stays as it is. Boxes after the
+ * eighth are homework.
  */
 export async function planSlot(
   viewer: User,
-  plan: {
-    classId: string;
-    week: string;
-    learnerIds: string[];
-    slot: number;
-    subject: SetWork["subject"];
-    subtopicId: string;
-    homework: boolean;
-    note: string | null;
-  },
+  plan: Box & { subject: SetWork["subject"]; subtopicId: string; note: string | null },
 ): Promise<PlanResult> {
-  const found = await viewerClass(viewer, plan.classId, plan.learnerIds);
-  if (!found) return { error: "No such class or student.", status: 404 };
+  const found = await plannableBox(viewer, plan);
+  if ("error" in found) return found;
   if (!subjectOk(found, plan.subject)) return { error: "That subject isn't taught in this class.", status: 400 };
-  if (plan.slot <= autoSlots(found.subject))
-    return { error: "The first boxes are the student's weekly lessons, which are added by themselves.", status: 400 };
+  const rows = await boxes(plan);
+  const busy = tooBusy(rows);
+  if (busy) return busy;
   const pool = await ready();
-  const { rows } = await pool.query(
-    `SELECT l.id, l.name,
-       (SELECT w.id FROM set_work w WHERE w.learner_id = l.id AND w.class_id = $2 AND w.week = $3::date AND w.slot = $4 AND w.kind = 'topic' LIMIT 1) AS work_id,
-       (SELECT w.done_at IS NOT NULL FROM set_work w WHERE w.learner_id = l.id AND w.class_id = $2 AND w.week = $3::date AND w.slot = $4 AND w.kind = 'topic' LIMIT 1) AS done,
-       (SELECT COUNT(*) FROM set_work w WHERE w.learner_id = l.id AND w.done_at IS NULL) AS open
-     FROM learners l WHERE l.id = ANY($1::uuid[])`,
-    [plan.learnerIds, plan.classId, plan.week, plan.slot],
-  );
-  const busy = rows.find((r) => !r.work_id && Number(r.open) + 1 > MAX_OPEN_WORK);
-  if (busy)
-    return {
-      error: `${busy.name} can have up to ${MAX_OPEN_WORK} pieces of work still to do. Wait for some to be finished first.`,
-      status: 400,
-    };
+  const homework = homeworkSlot(plan.slot);
   let added = 0,
     changed = 0,
     skipped = 0;
@@ -140,15 +162,16 @@ export async function planSlot(
     if (r.done) skipped++;
     else if (r.work_id) {
       await pool.query(
-        `UPDATE set_work SET subject = $2, subtopic_id = $3, homework = $4, note = $5, set_by = $6 WHERE id = $1 AND done_at IS NULL`,
-        [r.work_id, plan.subject, plan.subtopicId, plan.homework, plan.note, viewer.id],
+        `UPDATE set_work SET kind = 'topic', subject = $2, subtopic_id = $3, homework = $4, note = $5, set_by = $6
+         WHERE id = $1 AND done_at IS NULL`,
+        [r.work_id, plan.subject, plan.subtopicId, homework, plan.note, viewer.id],
       );
       changed++;
     } else {
       await pool.query(
         `INSERT INTO set_work (learner_id, set_by, subject, subtopic_id, note, class_id, week, homework, slot)
          VALUES ($1, $2, $3, $4, $5, $6, $7::date, $8, $9)`,
-        [r.id, viewer.id, plan.subject, plan.subtopicId, plan.note, plan.classId, plan.week, plan.homework, plan.slot],
+        [r.id, viewer.id, plan.subject, plan.subtopicId, plan.note, plan.classId, plan.week, homework, plan.slot],
       );
       added++;
     }
@@ -158,29 +181,60 @@ export async function planSlot(
 }
 
 /**
- * Homework that redoes the questions each student didn't get right first go in the session's
- * activities in a subject. One per student, subject and session; students without an activity in
- * that subject this session are skipped.
+ * Homework in one of the homework boxes that redoes the questions each student didn't get right
+ * first go in the session's activities in a subject. One per student, subject and session; students
+ * without an activity in that subject this session, or already redoing it, are skipped.
  */
 export async function planMistakesHomework(
   viewer: User,
-  plan: { classId: string; week: string; learnerIds: string[]; subject: SetWork["subject"]; note: string | null },
+  plan: Box & { subject: SetWork["subject"]; note: string | null },
 ): Promise<PlanResult> {
-  const found = await viewerClass(viewer, plan.classId, plan.learnerIds);
-  if (!found) return { error: "No such class or student.", status: 404 };
+  const found = await plannableBox(viewer, plan);
+  if ("error" in found) return found;
   if (!subjectOk(found, plan.subject)) return { error: "That subject isn't taught in this class.", status: 400 };
   const pool = await ready();
-  const { rowCount } = await pool.query(
-    `INSERT INTO set_work (learner_id, set_by, subject, subtopic_id, note, class_id, week, homework, kind)
-     SELECT l.id, $2, $3::varchar, '', $4, $5, $6::date, TRUE, 'mistakes' FROM learners l
+  const { rows: can } = await pool.query(
+    `SELECT l.id FROM learners l
      WHERE l.id = ANY($1::uuid[])
-       AND EXISTS (SELECT 1 FROM set_work w WHERE w.learner_id = l.id AND w.class_id = $5 AND w.week = $6::date AND w.subject = $3::varchar AND w.kind = 'topic')
-       AND NOT EXISTS (SELECT 1 FROM set_work w WHERE w.learner_id = l.id AND w.class_id = $5 AND w.week = $6::date AND w.subject = $3::varchar AND w.kind = 'mistakes')`,
-    [plan.learnerIds, viewer.id, plan.subject, plan.note, plan.classId, plan.week],
+       AND EXISTS (SELECT 1 FROM set_work w WHERE w.learner_id = l.id AND w.class_id = $2 AND w.week = $3::date AND w.subject = $4::varchar AND w.kind = 'topic' AND NOT w.homework)
+       AND NOT EXISTS (SELECT 1 FROM set_work w WHERE w.learner_id = l.id AND w.class_id = $2 AND w.week = $3::date AND w.subject = $4::varchar AND w.kind = 'mistakes' AND w.slot IS DISTINCT FROM $5::smallint)`,
+    [plan.learnerIds, plan.classId, plan.week, plan.subject, plan.slot],
   );
-  if (!rowCount) return { error: "Add an activity in this subject first, so there are questions to redo.", status: 400 };
-  await audit(viewer.id, "plan_mistakes_homework", plan.classId, { week: plan.week, students: rowCount });
-  return { added: rowCount };
+  const ids = new Set(can.map((r) => r.id as string));
+  const rows = (await boxes(plan)).filter((r) => ids.has(r.id) && !r.done);
+  if (!rows.length)
+    return {
+      error: "Add a class activity in this subject first, so there are questions to redo. Each student redoes a subject once a week.",
+      status: 400,
+    };
+  const busy = tooBusy(rows);
+  if (busy) return busy;
+  for (const r of rows) {
+    if (r.work_id) await pool.query(`DELETE FROM set_work WHERE id = $1 AND done_at IS NULL`, [r.work_id]);
+    await pool.query(
+      `INSERT INTO set_work (learner_id, set_by, subject, subtopic_id, note, class_id, week, homework, kind, slot)
+       VALUES ($1, $2, $3, '', $4, $5, $6::date, TRUE, 'mistakes', $7)`,
+      [r.id, viewer.id, plan.subject, plan.note, plan.classId, plan.week, plan.slot],
+    );
+  }
+  await audit(viewer.id, "plan_mistakes_homework", plan.classId, { week: plan.week, slot: plan.slot, students: rows.length });
+  return { added: rows.length };
+}
+
+/** Empties one of the session's boxes for each of these students, done or not: its score goes with it. */
+export async function unplanSlot(viewer: User, box: Box): Promise<{ removed: number } | { error: string; status: number }> {
+  const found = await plannableBox(viewer, box);
+  if ("error" in found) return found;
+  const { rowCount } = await (
+    await ready()
+  ).query(`DELETE FROM set_work WHERE learner_id = ANY($1::uuid[]) AND class_id = $2 AND week = $3::date AND slot = $4`, [
+    box.learnerIds,
+    box.classId,
+    box.week,
+    box.slot,
+  ]);
+  await audit(viewer.id, "unplan_activity", box.classId, { week: box.week, slot: box.slot, removed: rowCount ?? 0 });
+  return { removed: rowCount ?? 0 };
 }
 
 /** How many weeks the student pop-up looks back over, this one included. */
