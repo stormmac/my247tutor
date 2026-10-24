@@ -7,6 +7,7 @@ import { ChildLogin } from "@/components/ChildLogin";
 import { ChildTabs } from "@/components/ChildSwitcher";
 import { PlanButton, PlanSummary } from "@/components/PlanButton";
 import { RewardsButton } from "@/components/RewardsButton";
+import { Panel } from "@/components/Panel";
 import { ParentSummary } from "@/components/ParentSummary";
 import { FullReport, WellbeingAlert } from "@/components/ProgressReport";
 import { SuniChatsButton } from "@/components/SuniChats";
@@ -110,8 +111,12 @@ export default function ParentPage() {
         <KnowLink profile={{ ...atCentre.profile, name: atCentre.name }} />
         <WellbeingAlert profile={atCentre.profile} />
         <SuniNotes learnerId={atCentre.profile.id} name={atCentre.name} />
-        <ParentSummary profile={atCentre.profile} />
-        <FullReport profile={atCentre.profile} />
+        <Panel colour="diy" icon="📈" title={`How ${atCentre.name} is going`}>
+          <ParentSummary profile={atCentre.profile} />
+        </Panel>
+        <Panel colour="teacher" icon="📊" title="Full report">
+          <FullReport profile={atCentre.profile} />
+        </Panel>
         <p className="small muted no-print">
           {atCentre.centreName} pays for {atCentre.name}&apos;s lessons and looks after their sign-in. A child you add yourself
           {profile ? "" : " with + Add a child on the Student page"} needs a plan of their own.
@@ -156,105 +161,111 @@ export default function ParentPage() {
       <KnowLink profile={profile} />
       <WellbeingAlert profile={profile} onChange={setProfile} />
       {account.user && <SuniNotes learnerId={profile.id} name={profile.name} />}
-      <ParentSummary profile={profile} />
-      <FullReport profile={profile} onChange={setProfile} />
+      <Panel colour="diy" icon="📈" title={`How ${profile.name} is going`}>
+        <ParentSummary profile={profile} />
+      </Panel>
+      <Panel colour="teacher" icon="📊" title="Full report">
+        <FullReport profile={profile} onChange={setProfile} />
+      </Panel>
 
-      {account.user && profile.id && <ChildLogin key={profile.id} learnerId={profile.id} name={profile.name} />}
+      <Panel colour="account" icon="⚙️" title="Sign-in and settings" className="no-print">
+        {account.user && profile.id && <ChildLogin key={profile.id} learnerId={profile.id} name={profile.name} />}
 
-      <div className="card no-print">
-        <h2>Settings</h2>
-        <p className="muted small">
-          {account.user
-            ? `Logged in as ${account.user.email}. ${profile.name}'s progress is saved to your account.`
-            : "Progress is saved in this browser only."}
-        </p>
-        <div className="row">
-          <label className="row" style={{ fontWeight: 400, margin: 0 }}>
-            Name
-            <input
-              key={profile.id}
-              defaultValue={profile.name}
-              maxLength={20}
-              style={{ width: 160 }}
-              aria-label="Child's name"
-              onBlur={(e) => {
-                const name = e.target.value.trim().slice(0, 20);
-                if (name && name !== profile.name) setProfile((p) => ({ ...p, name }));
-                else e.target.value = profile.name;
-              }}
-            />
-          </label>
-          <label className="row" style={{ fontWeight: 400, margin: 0 }}>
-            School year
-            <select
-              value={profile.yearLevel}
-              style={{ width: "auto" }}
-              onChange={(e) => setProfile((p) => ({ ...p, yearLevel: Number(e.target.value) as LearnerProfile["yearLevel"] }))}
-            >
-              {YEARS.map((y) => (
-                <option key={y} value={y}>
-                  {yearName(y, curriculum)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="row" style={{ fontWeight: 400, margin: 0 }}>
-            Date of birth
-            <input
-              key={profile.id}
-              type="date"
-              defaultValue={profile.dateOfBirth ?? ""}
-              max={today()}
-              style={{ width: "auto" }}
-              aria-label="Child's date of birth"
-              onBlur={(e) => {
-                const dob = e.target.value;
-                if (dob === (profile.dateOfBirth ?? "")) return;
-                if (dob && dateOfBirthProblem(dob)) {
-                  alert(dateOfBirthProblem(dob));
-                  e.target.value = profile.dateOfBirth ?? "";
-                  return;
-                }
-                setProfile(({ dateOfBirth: _, ...p }) => (dob ? { ...p, dateOfBirth: dob } : p));
-              }}
-            />
-          </label>
-          {account.user ? (
-            <span className="small">
-              Curriculum: <strong>{CURRICULUM_NAMES[curriculum]}</strong>
-            </span>
-          ) : (
-            // Without an account there's no Admin to set it, so the grown-up chooses here.
+        <div className="card no-print">
+          <h2 style={{ marginTop: 0 }}>Settings</h2>
+          <p className="muted small">
+            {account.user
+              ? `Logged in as ${account.user.email}. ${profile.name}'s progress is saved to your account.`
+              : "Progress is saved in this browser only."}
+          </p>
+          <div className="row">
             <label className="row" style={{ fontWeight: 400, margin: 0 }}>
-              Curriculum
+              Name
+              <input
+                key={profile.id}
+                defaultValue={profile.name}
+                maxLength={20}
+                style={{ width: 160 }}
+                aria-label="Child's name"
+                onBlur={(e) => {
+                  const name = e.target.value.trim().slice(0, 20);
+                  if (name && name !== profile.name) setProfile((p) => ({ ...p, name }));
+                  else e.target.value = profile.name;
+                }}
+              />
+            </label>
+            <label className="row" style={{ fontWeight: 400, margin: 0 }}>
+              School year
               <select
-                value={curriculum}
+                value={profile.yearLevel}
                 style={{ width: "auto" }}
-                onChange={(e) => setProfile((p) => ({ ...p, curriculum: e.target.value as Curriculum }))}
+                onChange={(e) => setProfile((p) => ({ ...p, yearLevel: Number(e.target.value) as LearnerProfile["yearLevel"] }))}
               >
-                {CURRICULA.map((c) => (
-                  <option key={c} value={c}>
-                    {CURRICULUM_NAMES[c]}
+                {YEARS.map((y) => (
+                  <option key={y} value={y}>
+                    {yearName(y, curriculum)}
                   </option>
                 ))}
               </select>
             </label>
+            <label className="row" style={{ fontWeight: 400, margin: 0 }}>
+              Date of birth
+              <input
+                key={profile.id}
+                type="date"
+                defaultValue={profile.dateOfBirth ?? ""}
+                max={today()}
+                style={{ width: "auto" }}
+                aria-label="Child's date of birth"
+                onBlur={(e) => {
+                  const dob = e.target.value;
+                  if (dob === (profile.dateOfBirth ?? "")) return;
+                  if (dob && dateOfBirthProblem(dob)) {
+                    alert(dateOfBirthProblem(dob));
+                    e.target.value = profile.dateOfBirth ?? "";
+                    return;
+                  }
+                  setProfile(({ dateOfBirth: _, ...p }) => (dob ? { ...p, dateOfBirth: dob } : p));
+                }}
+              />
+            </label>
+            {account.user ? (
+              <span className="small">
+                Curriculum: <strong>{CURRICULUM_NAMES[curriculum]}</strong>
+              </span>
+            ) : (
+              // Without an account there's no Admin to set it, so the grown-up chooses here.
+              <label className="row" style={{ fontWeight: 400, margin: 0 }}>
+                Curriculum
+                <select
+                  value={curriculum}
+                  style={{ width: "auto" }}
+                  onChange={(e) => setProfile((p) => ({ ...p, curriculum: e.target.value as Curriculum }))}
+                >
+                  {CURRICULA.map((c) => (
+                    <option key={c} value={c}>
+                      {CURRICULUM_NAMES[c]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <button
+              className="btn secondary small"
+              onClick={() => {
+                if (confirm(`Delete all of ${profile.name}'s progress?`)) removeCurrentChild();
+              }}
+            >
+              Delete learner
+            </button>
+          </div>
+          {account.user && (
+            <p className="small muted" style={{ marginBottom: 0 }}>
+              To change your password or details, go to <Link href="/account">My account</Link>.
+            </p>
           )}
-          <button
-            className="btn secondary small"
-            onClick={() => {
-              if (confirm(`Delete all of ${profile.name}'s progress?`)) removeCurrentChild();
-            }}
-          >
-            Delete learner
-          </button>
         </div>
-        {account.user && (
-          <p className="small muted" style={{ marginBottom: 0 }}>
-            To change your password or details, go to <Link href="/account">My account</Link>.
-          </p>
-        )}
-      </div>
+      </Panel>
     </div>
   );
 }
