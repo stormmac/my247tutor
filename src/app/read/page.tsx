@@ -1,5 +1,6 @@
 "use client";
 
+import { BackToStudent } from "@/components/BackToStudent";
 import Link from "next/link";
 import { useProfile } from "@/components/useProfile";
 import {
@@ -88,6 +89,9 @@ export default function ReadPage() {
   const canBlend = openUnits(reading).length > 0;
   return (
     <div className="stack">
+      <div className="row">
+        <BackToStudent />
+      </div>
       <div className="row" style={{ gap: 16, flexWrap: "nowrap" }}>
         <div>
           <h1>Learn to Read</h1>

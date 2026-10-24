@@ -217,6 +217,9 @@ main {
 .back-to-student {
   align-self: flex-start;
 }
+.back-to-student.centred {
+  align-self: center;
+}
 
 input[type="text"],
 input[type="number"],
