@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLesson } from "../content/lesson";
+import { buildLesson, SENIOR_ENGLISH_YEAR } from "../content/lesson";
 import { advanceProgram, makeProgram, programFor, streamOf, streamSubtopics, workingYear } from "../content/program";
 import { subtopicsOf, topicsFor } from "../content/tree";
 import { CURRICULA, type Curriculum } from "../curriculum/curricula";
@@ -191,7 +191,8 @@ describe("work program", () => {
           const r = { ...record(subject, year, null, []), ...(curriculum !== "nsw" ? { curriculum } : {}) };
           const profile = applyAssessment(newProfile("Di", year, T0, curriculum === "nsw" ? undefined : curriculum), r);
           const lesson = buildLesson(profile, subject, T0);
-          expect(lesson.parts.filter((p) => p.kind === "activity").length, `${subject} Year ${year}`).toBe(2);
+          const senior = subject === "english" && year >= SENIOR_ENGLISH_YEAR;
+          expect(lesson.parts.filter((p) => p.kind === "activity").length, `${subject} Year ${year}`).toBe(senior ? 3 : 2);
           for (const p of lesson.parts) expect(p.questionIds.length, `${subject} Year ${year} ${p.title}`).toBeGreaterThan(0);
         }
     });

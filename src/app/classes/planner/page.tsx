@@ -8,6 +8,7 @@ import { subtopicPath } from "@/lib/content/tree";
 import { type Curriculum, curriculumOf, subjectName, yearName } from "@/lib/curriculum/curricula";
 import { YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
 import { CLASS_SUBJECTS, describeTime, MAX_SESSION_ACTIVITIES, type ClassTime } from "@/lib/auth/rules";
+import { autoSlots, type AutoActivity } from "@/lib/learner/autoActivities";
 import { addWeeks, dayOfWeek, weekOf } from "@/lib/learner/lesson";
 import type { LearnerProfile } from "@/lib/learner/model";
 
@@ -16,6 +17,8 @@ interface PlannerStudent {
   name: string;
   yearLevel: number;
   curriculum: LearnerProfile["curriculum"];
+  /** The weekly lessons' activities, added by themselves, in the first boxes. */
+  auto: AutoActivity[];
   planned: SetWork[];
 }
 
@@ -131,6 +134,8 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
   const subjects: Subject[] = c.subject === "both" ? ["maths", "english"] : [c.subject];
   const curriculum = curriculumOf(students[0]?.curriculum);
   const [editing, setEditing] = useState<Editing | null>(null);
+  // The first boxes are the weekly lessons, which fill themselves.
+  const autoCount = autoSlots(c.subject);
   const [history, setHistory] = useState<PlannerStudent | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -155,6 +160,11 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
           {c.teacherName ? `, with ${c.teacherName}` : ""}
           {c.times.map((t) => ` · 🗓 ${shortDate(dayOfWeek(week, t.weekday))}, ${describeTime(t).replace(/^\w+ /, "")}`).join("")}
         </p>
+        <p className="small" style={{ margin: "4px 0 0" }}>
+          Boxes 1 to {autoCount} fill themselves from each student&apos;s weekly{" "}
+          {c.subject === "english" ? "English" : c.subject === "maths" ? "maths" : "maths and English"} lessons. Add your own from box{" "}
+          {autoCount + 1}.
+        </p>
       </div>
       {error && (
         <div className="feedback bad" role="alert">
@@ -175,13 +185,19 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
                 </th>
                 {SLOTS.map((slot) => (
                   <th key={slot} scope="col">
-                    <button
-                      className="planner-head"
-                      title={`Choose activity ${slot} for the whole class`}
-                      onClick={() => setEditing({ slot, students })}
-                    >
-                      {slot} <span aria-hidden>▾</span>
-                    </button>
+                    {slot <= autoCount ? (
+                      <span className="planner-head auto" title="Added by itself each week from the student's weekly lesson">
+                        {slot} Auto
+                      </span>
+                    ) : (
+                      <button
+                        className="planner-head"
+                        title={`Choose activity ${slot} for the whole class`}
+                        onClick={() => setEditing({ slot, students })}
+                      >
+                        {slot} <span aria-hidden>▾</span>
+                      </button>
+                    )}
                   </th>
                 ))}
                 <th scope="col" className="planner-redo-head">
@@ -196,11 +212,17 @@ function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; r
                     <button className="planner-student-button" onClick={() => setHistory(s)}>
                       <strong>{s.name}</strong>
                       <span className="small muted">
-                        {filled(s)} of {MAX_SESSION_ACTIVITIES}
+                        {Math.min(autoCount, s.auto.length) + filled(s)} of {MAX_SESSION_ACTIVITIES}
                       </span>
                     </button>
                   </th>
                   {SLOTS.map((slot) => {
+                    if (slot <= autoCount)
+                      return (
+                        <td key={slot}>
+                          <AutoBox activity={s.auto[slot - 1]} curriculum={curriculumOf(s.curriculum)} showSubject={subjects.length > 1} />
+                        </td>
+                      );
                     const w = inBox(s, slot);
                     return (
                       <td key={slot}>
@@ -326,6 +348,49 @@ function band(work: SetWork): "good" | "warn" | "bad" {
   if (!work.total) return "good";
   const score = work.right! / work.total;
   return score > 0.75 ? "good" : score >= 0.5 ? "warn" : "bad";
+}
+
+/** How a finished weekly lesson activity went, with the same colours as set work. */
+function autoBand(a: AutoActivity): "good" | "warn" | "bad" {
+  const score = a.total ? a.right! / a.total : 1;
+  return score > 0.75 ? "good" : score >= 0.5 ? "warn" : "bad";
+}
+
+/** A box the weekly lesson fills by itself: what it is, and how far the student has got. */
+function AutoBox({
+  activity,
+  curriculum,
+  showSubject,
+}: {
+  activity: AutoActivity | undefined;
+  curriculum: Curriculum;
+  showSubject: boolean;
+}) {
+  if (!activity) return <div className="planner-box auto" />;
+  const percent = activity.done && activity.total ? Math.round((activity.right! / activity.total) * 100) : null;
+  return (
+    <div
+      className={`planner-box auto${activity.done ? ` ${autoBand(activity)}` : ""}`}
+      title="Added by itself each week from the student's weekly lesson"
+    >
+      {showSubject && <span className="planner-box-topic">{subjectName(activity.subject, curriculum)}</span>}
+      <span className="planner-box-title">{activity.title}</span>
+      {activity.detail && <span className="planner-box-topic">{activity.detail}</span>}
+      <span className="planner-box-foot">
+        {activity.done ? (
+          <span className={`pill ${autoBand(activity)}`}>
+            {activity.detail === "Reading lesson" ? `${percent}%` : `${activity.right}/${activity.total}`}
+          </span>
+        ) : activity.answered ? (
+          <span className="small muted">
+            {activity.answered} of {activity.total}
+          </span>
+        ) : (
+          <span className="small muted">Not started</span>
+        )}
+      </span>
+    </div>
+  );
 }
 
 /** A score as "8/10", coloured by how it went. */
@@ -559,6 +624,8 @@ function BoxEditor({
 
 interface HistoryWeek {
   week: string;
+  /** The weekly lessons' activities the student finished (this week only: earlier weeks' aren't kept). */
+  auto: AutoActivity[];
   work: SetWork[];
 }
 
@@ -576,7 +643,10 @@ function HistoryDialog({ student, week, onClose }: { student: PlannerStudent; we
       })
       .catch(() => setError("Couldn't connect. Try again."));
   }, [student.id, week]);
-  const scored = weeks?.flatMap((w) => w.work).filter((w) => w.doneAt && w.total) ?? [];
+  const scored = [
+    ...(weeks?.flatMap((w) => w.work).filter((w) => w.doneAt && w.total) ?? []),
+    ...(weeks?.flatMap((w) => w.auto).filter((a) => a.total) ?? []),
+  ];
   const right = scored.reduce((n, w) => n + w.right!, 0);
   const total = scored.reduce((n, w) => n + w.total!, 0);
 
@@ -602,13 +672,25 @@ function HistoryDialog({ student, week, onClose }: { student: PlannerStudent; we
           {!weeks && !error && <p className="muted">Loading…</p>}
           {weeks?.map((w) => {
             const done = w.work.filter((x) => x.doneAt);
+            const count = done.length + w.auto.length;
             return (
               <div key={w.week} className="planner-history-week">
                 <div className="planner-history-label">
                   <strong className="small">{shortDate(w.week)}</strong>
-                  <span className="small muted">{done.length ? `${done.length} done` : "Nothing done"}</span>
+                  <span className="small muted">{count ? `${count} done` : "Nothing done"}</span>
                 </div>
                 <div className="planner-history-row">
+                  {w.auto.map((a, i) => {
+                    const percent = a.total ? Math.round((a.right! / a.total) * 100) : 100;
+                    return (
+                      <div key={`auto-${i}`} className={`planner-history-box ${autoBand(a)}`} title={a.detail ?? undefined}>
+                        <span className="planner-box-title">{a.title}</span>
+                        <span className="planner-history-score">
+                          {percent}% {a.detail !== "Reading lesson" && <small>{`${a.right}/${a.total}`}</small>}
+                        </span>
+                      </div>
+                    );
+                  })}
                   {done.map((x) => {
                     const { title } = boxTitle(x, curriculum);
                     return (

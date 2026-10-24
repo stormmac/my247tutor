@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLesson, skillBuilder, subtopicStrength, weakestSubtopics } from "../content/lesson";
+import { buildLesson, SENIOR_ENGLISH_YEAR, skillBuilder, subtopicStrength, weakestSubtopics } from "../content/lesson";
 import { progressKey } from "../content/practice";
 import { QUESTIONS, subtopicPath } from "../content/tree";
 import { DIFFICULTIES } from "../content/types";
@@ -36,7 +36,8 @@ describe("weekly lesson", () => {
   });
 
   for (const subject of ["maths", "english"] as const)
-    for (const year of YEARS)
+    // From Year 6 English is comprehension, writing and vocabulary instead (autoActivities.test.ts).
+    for (const year of YEARS.filter((y) => subject === "maths" || y < SENIOR_ENGLISH_YEAR))
       it(`has 20 review questions from the year below and two 10-question activities: ${subject}, Year ${year}`, () => {
         const lesson = buildLesson(newProfile("Ava", year, NOW), subject, NOW);
         const [review, ...activities] = lesson.parts;

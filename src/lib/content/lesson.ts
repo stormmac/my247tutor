@@ -133,6 +133,33 @@ function programActivities(profile: LearnerProfile, subject: Subject, program: W
   return parts.length ? parts : null;
 }
 
+/** From this year, the English weekly lesson is comprehension, writing and vocabulary. */
+export const SENIOR_ENGLISH_YEAR = 6;
+
+/** The three parts of a senior English lesson, each found by its topic or subtopic's name. */
+const SENIOR_ENGLISH: { name: string; matches: (topic: string, subtopic: string) => boolean }[] = [
+  { name: "Comprehension", matches: (t, s) => /comprehension/i.test(s) || /^reading/i.test(t) },
+  { name: "Writing", matches: (t, s) => /writing/i.test(t) || /writing/i.test(s) },
+  { name: "Vocabulary", matches: (t, s) => /vocab|word meaning/i.test(t) || /vocab|word meaning/i.test(s) },
+];
+
+/**
+ * Comprehension, writing and vocabulary from the child's own year, the weakest subtopic of each.
+ * Fewer than three parts when the curriculum has no such topic, and the usual lesson is made instead.
+ */
+function seniorEnglish(profile: LearnerProfile, rng: Rng): LessonPart[] {
+  const curriculum = curriculumOf(profile.curriculum);
+  const all = practiseable("english", profile.yearLevel, curriculum).flatMap(({ topic, subtopics }) =>
+    subtopics.map((subtopic) => ({ topic, subtopic, strength: subtopicStrength(profile, subtopic) })),
+  );
+  return SENIOR_ENGLISH.flatMap(({ name, matches }) => {
+    const pick = all.filter((x) => matches(x.topic.title, x.subtopic.title)).sort((a, b) => a.strength - b.strength)[0];
+    if (!pick) return [];
+    const part = activityPart(pick.topic.title, pick.subtopic, profile.yearLevel, rng, curriculum);
+    return [{ ...part, title: `${name}: ${pick.subtopic.title}` }];
+  }).filter((p) => p.questionIds.length);
+}
+
 /**
  * Makes this week's lesson. The seed makes it the same for a child however often it is rebuilt in a week.
  * With a work program the activities come from it; otherwise they are the weakest subtopics in the child's year.
@@ -141,6 +168,10 @@ export function buildLesson(profile: LearnerProfile, subject: Subject, now = Dat
   const week = weekOf(now);
   const rng = new Rng(hash(`${profile.id ?? profile.name}:${subject}:${week}`));
   const curriculum = curriculumOf(profile.curriculum);
+  if (subject === "english" && profile.yearLevel >= SENIOR_ENGLISH_YEAR) {
+    const parts = seniorEnglish(profile, rng);
+    if (parts.length === SENIOR_ENGLISH.length) return { week, curriculum, parts };
+  }
   const program = programFor(profile, subject);
   const focus = program ? focusStreams(program, profile.yearLevel) : [];
   // The warm-up is the year below the work: the child's own year, or the lowest year the program is at.
