@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { BackToStudent } from "@/components/BackToStudent";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePraise } from "@/components/usePraise";
 import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components/QuestionView";
 import { questionFocus, useSuniFocus, useSuniSay, useSuniScreen } from "@/components/SuniCompanion";
 import type { useProfile } from "@/components/useProfile";
-import { addSetWork, buildLesson, skillBuilder } from "@/lib/content/lesson";
-import { finishWork, useSetWork } from "@/components/SetWork";
+import { addSetWork, buildLesson, mistakesOf, skillBuilder, type SetWorkItem } from "@/lib/content/lesson";
+import { finishWork, openNow, redoOf, useSetWork } from "@/components/SetWork";
 import { advanceProgram, ensureProgram, programFor, streamSubtopics } from "@/lib/content/program";
 import { progressKey, toPracticeQuestion } from "@/lib/content/practice";
 import { QUESTIONS, subtopicPath } from "@/lib/content/tree";
@@ -40,8 +40,12 @@ const subtopicById = (id: string, curriculum: Curriculum) => subtopicPath(id, cu
 const COLOUR_WORDS = { good: "right first go", warn: "right on a later go", bad: "not right" } as const;
 
 function describe(part: LessonPart, curriculum: Curriculum): string {
-  if (part.kind === "set")
-    return `${part.questionIds.length} questions, easy to hard, set by ${part.setBy ?? "your teacher"}.${part.note ? ` "${part.note}"` : ""}`;
+  if (part.kind === "set") {
+    const what = part.redo
+      ? `${part.questionIds.length} ${part.questionIds.length === 1 ? "question" : "questions"} from class you didn't get right first go, to have another go`
+      : `${part.questionIds.length} questions, easy to hard`;
+    return `${part.homework ? "🏠 Homework: " : ""}${what}, set by ${part.setBy ?? "your teacher"}.${part.note ? ` "${part.note}"` : ""}`;
+  }
   return part.kind === "review"
     ? `${part.questionIds.length} questions from ${yearName(part.year, curriculum)} to keep earlier skills sharp.`
     : `${part.questionIds.length} questions, easy to hard, on something to work on. Get over ${MOVE_UP_MARK * 100}% right first go to move up a level.`;
@@ -147,16 +151,34 @@ export function WeeklyLesson({
 
   // Work a parent, teacher or centre set, still to do, joins this week's lesson.
   const setWork = useSetWork(profile.id);
+  const { work: allWork, reload: reloadWork } = setWork;
+  const nothingToRedo = useRef(new Set<string>());
   useEffect(() => {
-    const open = setWork.work.filter((w) => !w.doneAt && w.subject === subject);
-    if (!lesson || !open.length) return;
+    if (!lesson) return;
+    const open = allWork
+      .filter((w) => !w.doneAt && w.subject === subject && openNow(w, lesson.week))
+      .map((w): SetWorkItem => (w.kind === "mistakes" ? { ...w, redo: redoOf(w, allWork) } : w));
+    // Homework redoing the mistakes when every question was right first go: nothing to redo.
+    const nothing = open.filter(
+      (w) =>
+        w.redo &&
+        !nothingToRedo.current.has(w.id) &&
+        !lesson.parts.some((p) => p.setWorkId === w.id) &&
+        mistakesOf(lesson, w.redo)?.length === 0,
+    );
+    if (nothing.length && profile.id) {
+      const learnerId = profile.id;
+      for (const w of nothing) nothingToRedo.current.add(w.id);
+      void Promise.all(nothing.map((w) => finishWork(learnerId, w.id, 0, 0))).then(reloadWork);
+    }
+    if (!open.length) return;
     setProfile((p) => {
       const now = currentLesson(p, subject);
       if (!now) return p;
       const next = addSetWork(now, open, p);
       return next === now ? p : saveLesson(p, subject, next);
     });
-  }, [lesson, setWork.work, subject, setProfile]);
+  }, [lesson, allWork, reloadWork, subject, setProfile, profile.id]);
 
   // A new week (or a first visit) makes a new lesson from how the child is going now.
   useEffect(() => {

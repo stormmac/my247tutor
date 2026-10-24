@@ -2677,3 +2677,56 @@ body:has(.read-along) .suni-fly {
     font-size: 1.25rem;
   }
 }
+
+/* The teacher's lesson planner. */
+.pill.homework {
+  margin-left: 6px;
+  background: var(--teacher-tint);
+  color: var(--teacher);
+}
+.planner-link {
+  border-left: 6px solid var(--teacher);
+}
+.planner-week {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.planner-week-label {
+  font-size: 1.05rem;
+}
+.planner-class {
+  border-top: 6px solid var(--teacher);
+}
+.planner-student {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+}
+.planner-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.planner-items li {
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.planner-items li:last-child {
+  border-bottom: 0;
+}
+.planner-form {
+  border: 2px solid var(--teacher-tint);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.planner .link-button {
+  color: var(--brand);
+  text-decoration: underline;
+  font-size: 0.9rem;
+  font-weight: 600;
+}

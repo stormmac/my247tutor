@@ -3,6 +3,7 @@ import type { Subject, YearLevel } from "../curriculum/types";
 import {
   ACTIVITY_QUESTIONS,
   REVIEW_QUESTIONS,
+  resultTries,
   SKILL_BUILDER_QUESTIONS,
   weekOf,
   type LessonPart,
@@ -164,11 +165,26 @@ export interface SetWorkItem {
   subtopicId: string;
   setBy: string | null;
   note: string | null;
+  /** To do at home after the class session. */
+  homework?: boolean;
+  /** Homework redoing the questions not right first go in these pieces of set work (the session's activities). */
+  redo?: string[];
+}
+
+/**
+ * The questions to redo for homework: those not right first go in the session's activities that
+ * are in this lesson. Null until each of those activities is finished, and when none is here.
+ */
+export function mistakesOf(lesson: WeeklyLesson, redo: string[]): string[] | null {
+  const parts = lesson.parts.filter((p) => p.setWorkId && redo.includes(p.setWorkId));
+  if (!parts.length || parts.some((p) => p.results.length < p.questionIds.length)) return null;
+  return parts.flatMap((p) => p.questionIds.filter((_, i) => resultTries(p.results[i]) !== 1));
 }
 
 /**
  * Adds set work the lesson doesn't have yet as parts after the rest: ten questions on its
- * subtopic, easy to hard. Work on a subtopic this curriculum doesn't have is left out.
+ * subtopic, easy to hard. Work on a subtopic this curriculum doesn't have is left out. Homework
+ * redoing a session's mistakes joins once the session's activities are finished.
  */
 export function addSetWork(lesson: WeeklyLesson, items: SetWorkItem[], profile: LearnerProfile): WeeklyLesson {
   const curriculum = curriculumOf(profile.curriculum);
@@ -176,6 +192,27 @@ export function addSetWork(lesson: WeeklyLesson, items: SetWorkItem[], profile: 
   const parts = items
     .filter((w) => !have.has(w.id))
     .flatMap((w): LessonPart[] => {
+      const extra = {
+        ...(w.setBy ? { setBy: w.setBy } : {}),
+        ...(w.note ? { note: w.note } : {}),
+        ...(w.homework ? { homework: true } : {}),
+      };
+      if (w.redo) {
+        const questionIds = mistakesOf(lesson, w.redo);
+        if (!questionIds) return [];
+        return [
+          {
+            kind: "set",
+            title: "Redo the questions you got wrong",
+            year: profile.yearLevel,
+            setWorkId: w.id,
+            ...extra,
+            redo: true,
+            questionIds,
+            results: [],
+          },
+        ];
+      }
       const path = subtopicPath(w.subtopicId, curriculum);
       if (!path) return [];
       const rng = new Rng(hash(`${w.id}:${lesson.week}`));
@@ -187,8 +224,7 @@ export function addSetWork(lesson: WeeklyLesson, items: SetWorkItem[], profile: 
           year: profile.yearLevel,
           subtopicId: subtopic.id,
           setWorkId: w.id,
-          ...(w.setBy ? { setBy: w.setBy } : {}),
-          ...(w.note ? { note: w.note } : {}),
+          ...extra,
           questionIds: activity(subtopic, rng, curriculum),
           results: [],
         },

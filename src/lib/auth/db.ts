@@ -4,7 +4,7 @@ import { BILLING_SQL } from "./billingSchema";
 import { CENTRE_SQL, CLASS_TIMES_SQL } from "./centreSchema";
 import { CHILD_SQL } from "./childSchema";
 import { CURRICULUM_SQL, UK_CURRICULUM_SQL, YEARS_SQL } from "./curriculumSchema";
-import { FAMILY_SQL, SCHOOL_TOPICS_SQL } from "./familySchema";
+import { FAMILY_SQL, PLANNER_SQL, SCHOOL_TOPICS_SQL } from "./familySchema";
 import { INVITE_SQL } from "./inviteSchema";
 import { PHONICS_CLIPS_SQL } from "./phonicsClipSchema";
 import { PRAISE_SQL } from "./praiseSchema";
@@ -47,9 +47,10 @@ ${QUESTION_HINTS_SQL}
 ${LEARNING_PLAN_SQL}
 ${SUNI_TECHNICAL_SQL}
 ${REWARDS_SQL}
-${CHECKIN_GREAT_SQL}`;
+${CHECKIN_GREAT_SQL}
+${PLANNER_SQL}`;
 
-/** The pool, once the card-payment columns, invite table, child sign-in columns, centre tables, class times, praise phrases, Suni chats, curriculum columns, centre parents, set work, recorded phonics sounds, Suni's notes, question hints, learning plans, the technical flag, rewards and the "great" feeling exist. Tried again on the next call if it fails. */
+/** The pool, once the card-payment columns, invite table, child sign-in columns, centre tables, class times, praise phrases, Suni chats, curriculum columns, centre parents, set work, recorded phonics sounds, Suni's notes, question hints, learning plans, the technical flag, rewards, the "great" feeling and the lesson planner exist. Tried again on the next call if it fails. */
 export function ready(): Promise<Pool> {
   schema ??= db()
     .query(LATER_SQL)

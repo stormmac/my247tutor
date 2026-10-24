@@ -40,6 +40,12 @@ export default function ClassesPage() {
         </div>
       ) : (
         <>
+          <Link href="/classes/planner" className="card class-card planner-link">
+            <h2 style={{ margin: 0 }}>📋 Lesson planner</h2>
+            <p className="muted" style={{ margin: "6px 0 0" }}>
+              See each student&apos;s activities this week, add up to 8 for their session, and set homework.
+            </p>
+          </Link>
           <SuniStudentNotes />
           <div className="card stack">
             <h2 style={{ margin: 0 }}>Timetable</h2>
