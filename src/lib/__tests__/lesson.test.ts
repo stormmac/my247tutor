@@ -7,7 +7,10 @@ import { YEARS } from "../curriculum/types";
 import {
   ACTIVITY_QUESTIONS,
   currentLesson,
+  daysLeftInWeek,
+  daysLeftText,
   lessonProgress,
+  ownPart,
   nextPart,
   recordLessonAnswer,
   resultColour,
@@ -132,5 +135,37 @@ describe("weekly lesson", () => {
         for (const id of ids) expect(Math.abs(rank(id) - rank(missed.id))).toBeLessThanOrEqual(1);
       }
     }
+  });
+});
+
+describe("the week's deadline", () => {
+  // Monday 19 October 2026 to Sunday 25 October, local time.
+  const day = (d: number, h = 9) => new Date(2026, 9, d, h).getTime();
+  it("counts the days left, ending at midnight on Sunday", () => {
+    expect(daysLeftInWeek(day(19))).toBe(7);
+    expect(daysLeftInWeek(day(22))).toBe(4);
+    expect(daysLeftInWeek(day(25, 23))).toBe(1);
+    expect(daysLeftInWeek(new Date(2026, 9, 26, 0, 0, 1).getTime())).toBe(7);
+    expect(weekOf(day(25, 23))).not.toBe(weekOf(new Date(2026, 9, 26, 0, 0, 1).getTime()));
+  });
+  it("says it simply", () => {
+    expect(daysLeftText(day(23))).toBe("3 days to go");
+    expect(daysLeftText(day(25))).toBe("Last day");
+  });
+});
+
+describe("own and set parts", () => {
+  it("counts the child's own parts apart from set work", () => {
+    const part = (kind: "review" | "activity" | "set", n: number, done: number) => ({
+      kind,
+      title: kind,
+      year: 4 as const,
+      questionIds: Array.from({ length: n }, (_, i) => `q${i}`),
+      results: Array.from({ length: done }, () => 1),
+    });
+    const lesson = { week: "2026-10-19", parts: [part("review", 20, 5), part("activity", 10, 0), part("set", 10, 10)] };
+    expect(lessonProgress(lesson)).toEqual({ done: 15, total: 40 });
+    expect(lessonProgress(lesson, ownPart)).toEqual({ done: 5, total: 30 });
+    expect(lessonProgress(lesson, (p) => !ownPart(p))).toEqual({ done: 10, total: 10 });
   });
 });

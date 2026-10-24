@@ -2589,3 +2589,20 @@ body:has(.read-along) .suni-fly {
   background: #fff4c2;
   color: #6b5400;
 }
+
+/* The Student page: this week's deadline, then one section for each kind of work. */
+.week-deadline {
+  background: var(--warn-tint);
+  color: var(--warn-text);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+}
+.home-section {
+  gap: 12px;
+}
+.home-section > h2 {
+  margin: 12px 0 0;
+}
+.home-section h3 {
+  font-size: 1.15rem;
+}

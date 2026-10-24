@@ -17,6 +17,7 @@ import { hasSkillPath, type Subject } from "@/lib/curriculum/types";
 import {
   LESSON_TRIES,
   currentLesson,
+  daysLeftText,
   lessonProgress,
   nextPart,
   recordLessonAnswer,
@@ -115,11 +116,32 @@ function ColourKey() {
   );
 }
 
-/** This week's lesson in a subject: the plan, then whichever part the child picks. */
-export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subject; profile: LearnerProfile; setProfile: SetProfile }) {
+/**
+ * This week's lesson in a subject: the plan, then whichever part the child picks. `startWork` opens
+ * the part for that piece of set work straight away, once it has joined the lesson.
+ */
+export function WeeklyLesson({
+  subject,
+  profile,
+  setProfile,
+  startWork,
+}: {
+  subject: Subject;
+  profile: LearnerProfile;
+  setProfile: SetProfile;
+  startWork?: string;
+}) {
   const lesson = currentLesson(profile, subject);
   // The part being worked on. Fixed while it runs, so the last answer's feedback stays on screen.
   const [running, setRunning] = useState<number | null>(null);
+  const [opened, setOpened] = useState(false);
+  if (startWork && !opened && lesson) {
+    const i = lesson.parts.findIndex((p) => p.setWorkId === startWork);
+    if (i >= 0) {
+      setOpened(true);
+      if (lesson.parts[i].results.length < lesson.parts[i].questionIds.length) setRunning(i);
+    }
+  }
   // Streams that moved up while the child was doing a part, shown back on the plan.
   const [moved, setMoved] = useState<MoveUp[]>([]);
 
@@ -187,7 +209,7 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
       </div>
       <h1 style={{ margin: 0 }}>This week&apos;s {title} lesson</h1>
       <p className="muted" style={{ margin: 0 }}>
-        For the week starting {monday}. Do the parts in any order. A new lesson is ready every Monday.
+        For the week starting {monday}. Do the parts in any order. {daysLeftText()}: this lesson ends at midnight on Sunday.
       </p>
       <ProgramLine subject={subject} profile={profile} />
       {moved.map((m) => (
