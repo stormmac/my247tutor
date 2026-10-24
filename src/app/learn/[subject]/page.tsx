@@ -2,6 +2,7 @@
 
 import { doesSubject } from "@/lib/learner/plan";
 import Link from "next/link";
+import { BackToStudent } from "@/components/BackToStudent";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { usePraise } from "@/components/usePraise";
@@ -303,6 +304,9 @@ function Practice({
           <p className="muted" style={{ margin: 0 }}>
             {skill.description}
           </p>
+          <div className="row" style={{ marginTop: 8 }}>
+            <BackToStudent />
+          </div>
         </div>
         <div className="small muted" aria-label="Session progress">
           This session: {session.correct} of {session.done} correct

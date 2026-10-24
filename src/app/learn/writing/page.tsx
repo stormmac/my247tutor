@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BackToStudent } from "@/components/BackToStudent";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { useSuniFocus } from "@/components/SuniCompanion";
@@ -63,6 +64,9 @@ function Writing() {
   if (!skillId) {
     return (
       <div className="stack">
+        <div className="row">
+          <BackToStudent />
+        </div>
         <h1>Choose your writing task</h1>
         <div className="grid grid-2">
           {writingSkills.map((s) => (
@@ -124,10 +128,15 @@ function Writing() {
 
   return (
     <div className="stack">
-      <div>
-        <span className="pill">{getOutcome(skill.outcome).code}</span>
-        <h1 style={{ marginTop: 8 }}>{skill.title}</h1>
-        <p>{task.prompt}</p>
+      <div className="stack" style={{ gap: 8 }}>
+        <div className="row">
+          <BackToStudent />
+        </div>
+        <div>
+          <span className="pill">{getOutcome(skill.outcome).code}</span>
+          <h1 style={{ marginTop: 8 }}>{skill.title}</h1>
+          <p>{task.prompt}</p>
+        </div>
       </div>
       <div className="practice">
         <div className="stack">

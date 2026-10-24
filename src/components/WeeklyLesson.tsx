@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BackToStudent } from "@/components/BackToStudent";
 import { useEffect, useMemo, useState } from "react";
 import { usePraise } from "@/components/usePraise";
 import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components/QuestionView";
@@ -181,6 +182,9 @@ export function WeeklyLesson({ subject, profile, setProfile }: { subject: Subjec
 
   return (
     <div className="card narrow stack" style={{ margin: "0 auto" }}>
+      <div className="row">
+        <BackToStudent />
+      </div>
       <h1 style={{ margin: 0 }}>This week&apos;s {title} lesson</h1>
       <p className="muted" style={{ margin: 0 }}>
         For the week starting {monday}. Do the parts in any order. A new lesson is ready every Monday.
@@ -390,9 +394,12 @@ function LessonPartView({
             </p>
           )}
         </div>
-        <button className="link-button small" style={{ textDecoration: "underline" }} onClick={onStop}>
-          Back to the lesson plan
-        </button>
+        <div className="row" style={{ gap: 8, justifyContent: "flex-end" }}>
+          <button className="link-button small" style={{ textDecoration: "underline" }} onClick={onStop}>
+            Back to the lesson plan
+          </button>
+          <BackToStudent />
+        </div>
       </div>
       <div className="stack" style={{ gap: 6 }}>
         <div className="small muted">
