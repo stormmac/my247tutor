@@ -7,7 +7,7 @@ import { usePraise } from "@/components/usePraise";
 import { QuestionView, attemptDetails, type QuestionOutcome } from "@/components/QuestionView";
 import { questionFocus, useSuniFocus, useSuniSay, useSuniScreen } from "@/components/SuniCompanion";
 import type { useProfile } from "@/components/useProfile";
-import { addSetWork, buildLesson, mistakesOf, skillBuilder, type SetWorkItem } from "@/lib/content/lesson";
+import { buildLesson, mistakesOf, skillBuilder, syncSetWork, type SetWorkItem } from "@/lib/content/lesson";
 import { finishWork, openNow, redoOf, useSetWork } from "@/components/SetWork";
 import { advanceProgram, ensureProgram, programFor, streamSubtopics } from "@/lib/content/program";
 import { progressKey, toPracticeQuestion } from "@/lib/content/practice";
@@ -151,10 +151,11 @@ export function WeeklyLesson({
 
   // Work a parent, teacher or centre set, still to do, joins this week's lesson.
   const setWork = useSetWork(profile.id);
-  const { work: allWork, reload: reloadWork } = setWork;
+  const { work: allWork, reload: reloadWork, loaded: workLoaded } = setWork;
   const nothingToRedo = useRef(new Set<string>());
   useEffect(() => {
-    if (!lesson) return;
+    // Until the work has loaded, an empty list would take every set part back out.
+    if (!lesson || !workLoaded || !profile.id) return;
     const open = allWork
       .filter((w) => !w.doneAt && w.subject === subject && openNow(w, lesson.week))
       .map((w): SetWorkItem => (w.kind === "mistakes" ? { ...w, redo: redoOf(w, allWork) } : w));
@@ -171,14 +172,13 @@ export function WeeklyLesson({
       for (const w of nothing) nothingToRedo.current.add(w.id);
       void Promise.all(nothing.map((w) => finishWork(learnerId, w.id, 0, 0))).then(reloadWork);
     }
-    if (!open.length) return;
     setProfile((p) => {
       const now = currentLesson(p, subject);
       if (!now) return p;
-      const next = addSetWork(now, open, p);
+      const next = syncSetWork(now, open, p);
       return next === now ? p : saveLesson(p, subject, next);
     });
-  }, [lesson, allWork, reloadWork, subject, setProfile, profile.id]);
+  }, [lesson, allWork, workLoaded, reloadWork, subject, setProfile, profile.id]);
 
   // A new week (or a first visit) makes a new lesson from how the child is going now.
   useEffect(() => {

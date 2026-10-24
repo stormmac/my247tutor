@@ -53,6 +53,8 @@ export interface SetWork {
   week: string | null;
   /** To do at home after the session. */
   homework: boolean;
+  /** Which of the session's boxes it's in, 1 to 8, left to right. */
+  slot: number | null;
   /** "topic": ten questions on a subtopic. "mistakes": the session's questions not right first go, to redo. */
   kind: "topic" | "mistakes";
 }
@@ -190,7 +192,9 @@ export async function canAddSchoolWork(viewer: User, learnerId: string): Promise
 export async function listSetWork(learnerId: string, limit = 30, viewerId?: string): Promise<SetWork[]> {
   const { rows } = await (
     await ready()
-  ).query(`${SET_WORK_SELECT} WHERE w.learner_id = $1 ORDER BY w.created_at DESC LIMIT $2`, [learnerId, limit]);
+  )
+    // Everything still to do first (there's at most MAX_OPEN_WORK of it), so none falls off the list.
+    .query(`${SET_WORK_SELECT} WHERE w.learner_id = $1 ORDER BY (w.done_at IS NULL) DESC, w.created_at DESC LIMIT $2`, [learnerId, limit]);
   return rows.map((r) => setWorkOf(r, viewerId));
 }
 
@@ -213,6 +217,7 @@ export function setWorkOf(r: Record<string, unknown>, viewerId?: string): SetWor
     classId: (r.class_id as string | null) ?? null,
     week: (r.week_text as string | null) ?? null,
     homework: Boolean(r.homework),
+    slot: r.slot === null || r.slot === undefined ? null : Number(r.slot),
     kind: r.kind === "mistakes" ? "mistakes" : "topic",
   };
 }

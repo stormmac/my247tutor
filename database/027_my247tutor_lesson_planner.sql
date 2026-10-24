@@ -6,6 +6,8 @@ ALTER TABLE set_work ADD COLUMN IF NOT EXISTS class_id UUID REFERENCES centre_cl
 -- The Monday of the session's week.
 ALTER TABLE set_work ADD COLUMN IF NOT EXISTS week DATE;
 ALTER TABLE set_work ADD COLUMN IF NOT EXISTS homework BOOLEAN NOT NULL DEFAULT FALSE;
+-- Which of the session's eight boxes an activity is in, left to right.
+ALTER TABLE set_work ADD COLUMN IF NOT EXISTS slot SMALLINT CHECK (slot BETWEEN 1 AND 8);
 -- 'topic': ten questions on a subtopic. 'mistakes': redo the questions not right first go in the session's activities.
 ALTER TABLE set_work ADD COLUMN IF NOT EXISTS kind VARCHAR(10) NOT NULL DEFAULT 'topic' CHECK (kind IN ('topic', 'mistakes'));
 CREATE INDEX IF NOT EXISTS idx_set_work_class_week ON set_work(class_id, week);

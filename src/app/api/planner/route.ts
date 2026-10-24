@@ -1,6 +1,5 @@
 import type { NextRequest } from "next/server";
-import { z } from "zod";
-import { planActivities, planMistakesHomework, plannerWeek, setHomework } from "@/lib/auth/planner";
+import { planMistakesHomework, plannerWeek, planSlot } from "@/lib/auth/planner";
 import { PlanWorkSchema } from "@/lib/auth/rules";
 import { requireUser } from "@/lib/auth/users";
 import { weekOf } from "@/lib/learner/lesson";
@@ -18,7 +17,7 @@ export async function GET(request: NextRequest) {
   return Response.json({ week, classes });
 }
 
-/** Plans activities, or homework redoing the questions got wrong, for students in a session. */
+/** Puts an activity in a session box, or plans homework redoing the questions got wrong, for students in a session. */
 export async function POST(request: NextRequest) {
   const result = await requireUser(request);
   if ("response" in result) return result.response;
@@ -26,22 +25,9 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return Response.json({ error: parsed.error.issues[0]?.message ?? "Check the details." }, { status: 400 });
   const plan = parsed.data;
   const added =
-    plan.kind === "topic"
-      ? await planActivities(result.user, { ...plan, note: plan.note || null })
+    plan.kind === "slot"
+      ? await planSlot(result.user, { ...plan, note: plan.note || null })
       : await planMistakesHomework(result.user, { ...plan, note: plan.note || null });
   if ("error" in added) return Response.json({ error: added.error }, { status: added.status });
   return Response.json(added);
-}
-
-const HomeworkSchema = z.object({ id: z.uuid(), homework: z.boolean() });
-
-/** Makes a planned activity homework, or not. */
-export async function PATCH(request: NextRequest) {
-  const result = await requireUser(request);
-  if ("response" in result) return result.response;
-  const parsed = HomeworkSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return Response.json({ error: "Check the details." }, { status: 400 });
-  return (await setHomework(result.user, parsed.data.id, parsed.data.homework))
-    ? Response.json({ ok: true })
-    : Response.json({ error: "No such activity." }, { status: 404 });
 }

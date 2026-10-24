@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { openNow, redoOf, type SetWork } from "../../components/SetWork";
 import { PLANNER_SQL } from "../auth/familySchema";
 import { FinishWorkSchema, MAX_SESSION_ACTIVITIES, PlanWorkSchema } from "../auth/rules";
-import { addSetWork, buildLesson, mistakesOf } from "../content/lesson";
+import { addSetWork, buildLesson, mistakesOf, syncSetWork } from "../content/lesson";
 import { addWeeks, dayOfWeek } from "../learner/lesson";
 import { newProfile } from "../learner/model";
 
@@ -27,6 +27,7 @@ const work = (over: Partial<SetWork>): SetWork => ({
   classId: CLASS,
   week: "2026-10-19",
   homework: false,
+  slot: null,
   kind: "topic",
   ...over,
 });
@@ -36,11 +37,13 @@ describe("the lesson planner", () => {
     expect(readFileSync(join(__dirname, "../../../database/027_my247tutor_lesson_planner.sql"), "utf8")).toContain(PLANNER_SQL);
   });
 
-  it("plans up to eight activities for a session's Monday", () => {
-    const ok = { kind: "topic", classId: CLASS, week: "2026-10-19", learnerIds: [LEARNER], subject: "maths", subtopicIds: [AREA_Y4] };
+  it("plans one of eight boxes for a session's Monday", () => {
+    const ok = { kind: "slot", classId: CLASS, week: "2026-10-19", learnerIds: [LEARNER], slot: 1, subject: "maths", subtopicId: AREA_Y4 };
     expect(PlanWorkSchema.safeParse(ok).success).toBe(true);
-    expect(PlanWorkSchema.safeParse({ ...ok, subtopicIds: Array(MAX_SESSION_ACTIVITIES).fill(AREA_Y4) }).success).toBe(true);
-    expect(PlanWorkSchema.safeParse({ ...ok, subtopicIds: Array(MAX_SESSION_ACTIVITIES + 1).fill(AREA_Y4) }).success).toBe(false);
+    expect(PlanWorkSchema.safeParse({ ...ok, slot: MAX_SESSION_ACTIVITIES }).success).toBe(true);
+    expect(PlanWorkSchema.safeParse({ ...ok, slot: MAX_SESSION_ACTIVITIES + 1 }).success).toBe(false);
+    expect(PlanWorkSchema.safeParse({ ...ok, slot: 0 }).success).toBe(false);
+    expect(PlanWorkSchema.safeParse({ ...ok, subtopicId: "" }).success).toBe(false);
     // A Tuesday isn't a week.
     expect(PlanWorkSchema.safeParse({ ...ok, week: "2026-10-20" }).success).toBe(false);
     expect(PlanWorkSchema.safeParse({ ...ok, learnerIds: [] }).success).toBe(false);
@@ -120,5 +123,33 @@ describe("the lesson planner", () => {
     const perfect = { ...done, parts: done.parts.map((p) => (p.setWorkId ? { ...p, results: p.questionIds.map(() => 1) } : p)) };
     expect(mistakesOf(perfect, ["a", "b"])).toEqual([]);
     expect(addSetWork(perfect, homework, profile)).toBe(perfect);
+  });
+
+  it("follows the teacher's changes to boxes not started, and leaves started ones", () => {
+    const profile = { ...newProfile("Ava", 4, NOW), id: LEARNER };
+    const lesson = buildLesson(profile, "maths", NOW);
+    const PLACE = lesson.parts.find((p) => p.kind === "activity")!.subtopicId!;
+    const a = { id: "a", subtopicId: AREA_Y4, setBy: "Ms Lee", note: null };
+    const b = { id: "b", subtopicId: AREA_Y4, setBy: "Ms Lee", note: null };
+    const both = addSetWork(lesson, [a, b], profile);
+    // Nothing changed: the same lesson back.
+    expect(syncSetWork(both, [a, b], profile)).toBe(both);
+    // Box a gets a new activity and b becomes homework.
+    const changed = syncSetWork(
+      both,
+      [
+        { ...a, subtopicId: PLACE },
+        { ...b, homework: true },
+      ],
+      profile,
+    );
+    expect(changed.parts.find((p) => p.setWorkId === "a")).toMatchObject({ subtopicId: PLACE });
+    expect(changed.parts.find((p) => p.setWorkId === "b")).toMatchObject({ subtopicId: AREA_Y4, homework: true });
+    expect(changed.parts.length).toBe(both.parts.length);
+    // Taken back: a goes. Started: b stays, whatever the teacher does.
+    const started = { ...both, parts: both.parts.map((p) => (p.setWorkId === "b" ? { ...p, results: [1] } : p)) };
+    const after = syncSetWork(started, [], profile);
+    expect(after.parts.map((p) => p.setWorkId).filter(Boolean)).toEqual(["b"]);
+    expect(syncSetWork(started, [{ ...b, subtopicId: PLACE }], profile).parts.find((p) => p.setWorkId === "b")!.subtopicId).toBe(AREA_Y4);
   });
 });

@@ -56,9 +56,12 @@ function StudentHome({ profile, signedIn }: { profile: LearnerProfile; signedIn:
   const teacherWork = setWork.work.filter(
     (w) => subjects.includes(w.subject) && openNow(w, weekOf()) && (!w.doneAt || Date.parse(w.doneAt) >= mondayOf()),
   );
-  // In the order the teacher set them, with the redo of the mistakes last.
+  // Box by box as the teacher planned them, then other set work in the order it was set, with the redo of the mistakes last.
   const inOrder = [...teacherWork].sort(
-    (a, b) => Number(a.kind === "mistakes") - Number(b.kind === "mistakes") || a.createdAt.localeCompare(b.createdAt),
+    (a, b) =>
+      Number(a.kind === "mistakes") - Number(b.kind === "mistakes") ||
+      (a.slot ?? 99) - (b.slot ?? 99) ||
+      a.createdAt.localeCompare(b.createdAt),
   );
   const classWork = inOrder.filter((w) => !w.homework);
   const homework = inOrder.filter((w) => w.homework);

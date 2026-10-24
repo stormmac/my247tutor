@@ -27,6 +27,8 @@ export interface SetWork {
   week: string | null;
   /** To do at home after the session. */
   homework: boolean;
+  /** Which of the session's boxes it's in, 1 to 8, left to right. */
+  slot: number | null;
   /** "mistakes": redo the session's questions that weren't right first go. */
   kind: "topic" | "mistakes";
 }

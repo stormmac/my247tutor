@@ -1,21 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { type SetWork, workTitle, WorkResult } from "@/components/SetWork";
 import { practiseable } from "@/lib/content/program";
+import { subtopicPath } from "@/lib/content/tree";
 import { type Curriculum, curriculumOf, subjectName, yearName } from "@/lib/curriculum/curricula";
 import { YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
 import { CLASS_SUBJECTS, describeTime, MAX_SESSION_ACTIVITIES, type ClassTime } from "@/lib/auth/rules";
 import { addWeeks, dayOfWeek, weekOf } from "@/lib/learner/lesson";
 import type { LearnerProfile } from "@/lib/learner/model";
-
-interface OwnPart {
-  subject: Subject;
-  title: string;
-  done: number;
-  total: number;
-}
 
 interface PlannerStudent {
   id: string;
@@ -23,8 +17,6 @@ interface PlannerStudent {
   yearLevel: number;
   curriculum: LearnerProfile["curriculum"];
   planned: SetWork[];
-  otherOpen: SetWork[];
-  ownLesson: OwnPart[];
 }
 
 interface PlannerClass {
@@ -39,15 +31,38 @@ interface PlannerClass {
   students: PlannerStudent[];
 }
 
+const SLOTS = Array.from({ length: MAX_SESSION_ACTIVITIES }, (_, i) => i + 1);
+
 const shortDate = (date: string) =>
   new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
-const activities = (s: PlannerStudent) => s.planned.filter((w) => w.kind === "topic");
+const inBox = (s: PlannerStudent, slot: number) => s.planned.find((w) => w.kind === "topic" && w.slot === slot);
+const filled = (s: PlannerStudent) => s.planned.filter((w) => w.kind === "topic" && w.slot).length;
+
+/** The subtopic's own name, short enough for a box ("Equivalent fractions"), with its topic underneath. */
+function boxTitle(w: SetWork, curriculum: Curriculum): { title: string; topic: string | null } {
+  const path = w.kind === "topic" ? subtopicPath(w.subtopicId, curriculum) : null;
+  if (!path) return { title: workTitle(w, curriculum), topic: null };
+  return { title: path.subtopic.title, topic: path.topic.title === path.subtopic.title ? null : path.topic.title };
+}
+
+/** Sends a change to the planner, giving back the server's error if it didn't work. */
+async function send(url: string, method: string, body?: unknown): Promise<string | null> {
+  const res = await fetch(url, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  }).catch(() => null);
+  if (res?.ok) return null;
+  const json = (await res?.json().catch(() => ({}))) as { error?: string };
+  return json?.error ?? "That didn't work. Try again.";
+}
 
 /**
- * The lesson planner: each class's weekly session, its students, and what each one has to do. The
- * teacher adds up to eight activities per student for the session, and homework: one of the
- * activities, or a redo of the questions the student didn't get right first go.
+ * The lesson planner: each class's weekly session as a grid, students down the left and their
+ * eight activity boxes across. Click a box to put an activity in it or change it; click a student
+ * to see their last four weeks and how they went. Homework is an activity marked 🏠, or a redo of
+ * the questions the student didn't get right first go.
  */
 export default function PlannerPage() {
   const [week, setWeek] = useState(() => weekOf());
@@ -74,8 +89,7 @@ export default function PlannerPage() {
         </Link>
         <h1 style={{ margin: "6px 0 0" }}>Lesson planner</h1>
         <p className="muted" style={{ margin: 0 }}>
-          Plan each student&apos;s weekly session: up to {MAX_SESSION_ACTIVITIES} activities of ten questions, and homework. They show on
-          the student&apos;s page under Teacher lessons.
+          Click a box to choose or change an activity (ten questions). Click a student to see their last four weeks.
         </p>
       </div>
       <div className="row planner-week" role="group" aria-label="Week">
@@ -103,385 +117,500 @@ export default function PlannerPage() {
         </div>
       )}
       {classes?.map((c) => (
-        <ClassSession key={c.class.id} data={c} week={week} reload={load} />
+        <ClassGrid key={c.class.id} data={c} week={week} reload={load} />
       ))}
     </div>
   );
 }
 
-/** One class's session this week: when it is, and each student's plan. */
-function ClassSession({ data, week, reload }: { data: PlannerClass; week: string; reload: () => Promise<void> }) {
+type Editing = { slot: number; students: PlannerStudent[] };
+
+/** One class's session: when it meets, and the grid of students and boxes. */
+function ClassGrid({ data, week, reload }: { data: PlannerClass; week: string; reload: () => Promise<void> }) {
   const { class: c, students } = data;
-  const [planning, setPlanning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const subjects: Subject[] = c.subject === "both" ? ["maths", "english"] : [c.subject];
   const curriculum = curriculumOf(students[0]?.curriculum);
-  // Students with an activity in the subject and no redo homework in it yet.
-  const canRedo = (subject: Subject) =>
-    students.filter(
-      (s) => activities(s).some((w) => w.subject === subject) && !s.planned.some((w) => w.kind === "mistakes" && w.subject === subject),
-    );
-  async function redoForClass(subject: Subject) {
-    setError(null);
-    const res = await fetch("/api/planner", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind: "mistakes", classId: c.id, week, learnerIds: canRedo(subject).map((s) => s.id), subject }),
-    }).catch(() => null);
-    const body = (await res?.json().catch(() => ({}))) as { error?: string };
-    if (!res?.ok) return setError(body?.error ?? "That didn't work.");
+  const [editing, setEditing] = useState<Editing | null>(null);
+  const [history, setHistory] = useState<PlannerStudent | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const redoFor = (s: PlannerStudent, subject: Subject) => s.planned.find((w) => w.kind === "mistakes" && w.subject === subject);
+  const canRedo = (s: PlannerStudent, subject: Subject) =>
+    !redoFor(s, subject) && s.planned.some((w) => w.kind === "topic" && w.subject === subject);
+  async function act(url: string, method: string, body?: unknown) {
+    setError(await send(url, method, body));
     await reload();
   }
+  const addRedo = (learners: PlannerStudent[], subject: Subject) =>
+    act("/api/planner", "POST", { kind: "mistakes", classId: c.id, week, learnerIds: learners.map((s) => s.id), subject });
+
   return (
     <section className="card stack planner-class" aria-labelledby={`class-${c.id}`}>
-      <div className="row spread" style={{ flexWrap: "wrap" }}>
-        <div>
-          <h2 id={`class-${c.id}`} style={{ margin: 0 }}>
-            {c.name}
-          </h2>
-          <p className="small muted" style={{ margin: "4px 0 0" }}>
-            Year {c.yearLevel}, {CLASS_SUBJECTS[c.subject]}
-            {c.teacherName ? `, with ${c.teacherName}` : ""}
-          </p>
-          {c.times.map((t) => (
-            <p key={`${t.weekday} ${t.start}`} className="small" style={{ margin: "2px 0 0" }}>
-              🗓 {shortDate(dayOfWeek(week, t.weekday))}: {describeTime(t)}
-            </p>
-          ))}
-        </div>
-        {students.length > 0 && !planning && (
-          <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-            <button className="btn small" onClick={() => setPlanning(true)}>
-              Plan for the whole class
-            </button>
-            {subjects.map((subject) =>
-              canRedo(subject).length > 1 ? (
-                <button key={subject} className="btn secondary small" onClick={() => void redoForClass(subject)}>
-                  🏠 Homework for everyone: redo {subjects.length > 1 ? `${subjectName(subject, curriculum)} ` : ""}questions got wrong
-                </button>
-              ) : null,
-            )}
-          </div>
-        )}
+      <div>
+        <h2 id={`class-${c.id}`} style={{ margin: 0 }}>
+          {c.name}
+        </h2>
+        <p className="small muted" style={{ margin: "4px 0 0" }}>
+          Year {c.yearLevel}, {CLASS_SUBJECTS[c.subject]}
+          {c.teacherName ? `, with ${c.teacherName}` : ""}
+          {c.times.map((t) => ` · 🗓 ${shortDate(dayOfWeek(week, t.weekday))}, ${describeTime(t).replace(/^\w+ /, "")}`).join("")}
+        </p>
       </div>
       {error && (
         <div className="feedback bad" role="alert">
           {error}
         </div>
-      )}
-      {planning && (
-        <PlanForm
-          classId={c.id}
-          week={week}
-          subjects={subjects}
-          students={students}
-          yearLevel={c.yearLevel}
-          onDone={async (saved) => {
-            setPlanning(false);
-            if (saved) await reload();
-          }}
-        />
       )}
       {students.length === 0 ? (
         <p className="muted" style={{ margin: 0 }}>
           No students in this class yet.
         </p>
       ) : (
-        <div className="stack" style={{ gap: 10 }}>
-          {students.map((s) => (
-            <StudentPlan key={s.id} student={s} classId={c.id} week={week} subjects={subjects} reload={reload} />
-          ))}
+        <div className="planner-scroll">
+          <table className="planner-grid">
+            <thead>
+              <tr>
+                <th scope="col" className="planner-name">
+                  Student
+                </th>
+                {SLOTS.map((slot) => (
+                  <th key={slot} scope="col">
+                    <button
+                      className="planner-head"
+                      title={`Choose activity ${slot} for the whole class`}
+                      onClick={() => setEditing({ slot, students })}
+                    >
+                      {slot} <span aria-hidden>▾</span>
+                    </button>
+                  </th>
+                ))}
+                <th scope="col" className="planner-redo-head">
+                  🏠 Redo wrong
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((s) => (
+                <tr key={s.id}>
+                  <th scope="row" className="planner-name">
+                    <button className="planner-student-button" onClick={() => setHistory(s)}>
+                      <strong>{s.name}</strong>
+                      <span className="small muted">
+                        {filled(s)} of {MAX_SESSION_ACTIVITIES}
+                      </span>
+                    </button>
+                  </th>
+                  {SLOTS.map((slot) => {
+                    const w = inBox(s, slot);
+                    return (
+                      <td key={slot}>
+                        <ActivityBox
+                          work={w}
+                          curriculum={curriculumOf(s.curriculum)}
+                          showSubject={subjects.length > 1}
+                          label={`${s.name}, activity ${slot}`}
+                          onClick={() => setEditing({ slot, students: [s] })}
+                        />
+                      </td>
+                    );
+                  })}
+                  <td>
+                    <div className="stack" style={{ gap: 4 }}>
+                      {subjects.map((subject) => {
+                        const redo = redoFor(s, subject);
+                        const name = subjects.length > 1 ? `${subjectName(subject, curriculum)} ` : "";
+                        if (redo)
+                          return (
+                            <div key={subject} className="planner-box filled homework">
+                              <span className="planner-box-title">🏠 Redo {name}wrong</span>
+                              {redo.doneAt ? (
+                                <Score work={redo} />
+                              ) : (
+                                <button
+                                  className="link-button small"
+                                  onClick={() => {
+                                    if (confirm(`Take the redo homework off ${s.name}'s plan?`))
+                                      void act(`/api/set-work/${redo.id}?learner=${s.id}`, "DELETE");
+                                  }}
+                                >
+                                  Take off
+                                </button>
+                              )}
+                            </div>
+                          );
+                        return canRedo(s, subject) ? (
+                          <button key={subject} className="planner-box empty" onClick={() => void addRedo([s], subject)}>
+                            + Redo {name}wrong
+                          </button>
+                        ) : null;
+                      })}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
+      {subjects.some((subject) => students.filter((s) => canRedo(s, subject)).length > 1) && (
+        <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
+          {subjects.map((subject) => {
+            const who = students.filter((s) => canRedo(s, subject));
+            return who.length > 1 ? (
+              <button key={subject} className="btn secondary small" onClick={() => void addRedo(who, subject)}>
+                🏠 Homework for everyone: redo {subjects.length > 1 ? `${subjectName(subject, curriculum)} ` : ""}questions got wrong
+              </button>
+            ) : null;
+          })}
+        </div>
+      )}
+      {editing && (
+        <BoxEditor
+          classId={c.id}
+          week={week}
+          slot={editing.slot}
+          students={editing.students}
+          subjects={subjects}
+          yearLevel={editing.students.length === 1 ? editing.students[0].yearLevel : c.yearLevel}
+          onClose={async (saved) => {
+            setEditing(null);
+            if (saved) await reload();
+          }}
+        />
+      )}
+      {history && <HistoryDialog student={history} week={week} onClose={() => setHistory(null)} />}
     </section>
   );
 }
 
-/** One student's plan for the session: their activities, homework, and what else they're doing. */
-function StudentPlan({
-  student,
-  classId,
-  week,
-  subjects,
-  reload,
+/** One box in the grid: the activity in it and how the student went, or a + to add one. */
+function ActivityBox({
+  work,
+  curriculum,
+  showSubject,
+  label,
+  onClick,
 }: {
-  student: PlannerStudent;
-  classId: string;
-  week: string;
-  subjects: Subject[];
-  reload: () => Promise<void>;
+  work: SetWork | undefined;
+  curriculum: Curriculum;
+  showSubject: boolean;
+  label: string;
+  onClick: () => void;
 }) {
-  const curriculum = curriculumOf(student.curriculum);
-  const [adding, setAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const count = activities(student).length;
-  const full = count >= MAX_SESSION_ACTIVITIES;
-
-  async function send(url: string, init: RequestInit) {
-    setError(null);
-    const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...init }).catch(() => null);
-    const body = (await res?.json().catch(() => ({}))) as { error?: string };
-    if (!res?.ok) return setError(body?.error ?? "That didn't work.");
-    await reload();
-  }
-  const redoHomework = (subject: Subject) =>
-    send("/api/planner", { method: "POST", body: JSON.stringify({ kind: "mistakes", classId, week, learnerIds: [student.id], subject }) });
-
+  if (!work)
+    return (
+      <button className="planner-box empty" aria-label={`${label}: add`} onClick={onClick}>
+        +
+      </button>
+    );
+  const { title, topic } = boxTitle(work, curriculum);
   return (
-    <div className="planner-student stack" style={{ gap: 8 }}>
-      <div className="row spread" style={{ flexWrap: "wrap" }}>
-        <div>
-          <strong>{student.name}</strong> <span className="small muted">{yearName(student.yearLevel as YearLevel, curriculum)}</span>
-        </div>
-        <span className={`pill ${full ? "warn" : ""}`}>
-          {count} of {MAX_SESSION_ACTIVITIES} activities
-        </span>
-      </div>
-      {student.planned.length > 0 ? (
-        <ul className="planner-items">
-          {student.planned.map((w) => (
-            <li key={w.id} className="row spread">
-              <div>
-                <span className="small muted">{subjectName(w.subject, curriculum)}</span> {workTitle(w, curriculum)}
-                {w.homework && <span className="pill homework">🏠 Homework</span>}
-              </div>
-              <div className="row" style={{ gap: 10 }}>
-                {w.doneAt ? <WorkResult work={w} /> : <span className="pill">To do</span>}
-                {w.kind === "topic" && !w.doneAt && (
-                  <button
-                    className="link-button small"
-                    onClick={() => send("/api/planner", { method: "PATCH", body: JSON.stringify({ id: w.id, homework: !w.homework }) })}
-                  >
-                    {w.homework ? "Do in class" : "Make homework"}
-                  </button>
-                )}
-                {!w.doneAt && (
-                  <button
-                    className="link-button small"
-                    onClick={() => {
-                      if (confirm(`Take "${workTitle(w, curriculum)}" off ${student.name}'s plan?`))
-                        void send(`/api/set-work/${w.id}?learner=${student.id}`, { method: "DELETE" });
-                    }}
-                  >
-                    Take off
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="small muted" style={{ margin: 0 }}>
-          Nothing planned for this session yet.
-        </p>
-      )}
-      {adding ? (
-        <PlanForm
-          classId={classId}
-          week={week}
-          subjects={subjects}
-          students={[student]}
-          yearLevel={student.yearLevel}
-          onDone={async (saved) => {
-            setAdding(false);
-            if (saved) await reload();
-          }}
-        />
-      ) : (
-        <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-          <button className="btn secondary small" disabled={full} onClick={() => setAdding(true)}>
-            + Add activities
-          </button>
-          {subjects.map((subject) => {
-            const has = activities(student).some((w) => w.subject === subject);
-            const set = student.planned.some((w) => w.kind === "mistakes" && w.subject === subject);
-            if (!has || set) return null;
-            return (
-              <button key={subject} className="btn secondary small" onClick={() => void redoHomework(subject)}>
-                🏠 Homework: redo {subjects.length > 1 ? `${subjectName(subject, curriculum)} ` : ""}questions got wrong
-              </button>
-            );
-          })}
-        </div>
-      )}
-      {error && (
-        <div className="feedback bad" role="alert">
-          {error}
-        </div>
-      )}
-      <AlsoDoing student={student} curriculum={curriculum} />
-    </div>
+    <button
+      className={`planner-box filled${work.homework ? " homework" : ""}${work.doneAt ? " done" : ""}`}
+      aria-label={`${label}: ${title}`}
+      onClick={onClick}
+    >
+      {showSubject && <span className="planner-box-topic">{subjectName(work.subject, curriculum)}</span>}
+      <span className="planner-box-title">{title}</span>
+      {topic && <span className="planner-box-topic">{topic}</span>}
+      <span className="planner-box-foot">
+        {work.homework && <span title="Homework">🏠</span>}
+        {work.doneAt ? <Score work={work} /> : <span className="small muted">To do</span>}
+      </span>
+    </button>
   );
 }
 
-/** What else the student has this week: their own lesson, and work set elsewhere. */
-function AlsoDoing({ student, curriculum }: { student: PlannerStudent; curriculum: Curriculum }) {
-  if (!student.ownLesson.length && !student.otherOpen.length) return null;
+/** A score as "8/10", green over 75% right first go. */
+function Score({ work }: { work: SetWork }) {
+  if (!work.total)
+    return (
+      <span className="pill good" title="Everything was right first go">
+        Nothing to redo
+      </span>
+    );
   return (
-    <details className="small">
-      <summary className="muted">Also this week</summary>
-      <ul style={{ margin: "6px 0 0", paddingLeft: 20 }}>
-        {student.ownLesson.map((p) => (
-          <li key={`${p.subject} ${p.title}`}>
-            Their own {subjectName(p.subject, curriculum)} lesson: {p.title}, {p.done} of {p.total} done
-          </li>
-        ))}
-        {student.otherOpen.map((w) => (
-          <li key={w.id}>
-            {workTitle(w, curriculum)}, set by {w.setBy ?? "someone"}
-            {w.week ? ` for the week of ${shortDate(w.week)}` : ""}, still to do
-          </li>
-        ))}
-      </ul>
-    </details>
+    <span className={`pill ${work.right! / work.total > 0.75 ? "good" : "warn"}`} title={`${work.right} of ${work.total} right first go`}>
+      {work.right}/{work.total}
+    </span>
   );
 }
 
-/** Picks activities (subtopics) for one student or the whole class, and whether they're homework. */
-function PlanForm({
+/** A dialog that opens as soon as it's on the page, and tells its parent when it closes. */
+function Dialog({ label, onClose, children }: { label: string; onClose: () => void; children: (close: () => void) => React.ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (d && !d.open) d.showModal();
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className="preview-dialog planner-dialog"
+      aria-label={label}
+      onClose={onClose}
+      onClick={(e) => e.target === ref.current && ref.current.close()}
+    >
+      {children(() => ref.current?.close())}
+    </dialog>
+  );
+}
+
+/** Chooses or changes the activity in one box, for one student or the whole class. */
+function BoxEditor({
   classId,
   week,
-  subjects,
+  slot,
   students,
+  subjects,
   yearLevel,
-  onDone,
+  onClose,
 }: {
   classId: string;
   week: string;
-  subjects: Subject[];
+  slot: number;
   students: PlannerStudent[];
+  subjects: Subject[];
   yearLevel: number;
-  onDone: (saved: boolean) => void;
+  onClose: (saved: boolean) => void;
 }) {
+  const one = students.length === 1 ? students[0] : null;
+  const current = one ? inBox(one, slot) : undefined;
   const curriculum = curriculumOf(students[0]?.curriculum);
-  const [subject, setSubject] = useState<Subject>(subjects[0]);
+  const [subject, setSubject] = useState<Subject>(current?.subject ?? subjects[0]);
   const [year, setYear] = useState<YearLevel>(yearLevel as YearLevel);
-  const [picked, setPicked] = useState<string[]>([]);
-  const [homework, setHomework] = useState(false);
-  const [note, setNote] = useState("");
+  const [picked, setPicked] = useState<string>(current?.subtopicId ?? "");
+  const [homework, setHomework] = useState(current?.homework ?? false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const room = Math.max(0, MAX_SESSION_ACTIVITIES - Math.max(...students.map((s) => activities(s).length)));
+  const saved = useRef(false);
   const topics = practiseable(subject, year, curriculum).filter((t) => t.subtopics.length);
-  const who = students.length === 1 ? students[0].name : "the whole class";
+  const done = students.filter((s) => inBox(s, slot)?.doneAt);
+  const who = one ? one.name : "the whole class";
+  const closer = useRef<() => void>(() => {});
+  const close = (didSave: boolean) => {
+    saved.current = didSave;
+    closer.current();
+  };
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    setError(null);
-    const res = await fetch("/api/planner", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        kind: "topic",
-        classId,
-        week,
-        learnerIds: students.map((s) => s.id),
-        subject,
-        subtopicIds: picked,
-        homework,
-        note: note.trim() || undefined,
-      }),
-    }).catch(() => null);
-    const body = (await res?.json().catch(() => ({}))) as { error?: string };
+    const err = await send("/api/planner", "POST", {
+      kind: "slot",
+      classId,
+      week,
+      slot,
+      learnerIds: students.map((s) => s.id),
+      subject,
+      subtopicId: picked,
+      homework,
+    });
     setBusy(false);
-    if (!res?.ok) return setError(body?.error ?? "That didn't work.");
-    onDone(true);
+    if (err) return setError(err);
+    close(true);
+  }
+  async function takeOff() {
+    if (!current || !one) return;
+    setBusy(true);
+    const err = await send(`/api/set-work/${current.id}?learner=${one.id}`, "DELETE");
+    setBusy(false);
+    if (err) return setError(err);
+    close(true);
   }
 
   return (
-    <form className="stack planner-form" onSubmit={save} style={{ gap: 10 }}>
-      <strong>Add activities for {who}</strong>
-      <div className="row" style={{ flexWrap: "wrap" }}>
-        {subjects.length > 1 && (
-          <label className="row" style={{ fontWeight: 400, margin: 0 }}>
-            Subject
-            <select
-              value={subject}
-              style={{ width: "auto" }}
-              onChange={(e) => {
-                setSubject(e.target.value as Subject);
-                setPicked([]);
-              }}
-            >
-              {subjects.map((s) => (
-                <option key={s} value={s}>
-                  {subjectName(s, curriculum)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <label className="row" style={{ fontWeight: 400, margin: 0 }}>
-          From
-          <select
-            value={year}
-            style={{ width: "auto" }}
-            onChange={(e) => {
-              setYear(Number(e.target.value) as YearLevel);
-              setPicked([]);
-            }}
-          >
-            {YEARS.map((y) => (
-              <option key={y} value={y}>
-                {yearName(y, curriculum)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <fieldset className="stack" style={{ gap: 8, margin: 0 }}>
-        <legend className="small muted">
-          {room
-            ? `Choose up to ${room} more ${room === 1 ? "activity" : "activities"}. Each is ten questions, easy to hard.`
-            : "This session is full."}
-        </legend>
-        {topics.map(({ topic, subtopics }) => (
-          <div key={topic.id}>
-            <strong className="small">{topic.title}</strong>
-            <div className="row" style={{ gap: "4px 14px", flexWrap: "wrap" }}>
-              {subtopics.map((s) => (
-                <label key={s.id} className="row small" style={{ fontWeight: 400, margin: 0, gap: 6 }}>
-                  <input
-                    type="checkbox"
-                    checked={picked.includes(s.id)}
-                    disabled={!picked.includes(s.id) && picked.length >= room}
-                    onChange={(e) => setPicked((p) => (e.target.checked ? [...p, s.id] : p.filter((id) => id !== s.id)))}
-                    style={{ width: "auto" }}
-                  />
-                  {s.title}
-                </label>
-              ))}
+    <Dialog label={`Activity ${slot} for ${who}`} onClose={() => onClose(saved.current)}>
+      {(closeDialog) => {
+        closer.current = closeDialog;
+        return (
+          <div className="stack">
+            <div className="row spread" style={{ flexWrap: "nowrap", alignItems: "flex-start" }}>
+              <h2 style={{ margin: 0 }}>
+                Activity {slot} for {who}
+              </h2>
+              <button type="button" className="btn secondary small" onClick={() => close(false)}>
+                Close
+              </button>
             </div>
+            {current?.doneAt ? (
+              <>
+                <p style={{ margin: 0 }}>
+                  <strong>{workTitle(current, curriculum)}</strong>
+                  {current.homework ? " (homework)" : ""}
+                </p>
+                <p style={{ margin: 0 }}>
+                  Done: <WorkResult work={current} />
+                </p>
+                <p className="small muted" style={{ margin: 0 }}>
+                  {one!.name} has done this one, so it stays as it is.
+                </p>
+              </>
+            ) : (
+              <form className="stack" onSubmit={save} style={{ gap: 10 }}>
+                {current && (
+                  <p className="small" style={{ margin: 0 }}>
+                    Now: <strong>{workTitle(current, curriculum)}</strong>. Pick another to change it.
+                  </p>
+                )}
+                {!one && done.length > 0 && (
+                  <p className="small muted" style={{ margin: 0 }}>
+                    {done.map((s) => s.name).join(", ")} {done.length === 1 ? "has" : "have"} done activity {slot}, so theirs stays as it
+                    is.
+                  </p>
+                )}
+                <div className="row" style={{ flexWrap: "wrap" }}>
+                  {subjects.length > 1 && (
+                    <label className="row" style={{ fontWeight: 400, margin: 0 }}>
+                      Subject
+                      <select
+                        value={subject}
+                        style={{ width: "auto" }}
+                        onChange={(e) => {
+                          setSubject(e.target.value as Subject);
+                          setPicked("");
+                        }}
+                      >
+                        {subjects.map((s) => (
+                          <option key={s} value={s}>
+                            {subjectName(s, curriculum)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <label className="row" style={{ fontWeight: 400, margin: 0 }}>
+                    From
+                    <select value={year} style={{ width: "auto" }} onChange={(e) => setYear(Number(e.target.value) as YearLevel)}>
+                      {YEARS.map((y) => (
+                        <option key={y} value={y}>
+                          {yearName(y, curriculum)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <fieldset className="stack planner-topics" style={{ gap: 8, margin: 0 }}>
+                  <legend className="small muted">Choose an activity: ten questions, easy to hard</legend>
+                  {topics.map(({ topic, subtopics }) => (
+                    <div key={topic.id}>
+                      <strong className="small">{topic.title}</strong>
+                      <div className="row" style={{ gap: "4px 14px", flexWrap: "wrap" }}>
+                        {subtopics.map((s) => (
+                          <label key={s.id} className="row small" style={{ fontWeight: 400, margin: 0, gap: 6 }}>
+                            <input
+                              type="radio"
+                              name={`activity-${slot}`}
+                              checked={picked === s.id}
+                              onChange={() => setPicked(s.id)}
+                              style={{ width: "auto" }}
+                            />
+                            {s.title}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </fieldset>
+                <label className="row small" style={{ fontWeight: 400, margin: 0, gap: 6 }}>
+                  <input type="checkbox" checked={homework} onChange={(e) => setHomework(e.target.checked)} style={{ width: "auto" }} />
+                  🏠 Homework (do it at home after class)
+                </label>
+                {error && (
+                  <div className="feedback bad" role="alert">
+                    {error}
+                  </div>
+                )}
+                <div className="row" style={{ flexWrap: "wrap" }}>
+                  <button className="btn" disabled={busy || !picked}>
+                    {busy ? "Saving…" : current ? "Change activity" : "Add activity"}
+                  </button>
+                  {current && (
+                    <button type="button" className="btn secondary" disabled={busy} onClick={() => void takeOff()}>
+                      Take it off
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
           </div>
-        ))}
-      </fieldset>
-      <label className="row small" style={{ fontWeight: 400, margin: 0, gap: 6 }}>
-        <input type="checkbox" checked={homework} onChange={(e) => setHomework(e.target.checked)} style={{ width: "auto" }} />
-        🏠 Make {picked.length === 1 ? "it" : "these"} homework
-      </label>
-      <label className="stack" style={{ fontWeight: 400, margin: 0, gap: 4 }}>
-        A note (optional)
-        <input
-          value={note}
-          maxLength={200}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder="Such as: We'll go over these on Tuesday"
-        />
-      </label>
-      {error && (
-        <div className="feedback bad" role="alert">
-          {error}
+        );
+      }}
+    </Dialog>
+  );
+}
+
+interface HistoryWeek {
+  week: string;
+  work: SetWork[];
+}
+
+/** A student's last four weeks: each week's activities and homework, and the score on each. */
+function HistoryDialog({ student, week, onClose }: { student: PlannerStudent; week: string; onClose: () => void }) {
+  const [weeks, setWeeks] = useState<HistoryWeek[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const curriculum = curriculumOf(student.curriculum);
+  useEffect(() => {
+    void fetch(`/api/planner/history?learner=${student.id}&week=${week}`)
+      .then(async (r) => {
+        const body = (await r.json().catch(() => ({}))) as { weeks?: HistoryWeek[]; error?: string };
+        if (r.ok && body.weeks) setWeeks(body.weeks);
+        else setError(body.error ?? "Couldn't load their weeks.");
+      })
+      .catch(() => setError("Couldn't connect. Try again."));
+  }, [student.id, week]);
+  const scored = weeks?.flatMap((w) => w.work).filter((w) => w.doneAt && w.total) ?? [];
+  const right = scored.reduce((n, w) => n + w.right!, 0);
+  const total = scored.reduce((n, w) => n + w.total!, 0);
+
+  return (
+    <Dialog label={`${student.name}'s last four weeks`} onClose={onClose}>
+      {(close) => (
+        <div className="stack">
+          <div className="row spread" style={{ flexWrap: "nowrap", alignItems: "flex-start" }}>
+            <div>
+              <h2 style={{ margin: 0 }}>{student.name}: last four weeks</h2>
+              {total > 0 && (
+                <p className="small muted" style={{ margin: "4px 0 0" }}>
+                  {Math.round((right / total) * 100)}% right first go across {scored.length}{" "}
+                  {scored.length === 1 ? "activity" : "activities"} done
+                </p>
+              )}
+            </div>
+            <button type="button" className="btn secondary small" onClick={close}>
+              Close
+            </button>
+          </div>
+          {error && <div className="feedback bad">{error}</div>}
+          {!weeks && !error && <p className="muted">Loading…</p>}
+          {weeks?.map((w) => (
+            <div key={w.week} className="stack planner-history-week" style={{ gap: 6 }}>
+              <strong className="small">Week of {shortDate(w.week)}</strong>
+              {w.work.length === 0 ? (
+                <p className="small muted" style={{ margin: 0 }}>
+                  Nothing set.
+                </p>
+              ) : (
+                <div className="planner-history-boxes">
+                  {w.work.map((x) => {
+                    const { title, topic } = boxTitle(x, curriculum);
+                    return (
+                      <div key={x.id} className={`planner-box filled${x.homework ? " homework" : ""}${x.doneAt ? " done" : ""}`}>
+                        <span className="planner-box-title">{title}</span>
+                        {topic && <span className="planner-box-topic">{topic}</span>}
+                        <span className="planner-box-foot">
+                          {x.homework && <span title="Homework">🏠</span>}
+                          {x.doneAt ? <Score work={x} /> : <span className="small muted">Not done</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
-      <div className="row">
-        <button className="btn" disabled={busy || !picked.length}>
-          {busy ? "Adding…" : `Add ${picked.length || ""} ${picked.length === 1 ? "activity" : "activities"}`.replace("  ", " ")}
-        </button>
-        <button type="button" className="btn secondary" onClick={() => onDone(false)}>
-          Cancel
-        </button>
-      </div>
-    </form>
+    </Dialog>
   );
 }
