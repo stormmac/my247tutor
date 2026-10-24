@@ -17,29 +17,8 @@
   --warn-text: #8a5a00;
   --radius: 14px;
   --shadow: 0 1px 2px rgba(31, 42, 46, 0.06), 0 4px 16px rgba(31, 42, 46, 0.06);
+  /* Always light, even on a device set to dark mode. */
   color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --suni-antenna: #8a7f76;
-    --bg: #12181a;
-    --surface: #1b2326;
-    --surface-2: #232d31;
-    --text: #e9eef0;
-    --muted: #a3b1b5;
-    --border: #34434a;
-    --brand: #4cc497;
-    --brand-strong: #6fd8ae;
-    --brand-tint: #173a2e;
-    --good: #4cc497;
-    --good-tint: #173a2e;
-    --bad: #f08a7e;
-    --bad-tint: #3d1f1b;
-    --warn-tint: #3a2f17;
-    --warn-text: #f2c46d;
-    color-scheme: dark;
-  }
 }
 
 * {
@@ -917,12 +896,6 @@ a.tab {
   from {
     opacity: 0;
     transform: translateY(8px) scale(0.96);
-  }
-}
-@media (prefers-color-scheme: dark) {
-  .suni-chat-header {
-    background: #3a3410;
-    color: #fff6c7;
   }
 }
 .suni-companion.dragging .suni-fly {
@@ -2600,18 +2573,6 @@ body:has(.read-along) .suni-fly {
   --practice-tint: #e6eff9;
   --games: #b8650f;
   --games-tint: #fdf0dd;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --teacher: #b7a2f2;
-    --teacher-tint: #2a2440;
-    --diy: #4cc497;
-    --diy-tint: #173a2e;
-    --practice: #8cb8ec;
-    --practice-tint: #1b2c40;
-    --games: #f2b36d;
-    --games-tint: #3a2a17;
-  }
 }
 .week-deadline {
   background: var(--warn-tint);
