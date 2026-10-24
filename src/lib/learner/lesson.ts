@@ -77,11 +77,29 @@ export function nextPart(lesson: WeeklyLesson): number {
   return lesson.parts.findIndex((p) => p.results.length < p.questionIds.length);
 }
 
-export function lessonProgress(lesson: WeeklyLesson): { done: number; total: number } {
+export function lessonProgress(lesson: WeeklyLesson, which: (part: LessonPart) => boolean = () => true): { done: number; total: number } {
+  const parts = lesson.parts.filter(which);
   return {
-    done: lesson.parts.reduce((n, p) => n + Math.min(p.results.length, p.questionIds.length), 0),
-    total: lesson.parts.reduce((n, p) => n + p.questionIds.length, 0),
+    done: parts.reduce((n, p) => n + Math.min(p.results.length, p.questionIds.length), 0),
+    total: parts.reduce((n, p) => n + p.questionIds.length, 0),
   };
+}
+
+/** The parts the child does on their own (the review and the activities), not work someone set. */
+export const ownPart = (part: LessonPart) => part.kind !== "set";
+
+/**
+ * Days left to do this week's lessons, counting today. The week ends at midnight on Sunday, local
+ * time: 7 on a Monday, 1 on a Sunday.
+ */
+export function daysLeftInWeek(now = Date.now()): number {
+  return 7 - ((new Date(now).getDay() + 6) % 7);
+}
+
+/** "3 days to go" or, on Sunday, "Last day". */
+export function daysLeftText(now = Date.now()): string {
+  const left = daysLeftInWeek(now);
+  return left === 1 ? "Last day" : `${left} days to go`;
 }
 
 export function saveLesson(profile: LearnerProfile, subject: Subject, lesson: WeeklyLesson): LearnerProfile {

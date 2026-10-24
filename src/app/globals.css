@@ -2589,3 +2589,91 @@ body:has(.read-along) .suni-fly {
   background: #fff4c2;
   color: #6b5400;
 }
+
+/* The Student page: this week's deadline, then one coloured panel for each kind of work. */
+:root {
+  --teacher: #6b4fbb;
+  --teacher-tint: #efeafb;
+  --diy: #1f7a5a;
+  --diy-tint: #e3f2ec;
+  --practice: #2f6db5;
+  --practice-tint: #e6eff9;
+  --games: #b8650f;
+  --games-tint: #fdf0dd;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --teacher: #b7a2f2;
+    --teacher-tint: #2a2440;
+    --diy: #4cc497;
+    --diy-tint: #173a2e;
+    --practice: #8cb8ec;
+    --practice-tint: #1b2c40;
+    --games: #f2b36d;
+    --games-tint: #3a2a17;
+  }
+}
+.week-deadline {
+  background: var(--warn-tint);
+  color: var(--warn-text);
+  border: 2px solid currentColor;
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 1.05rem;
+}
+.home-section {
+  --section: var(--diy);
+  --section-tint: var(--diy-tint);
+  gap: 12px;
+  background: var(--section-tint);
+  border: 2px solid var(--section);
+  border-top-width: 8px;
+  border-radius: var(--radius);
+  padding: 16px 18px 20px;
+  margin-top: 8px;
+}
+.home-section.section-teacher {
+  --section: var(--teacher);
+  --section-tint: var(--teacher-tint);
+}
+.home-section.section-practice {
+  --section: var(--practice);
+  --section-tint: var(--practice-tint);
+}
+.home-section.section-games {
+  --section: var(--games);
+  --section-tint: var(--games-tint);
+}
+.home-section > h2 {
+  margin: 0;
+  color: var(--section);
+  font-size: 1.45rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.home-section .section-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--section);
+  font-size: 1.2rem;
+  flex: none;
+}
+.home-section .card {
+  box-shadow: none;
+}
+.home-section h3 {
+  font-size: 1.15rem;
+}
+@media (max-width: 420px) {
+  .home-section {
+    padding: 12px 12px 16px;
+  }
+  .home-section > h2 {
+    font-size: 1.25rem;
+  }
+}

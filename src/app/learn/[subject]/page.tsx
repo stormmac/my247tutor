@@ -45,7 +45,10 @@ export default function SubjectPage() {
 function SubjectLearning() {
   const { subject } = useParams<{ subject: string }>();
   // The weekly lesson is the main path; ?mode=practice is open-ended practice from the skill map.
-  const freePractice = useSearchParams().get("mode") === "practice";
+  const search = useSearchParams();
+  const freePractice = search.get("mode") === "practice";
+  // ?work=<id> opens that piece of set work in the weekly lesson.
+  const startWork = search.get("work") ?? undefined;
   const { profile, setProfile, loaded } = useProfile();
   const [thanks, setThanks] = useState<AssessmentRecord | null>(null);
 
@@ -81,7 +84,7 @@ function SubjectLearning() {
   }
   // Years 1–2 and 7–8 have no skill path, so free practice is their year's topics instead.
   if (freePractice && hasSkillPath(profile.yearLevel)) return <Practice subject={subject} profile={profile} setProfile={setProfile} />;
-  return <WeeklyLesson subject={subject} profile={profile} setProfile={setProfile} />;
+  return <WeeklyLesson subject={subject} profile={profile} setProfile={setProfile} startWork={startWork} />;
 }
 
 /** The starting assessment: random written questions, from very easy two years below up. */

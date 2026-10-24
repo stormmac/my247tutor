@@ -178,6 +178,10 @@ export function useProfile() {
       // Functional updates start from the stored profile, so Suni and the page can't undo each other's changes.
       const base = readStoredProfile() ?? prev;
       const next = typeof update === "function" ? (base ? update(base) : base) : update;
+      // An update that changes nothing saves nothing, once this page already shows the saved profile.
+      // Saving would tell every page the profile changed, and a page whose effect makes that same
+      // no-op update would loop forever, freezing the page.
+      if (typeof update === "function" && next === base && prev && JSON.stringify(prev) === JSON.stringify(base)) return prev;
       write(next);
       return next;
     });

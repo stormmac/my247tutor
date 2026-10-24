@@ -2,19 +2,23 @@
 
 import { doesSubject, sessionTimes } from "@/lib/learner/plan";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AdminLearnPicker } from "@/components/AdminLearnPicker";
 import { ClassLearnPicker } from "@/components/ClassLearnPicker";
+import { loadRewards } from "@/components/RewardsButton";
+import { type SetWork, useSetWork } from "@/components/SetWork";
 import { useAccount } from "@/components/useAccount";
 import { switchChild, useChildren, useProfile } from "@/components/useProfile";
-import { currentLesson, lessonProgress } from "@/lib/learner/lesson";
+import { currentLesson, daysLeftInWeek, daysLeftText, lessonProgress, ownPart, weekOf } from "@/lib/learner/lesson";
 import { MAX_CHILDREN, newProfile, skillState, type LearnerProfile } from "@/lib/learner/model";
 import { CURRICULA, CURRICULUM_NAMES, type Curriculum, curriculumOf, subjectName, yearName, yearWord } from "@/lib/curriculum/curricula";
 import { skillsFor } from "@/lib/curriculum/skills";
 import { hasSkillPath, YEARS, type Subject, type YearLevel } from "@/lib/curriculum/types";
-import { currentSightLevel, currentUnit, readingOf, readingYear, sightLevelsDone, unitsDone } from "@/lib/phonics/progress";
+import { currentSightLevel, currentUnit, readingOf, readingYear, sightLevelsDone, unitsDone, weeklyReading } from "@/lib/phonics/progress";
 import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
-import { UNITS } from "@/lib/phonics/sequence";
+import { getUnit, UNITS } from "@/lib/phonics/sequence";
+import { subtopicPath } from "@/lib/content/tree";
+import { lessonPoints, REWARD_SUBJECTS, type Rewards, rewardText, totalsText } from "@/lib/learner/rewards";
 import { describeTables, tablesOf } from "@/lib/tables/game";
 
 export default function LearnPage() {
@@ -34,155 +38,231 @@ export default function LearnPage() {
         onCreate={(name, year, curriculum) => setProfile(newProfile(name, year, Date.now(), curriculum))}
       />
     );
+  return <StudentHome profile={profile} signedIn={Boolean(account.user)} />;
+}
+
+/**
+ * The Student page, in the order to do things: lessons from a teacher this week, the student's own
+ * (DIY) lessons this week, practice, then games and rewards. This week's lessons end at midnight on
+ * Sunday, so both lesson sections say how many days are left.
+ */
+function StudentHome({ profile, signedIn }: { profile: LearnerProfile; signedIn: boolean }) {
   const curriculum = curriculumOf(profile.curriculum);
   // A grown-up's plan can leave out a subject; Learn to Read and writing are English, times tables are Maths.
-  const maths = doesSubject(profile.plan, "maths");
-  const english = doesSubject(profile.plan, "english");
+  const subjects = (["maths", "english"] as const).filter((s) => doesSubject(profile.plan, s));
+  const english = subjects.includes("english");
+  const reading = english && readingYear(profile.yearLevel);
+  const setWork = useSetWork(profile.id);
+  const teacherWork = setWork.work.filter((w) => subjects.includes(w.subject) && (!w.doneAt || Date.parse(w.doneAt) >= mondayOf()));
   const session = profile.plan?.session;
+  const left = daysLeftText();
 
   return (
-    <div className="stack">
-      <div className="row" style={{ gap: 16, flexWrap: "nowrap" }}>
-        <div style={{ flex: 1 }}>
-          <h1>Hi {profile.name}! What shall we learn?</h1>
-          <p className="muted" style={{ margin: 0 }}>
-            {yearName(profile.yearLevel, curriculum)}. Pick a subject to keep going, and ask Suni if you get stuck.
-          </p>
+    <div className="stack student-home">
+      <div>
+        <h1>Hi {profile.name}! What shall we learn?</h1>
+        <p className="muted" style={{ margin: 0 }}>
+          {yearName(profile.yearLevel, curriculum)}. Start with this week&apos;s lessons, and ask Suni if you get stuck.
+        </p>
+      </div>
+      <div className="week-deadline" role="status">
+        <strong>⏰ {left}</strong>{" "}
+        {daysLeftInWeek() === 1 ? "This week's lessons end at midnight tonight." : "This week's lessons end at midnight on Sunday."}
+      </div>
+
+      {(teacherWork.length > 0 || session) && (
+        <section className="stack home-section section-teacher" aria-labelledby="teacher-lessons">
+          <h2 id="teacher-lessons">
+            <span className="section-icon" aria-hidden>
+              🧑‍🏫
+            </span>{" "}
+            Teacher lessons this week
+          </h2>
           {session && (
-            <p className="small" style={{ margin: "4px 0 0" }}>
-              🧑‍🏫 Learning with {session.teacherName ?? "your teacher"}: {sessionTimes(session)}
+            <p className="small" style={{ margin: 0 }}>
+              Learning with {session.teacherName ?? "your teacher"}: {sessionTimes(session)}
             </p>
           )}
+          {teacherWork.length ? (
+            <div className="stack" style={{ gap: 10 }}>
+              {teacherWork.map((w) => (
+                <TeacherLessonCard key={w.id} profile={profile} work={w} />
+              ))}
+            </div>
+          ) : (
+            <p className="muted" style={{ margin: 0 }}>
+              Nothing set this week yet.
+            </p>
+          )}
+        </section>
+      )}
+
+      <section className="stack home-section section-diy" aria-labelledby="diy-lessons">
+        <h2 id="diy-lessons">
+          <span className="section-icon" aria-hidden>
+            📅
+          </span>{" "}
+          My DIY lessons this week
+        </h2>
+        <div className={subjects.length > 1 ? "grid grid-2" : "grid"}>
+          {subjects.map((s) => (
+            <LessonCard key={s} profile={profile} subject={s} title={subjectName(s, curriculum)} />
+          ))}
         </div>
-        {account.user && profile.id && (
-          <Link href="/rewards" className="btn rewards-link">
-            🏆 Rewards
+        {reading && <ReadingWeekCard profile={profile} />}
+      </section>
+
+      <section className="stack home-section section-practice" aria-labelledby="practice">
+        <h2 id="practice">
+          <span className="section-icon" aria-hidden>
+            ✏️
+          </span>{" "}
+          Practice activities
+        </h2>
+        <div className={subjects.length > 1 ? "grid grid-2" : "grid"}>
+          {subjects.map((s) => (
+            <PracticeCard key={s} profile={profile} subject={s} title={subjectName(s, curriculum)} />
+          ))}
+        </div>
+        {english && (
+          <div className="card">
+            <div className="row spread">
+              <div>
+                <h3 style={{ margin: 0 }}>Writing</h3>
+                <p className="muted" style={{ margin: 0 }}>
+                  Write a story, an argument or a report, and get feedback on it.
+                </p>
+              </div>
+              <Link href="/learn/writing" className="btn secondary">
+                Start writing
+              </Link>
+            </div>
+          </div>
+        )}
+        {reading && <ReadingPracticeCard profile={profile} />}
+      </section>
+
+      <section className="stack home-section section-games" aria-labelledby="games">
+        <h2 id="games">
+          <span className="section-icon" aria-hidden>
+            🎮
+          </span>{" "}
+          Games and rewards
+        </h2>
+        <div className={subjects.includes("maths") ? "grid grid-2" : "grid"}>
+          {subjects.includes("maths") && <TablesCard profile={profile} />}
+          <RewardsCard profile={profile} signedIn={signedIn} />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/** Midnight at the start of this week's Monday, local time. */
+function mondayOf(now = Date.now()): number {
+  return new Date(`${weekOf(now)}T00:00:00`).getTime();
+}
+
+/** One piece of work a teacher (or another grown-up) set: where it's up to, and a button straight into it. */
+function TeacherLessonCard({ profile, work }: { profile: LearnerProfile; work: SetWork }) {
+  const curriculum = curriculumOf(profile.curriculum);
+  const path = subtopicPath(work.subtopicId, curriculum);
+  const title = path
+    ? path.topic.title === path.subtopic.title
+      ? path.topic.title
+      : `${path.topic.title}: ${path.subtopic.title}`
+    : "Set work";
+  const part = currentLesson(profile, work.subject)?.parts.find((p) => p.setWorkId === work.id);
+  const answered = part ? Math.min(part.results.length, part.questionIds.length) : 0;
+  const total = part?.questionIds.length ?? 0;
+  const done = Boolean(work.doneAt) || (total > 0 && answered >= total);
+  return (
+    <div className="card stack teacher-lesson" style={{ gap: 6 }}>
+      <div className="row spread">
+        <div>
+          <span className="pill">{subjectName(work.subject, curriculum)}</span>
+          <h3 style={{ margin: "6px 0 0" }}>{title}</h3>
+        </div>
+        {done ? (
+          <span className="pill good">Done ⭐</span>
+        ) : (
+          <Link href={`/learn/${work.subject}?work=${work.id}`} className="btn">
+            {answered ? "Keep going" : "Start"}
           </Link>
         )}
       </div>
-      {english && readingYear(profile.yearLevel) && <ReadingCard profile={profile} />}
-      <div className={maths && english ? "grid grid-2" : "grid"}>
-        {maths && <SubjectCard profile={profile} subject="maths" title={subjectName("maths", curriculum)} />}
-        {english && <SubjectCard profile={profile} subject="english" title="English" />}
+      <p className="small muted" style={{ margin: 0 }}>
+        {work.atSchool ? "What you're doing at school now" : `Set by ${work.setBy ?? "your teacher"}`}
+        {total > 0 && !done ? `. ${answered} of ${total} questions done.` : "."}
+        {work.note ? ` “${work.note}”` : ""}
+      </p>
+    </div>
+  );
+}
+
+/** The student's own weekly lesson in a subject (the review and activities), or the starting check before it. */
+function LessonCard({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
+  const placed = profile.placementDone[subject];
+  const lesson = currentLesson(profile, subject);
+  const { done, total } = lesson ? lessonProgress(lesson, ownPart) : { done: 0, total: 0 };
+  const finished = total > 0 && done >= total;
+  return (
+    <div className="card stack">
+      <div className="row spread">
+        <h3 style={{ margin: 0 }}>{title}</h3>
+        {finished && <span className="pill good">Done ⭐</span>}
       </div>
-      {maths && <TablesCard profile={profile} />}
-      {english && (
-        <div className="card">
-          <div className="row spread">
-            <div>
-              <h2>Writing</h2>
-              <p className="muted" style={{ margin: 0 }}>
-                Write a story, an argument or a report, and get feedback on it.
-              </p>
-            </div>
-            <Link href="/learn/writing" className="btn secondary">
-              Start writing
-            </Link>
-          </div>
+      {total > 0 && (
+        <div className="progress" aria-label={`${done} of ${total} questions done`}>
+          <div style={{ width: `${(done / total) * 100}%` }} />
+        </div>
+      )}
+      <p className="muted" style={{ margin: 0 }}>
+        {!placed
+          ? "Start with a short check. It begins easy and gets harder, so we know where to begin."
+          : !lesson
+            ? "Your new lesson for this week is ready."
+            : finished
+              ? "This week's lesson is finished. A new one is ready on Monday."
+              : done
+                ? `${done} of ${total} questions done.`
+                : `Ready: ${total} questions.`}
+      </p>
+      {!finished && (
+        <div className="row">
+          <Link href={`/learn/${subject}`} className="btn">
+            {!placed ? "Start the check" : done ? "Keep going" : "Start this week's lesson"}
+          </Link>
         </div>
       )}
     </div>
   );
 }
 
-/**
- * Learn to Read, the phonics program, comes first for a student in it. Everyone else up to Year 5 is
- * asked to do the reading check once, which puts them in the program if their reading age is below 9.5.
- * From Year 6 on there's no card at all.
- */
-function ReadingCard({ profile }: { profile: LearnerProfile }) {
-  const reading = readingOf(profile);
-  if (reading.enrolled) {
-    const next = currentUnit(reading);
-    const done = unitsDone(reading);
-    const nextSight = currentSightLevel(reading);
-    const sightDone = sightLevelsDone(reading);
+/** Free practice and topics in a subject, with how many skills are mastered. */
+function PracticeCard({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
+  const placed = profile.placementDone[subject];
+  // Years 1–2 and 7–8 have no skill map; they practise their year's topics.
+  if (!hasSkillPath(profile.yearLevel))
     return (
-      <div className="card stack reading-card">
-        <div className="row spread">
-          <h2 style={{ margin: 0 }}>📖 Learn to Read</h2>
-          <span className="pill good">
-            {done} of {UNITS.length} sounds · {sightDone} of {SIGHT_LEVELS.length} word levels
-          </span>
-        </div>
-        <div className="progress" aria-label={`${done + sightDone} of ${UNITS.length + SIGHT_LEVELS.length} parts done`}>
-          <div style={{ width: `${((done + sightDone) / (UNITS.length + SIGHT_LEVELS.length)) * 100}%` }} />
-        </div>
+      <div className="card stack">
+        <h3 style={{ margin: 0 }}>{title}</h3>
         <p className="muted" style={{ margin: 0 }}>
-          {next || nextSight
-            ? [next && `Next sounds: ${next.title.replace(/_/g, "–")}.`, nextSight && `Next sight words: ${nextSight.title}.`]
-                .filter(Boolean)
-                .join(" ")
-            : "You've learnt every sound and sight word! Do the reading check again to see how far you've come."}
+          Practise any topic from your year.
         </p>
         <div className="row">
-          {next || !nextSight ? (
-            <Link href={next ? `/read/${next.id}` : "/read/check"} className="btn">
-              {next ? "Practise sounds" : "Reading check"}
-            </Link>
-          ) : null}
-          {nextSight && (
-            <Link href={`/read/words/${nextSight.id}`} className={next ? "btn secondary" : "btn"}>
-              Sight words
-            </Link>
-          )}
-          <Link href="/read" className="btn secondary">
-            All of Learn to Read
+          <Link href={`/learn/${subject}/topics?year=${profile.yearLevel}`} className="btn secondary">
+            Choose a topic
           </Link>
         </div>
       </div>
     );
-  }
-  if (reading.age !== null) return null;
-  return (
-    <div className="card">
-      <div className="row spread">
-        <div>
-          <h2>Reading check</h2>
-          <p className="muted" style={{ margin: 0 }}>
-            A quick word game with Suni that works out your reading age. It takes about three minutes.
-          </p>
-        </div>
-        <Link href="/read/check" className="btn secondary">
-          Start
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function TablesCard({ profile }: { profile: LearnerProfile }) {
-  const games = tablesOf(profile).games;
-  const last = games.at(-1);
-  return (
-    <div className="card">
-      <div className="row spread">
-        <div>
-          <h2>✖️ Times tables game</h2>
-          <p className="muted" style={{ margin: 0 }}>
-            {last
-              ? `Last game: ${last.right} right on ${describeTables(last.tables)}. Can you beat it?`
-              : "Answer as many as you can in 2 minutes. Pick your tables and speed."}
-          </p>
-        </div>
-        <Link href="/tables" className="btn secondary">
-          Play
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
-  // Years 1–2 and 7–8 have no skill map; they practise their year's topics.
-  if (!hasSkillPath(profile.yearLevel)) return <TopicsCard profile={profile} subject={subject} title={title} />;
   const skills = skillsFor(subject).filter((s) => s.practice !== "writing");
   const mastered = skills.filter((s) => skillState(profile, s.id).mastered).length;
-  const placed = profile.placementDone[subject];
   return (
     <div className="card stack">
       <div className="row spread">
-        <h2 style={{ margin: 0 }}>{title}</h2>
+        <h3 style={{ margin: 0 }}>{title}</h3>
         <span className="pill good">
           {mastered} of {skills.length} skills
         </span>
@@ -190,13 +270,7 @@ function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; sub
       <div className="progress" aria-label={`${mastered} of ${skills.length} skills mastered`}>
         <div style={{ width: `${(mastered / skills.length) * 100}%` }} />
       </div>
-      <p className="muted" style={{ margin: 0 }}>
-        {placed ? lessonLine(profile, subject) : "Start with a short check. It begins easy and gets harder, so we know where to begin."}
-      </p>
       <div className="row">
-        <Link href={`/learn/${subject}`} className="btn">
-          {placed ? "This week's lesson" : "Start the check"}
-        </Link>
         {placed && (
           <Link href={`/learn/${subject}?mode=practice`} className="btn secondary">
             Free practice
@@ -210,32 +284,150 @@ function SubjectCard({ profile, subject, title }: { profile: LearnerProfile; sub
   );
 }
 
-/** Where the child is up to in this week's lesson. */
-function lessonLine(profile: LearnerProfile, subject: Subject): string {
-  const lesson = currentLesson(profile, subject);
-  if (!lesson) return "Your new lesson for this week is ready.";
-  const { done, total } = lessonProgress(lesson);
-  if (done >= total) return "This week's lesson is finished. A new one is ready on Monday.";
-  return done ? `This week's lesson: ${done} of ${total} questions done.` : `This week's lesson is ready: ${total} questions.`;
+/**
+ * This week's reading lesson for a student in Learn to Read, or the reading check for one who
+ * hasn't done it. Up to Year 5 only; a student who read well enough doesn't see it.
+ */
+function ReadingWeekCard({ profile }: { profile: LearnerProfile }) {
+  const reading = readingOf(profile);
+  if (!reading.enrolled && reading.age !== null) return null;
+  const weekly = reading.enrolled ? weeklyReading(reading) : null;
+  if (!weekly)
+    return (
+      <div className="card">
+        <div className="row spread">
+          <div>
+            <h3 style={{ margin: 0 }}>Reading check</h3>
+            <p className="muted" style={{ margin: 0 }}>
+              A quick word game with Suni that works out your reading age. It takes about three minutes.
+            </p>
+          </div>
+          <Link href="/read/check" className="btn">
+            Start
+          </Link>
+        </div>
+      </div>
+    );
+  const unit = getUnit(weekly.unitId);
+  return (
+    <div className="card reading-card">
+      <div className="row spread">
+        <div>
+          <h3 style={{ margin: 0 }}>📖 Reading lesson</h3>
+          <p className="muted" style={{ margin: 0 }}>
+            {weekly.passed
+              ? "Done this week! You can do it again for more practice."
+              : `Sounds${unit ? ` ${unit.title.replace(/_/g, "–")}` : ""}, sight words and a story.`}
+          </p>
+        </div>
+        {weekly.passed ? (
+          <span className="pill good">Done ⭐</span>
+        ) : (
+          <Link href="/read/week" className="btn">
+            {weekly.done ? "Try again" : "Start"}
+          </Link>
+        )}
+      </div>
+    </div>
+  );
 }
 
-/** A Year 1–2 or 7–8 learner's subject: the weekly lesson, and their year's topics to practise. */
-function TopicsCard({ profile, subject, title }: { profile: LearnerProfile; subject: Subject; title: string }) {
-  const placed = profile.placementDone[subject];
+/** Learn to Read's extra practice: the next sounds and sight words, and the whole program. */
+function ReadingPracticeCard({ profile }: { profile: LearnerProfile }) {
+  const reading = readingOf(profile);
+  if (!reading.enrolled) return null;
+  const next = currentUnit(reading);
+  const done = unitsDone(reading);
+  const nextSight = currentSightLevel(reading);
+  const sightDone = sightLevelsDone(reading);
   return (
     <div className="card stack">
-      <h2 style={{ margin: 0 }}>{title}</h2>
-      <p className="muted" style={{ margin: 0 }}>
-        {placed ? lessonLine(profile, subject) : "Start with a short check. It begins easy and gets harder, so we know where to begin."}
-      </p>
+      <div className="row spread">
+        <h3 style={{ margin: 0 }}>📖 Learn to Read</h3>
+        <span className="pill good">
+          {done} of {UNITS.length} sounds · {sightDone} of {SIGHT_LEVELS.length} word levels
+        </span>
+      </div>
+      <div className="progress" aria-label={`${done + sightDone} of ${UNITS.length + SIGHT_LEVELS.length} parts done`}>
+        <div style={{ width: `${((done + sightDone) / (UNITS.length + SIGHT_LEVELS.length)) * 100}%` }} />
+      </div>
       <div className="row">
-        <Link href={`/learn/${subject}`} className="btn">
-          {placed ? "This week's lesson" : "Start the check"}
-        </Link>
-        <Link href={`/learn/${subject}/topics?year=${profile.yearLevel}`} className="btn secondary">
-          Choose a topic
+        {next && (
+          <Link href={`/read/${next.id}`} className="btn secondary">
+            Practise sounds
+          </Link>
+        )}
+        {nextSight && (
+          <Link href={`/read/words/${nextSight.id}`} className="btn secondary">
+            Sight words
+          </Link>
+        )}
+        <Link href="/read" className="btn secondary">
+          All of Learn to Read
         </Link>
       </div>
+    </div>
+  );
+}
+
+function TablesCard({ profile }: { profile: LearnerProfile }) {
+  const games = tablesOf(profile).games;
+  const last = games.at(-1);
+  return (
+    <div className="card stack">
+      <h3 style={{ margin: 0 }}>✖️ Times tables game</h3>
+      <p className="muted" style={{ margin: 0 }}>
+        {last
+          ? `Last game: ${last.right} right on ${describeTables(last.tables)}. Can you beat it?`
+          : "Answer as many as you can in 2 minutes. Pick your tables and speed."}
+      </p>
+      <div className="row">
+        <Link href="/tables" className="btn secondary">
+          Play
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/** The points and rewards earned so far, and this week's lesson points. Kept with an account. */
+function RewardsCard({ profile, signedIn }: { profile: LearnerProfile; signedIn: boolean }) {
+  const [rewards, setRewards] = useState<Rewards | string | null>(null);
+  const learnerId = signedIn ? profile.id : undefined;
+  useEffect(() => {
+    if (!learnerId) return;
+    let live = true;
+    void loadRewards(learnerId).then((r) => live && setRewards(r));
+    return () => {
+      live = false;
+    };
+  }, [learnerId]);
+  const thisWeek = REWARD_SUBJECTS.filter((s) => doesSubject(profile.plan, s)).reduce(
+    (n, s) => n + lessonPoints(currentLesson(profile, s) ?? undefined),
+    0,
+  );
+  return (
+    <div className="card stack rewards-card">
+      <h3 style={{ margin: 0 }}>🏆 Rewards</h3>
+      {learnerId ? (
+        <>
+          <p style={{ margin: 0 }}>
+            You&apos;ve earned <strong>{typeof rewards === "object" && rewards ? totalsText(rewards.totals) : "…"}</strong>.
+          </p>
+          <p className="muted small" style={{ margin: 0 }}>
+            ⭐ {rewardText("points", thisWeek)} from this week&apos;s lessons so far.
+          </p>
+          <div className="row">
+            <Link href="/rewards" className="btn secondary">
+              See my rewards
+            </Link>
+          </div>
+        </>
+      ) : (
+        <p className="muted" style={{ margin: 0 }}>
+          Rewards are kept with your account. Ask a grown-up to sign in to start earning points.
+        </p>
+      )}
     </div>
   );
 }
