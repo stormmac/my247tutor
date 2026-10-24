@@ -1590,6 +1590,23 @@ body:has(.read-along) .suni-fly {
 .tables-speeds {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
+.tables-speeds.tables-minutes {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.tables-best table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tables-best th,
+.tables-best td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+.tables-best th[scope="row"],
+.tables-best thead th:first-child {
+  text-align: left;
+}
 .tables-speeds .choice {
   display: flex;
   flex-direction: column;

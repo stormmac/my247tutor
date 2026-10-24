@@ -29,7 +29,7 @@ import {
   unitsDone,
 } from "@/lib/phonics/progress";
 import { SIGHT_LEVELS } from "@/lib/phonics/sightWords";
-import { describeTables, SPEEDS, tablesOf, trickyFacts } from "@/lib/tables/game";
+import { describeTables, minutesOf, SPEEDS, tablesOf, trickyFacts } from "@/lib/tables/game";
 import { UNITS } from "@/lib/phonics/sequence";
 import { COMPETENCY_LABELS, competency, recommendedPlan, subjectLevel, type Competency, type Standing } from "@/lib/learner/report";
 import { SuniChatsReport } from "@/components/SuniChats";
@@ -730,7 +730,7 @@ function TablesReport({ profile }: { profile: LearnerProfile }) {
     <div className="card stack tables-report">
       <h2 style={{ margin: 0 }}>Times tables game</h2>
       <p className="muted" style={{ margin: 0 }}>
-        {record.games.length} game{record.games.length === 1 ? "" : "s"} played. Each game is 2 minutes.
+        {record.games.length} game{record.games.length === 1 ? "" : "s"} played.
       </p>
       <table>
         <thead>
@@ -738,6 +738,7 @@ function TablesReport({ profile }: { profile: LearnerProfile }) {
             <th>When</th>
             <th>Tables</th>
             <th>Speed</th>
+            <th>Time</th>
             <th>Right</th>
           </tr>
         </thead>
@@ -747,6 +748,7 @@ function TablesReport({ profile }: { profile: LearnerProfile }) {
               <td>{new Date(g.at).toLocaleDateString("en-AU")}</td>
               <td>{describeTables(g.tables)}</td>
               <td>{SPEEDS[g.speed]?.label ?? g.speed}</td>
+              <td>{minutesOf(g)} min</td>
               <td>
                 {g.right} of {g.asked}
               </td>

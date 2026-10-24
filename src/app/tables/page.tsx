@@ -9,28 +9,36 @@ import {
   answerOf,
   answerOfFact,
   bestKey,
+  bestScores,
   describeTables,
   factOf,
-  GAME_MS,
+  GAME_MINUTES,
+  gameMs,
+  minutesOf,
   nextQuestion,
   recordGame,
   SPEEDS,
   TABLES,
   tablesOf,
   trickyFacts,
+  type Minutes,
   type Speed,
   type TablesGame,
+  type TablesRecord,
   type TablesQuestion,
 } from "@/lib/tables/game";
 
 const capitalise = (s: string) => s[0].toUpperCase() + s.slice(1);
+const minutesName = (m: Minutes) => `${m} minute${m === 1 ? "" : "s"}`;
+
+type Choice = { tables: number[]; speed: Speed; minutes: Minutes };
 
 type Result = { game: TablesGame; newBest: boolean; best: number };
 
-/** The times tables game: pick the tables and speed, then answer as many as you can in two minutes. */
+/** The times tables game: pick the tables, speed and length, then answer as many as you can in one or two minutes. */
 export default function TablesPage() {
   const { profile, setProfile, loaded } = useProfile();
-  const [playing, setPlaying] = useState<{ tables: number[]; speed: Speed } | null>(null);
+  const [playing, setPlaying] = useState<Choice | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   useSuniScreen(
     result
@@ -64,7 +72,7 @@ export default function TablesPage() {
     setPlaying(null);
   }
 
-  if (playing) return <Game key={round} tables={playing.tables} speed={playing.speed} onFinish={finish} />;
+  if (playing) return <Game key={round} {...playing} onFinish={finish} />;
 
   if (result) {
     const { game } = result;
@@ -79,7 +87,8 @@ export default function TablesPage() {
           {game.right} <span className="muted">right out of {game.asked}</span>
         </p>
         <p className="muted" style={{ margin: 0 }}>
-          {capitalise(describeTables(game.tables))}, {SPEEDS[game.speed].label.toLowerCase()}. Your best: {result.best}.
+          {capitalise(describeTables(game.tables))}, {SPEEDS[game.speed].label.toLowerCase()}, {minutesName(minutesOf(game))}. Your best:{" "}
+          {result.best}.
         </p>
         {missed.length > 0 && (
           <div className="stack" style={{ gap: 6 }}>
@@ -99,7 +108,7 @@ export default function TablesPage() {
             onClick={() => {
               setResult(null);
               setRound((r) => r + 1);
-              setPlaying({ tables: game.tables, speed: game.speed });
+              setPlaying({ tables: game.tables, speed: game.speed, minutes: minutesOf(game) });
             }}
           >
             Play again
@@ -114,12 +123,12 @@ export default function TablesPage() {
 
   return (
     <Setup
-      initial={record.last}
-      best={(tables, speed) => record.best[bestKey(tables, speed)] ?? 0}
+      initial={{ ...record.last, minutes: record.last.minutes ?? 2 }}
+      record={record}
       tricky={trickyFacts(record)}
-      onStart={(tables, speed) => {
+      onStart={(choice) => {
         setRound((r) => r + 1);
-        setPlaying({ tables, speed });
+        setPlaying(choice);
       }}
     />
   );
@@ -127,16 +136,19 @@ export default function TablesPage() {
 
 function Setup({
   initial,
-  best,
+  record,
   tricky,
   onStart,
 }: {
-  initial: { tables: number[]; speed: Speed };
-  best: (tables: number[], speed: Speed) => number;
+  initial: Choice;
+  record: TablesRecord;
   tricky: string[];
-  onStart: (tables: number[], speed: Speed) => void;
+  onStart: (choice: Choice) => void;
 }) {
   const [speed, setSpeed] = useState<Speed>(initial.speed);
+  const [minutes, setMinutes] = useState<Minutes>(initial.minutes);
+  const best = (tables: number[], speed: Speed) => record.best[bestKey(tables, speed, minutes)] ?? 0;
+  const start = (tables: number[]) => onStart({ tables, speed, minutes });
   const [picked, setPicked] = useState<number[]>(initial.tables);
   const toggle = (t: number) => setPicked((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t].sort((a, b) => a - b)));
 
@@ -146,8 +158,25 @@ function Setup({
         <div>
           <h1>Times tables</h1>
           <p className="muted" style={{ margin: 0 }}>
-            Answer as many as you can in 2 minutes.
+            Answer as many as you can in 1 or 2 minutes.
           </p>
+        </div>
+      </div>
+
+      <div className="card stack">
+        <h2 style={{ margin: 0 }}>Time</h2>
+        <div className="tables-speeds tables-minutes" role="radiogroup" aria-label="Time">
+          {GAME_MINUTES.map((m) => (
+            <button
+              key={m}
+              role="radio"
+              aria-checked={minutes === m}
+              className={`choice ${minutes === m ? "selected" : ""}`}
+              onClick={() => setMinutes(m)}
+            >
+              <strong>⏱ {minutesName(m)}</strong>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -178,7 +207,7 @@ function Setup({
         <h2 style={{ margin: 0 }}>Practise one table</h2>
         <div className="tables-one">
           {TABLES.map((t) => (
-            <button key={t} className="choice" onClick={() => onStart([t], speed)} aria-label={`Practise the ${t} times table`}>
+            <button key={t} className="choice" onClick={() => start([t])} aria-label={`Practise the ${t} times table`}>
               <span className="tables-num">{t}s</span>
               {best([t], speed) > 0 && <span className="small muted">Best {best([t], speed)}</span>}
             </button>
@@ -210,12 +239,14 @@ function Setup({
           ))}
         </div>
         <div className="row">
-          <button className="btn" disabled={!picked.length} onClick={() => onStart(picked, speed)}>
+          <button className="btn" disabled={!picked.length} onClick={() => start(picked)}>
             {picked.length ? `Start: ${describeTables(picked)}` : "Tick at least one table"}
           </button>
           {picked.length > 0 && best(picked, speed) > 0 && <span className="muted small">Best: {best(picked, speed)}</span>}
         </div>
       </div>
+
+      <BestScores record={record} minutes={minutes} />
 
       {tricky.length > 0 && (
         <p className="muted" style={{ margin: 0 }}>
@@ -229,34 +260,76 @@ function Setup({
   );
 }
 
+/** The student's best score on each table and mix of tables at each speed, for games of this length. */
+function BestScores({ record, minutes }: { record: TablesRecord; minutes: Minutes }) {
+  const rows = bestScores(record, minutes);
+  const speeds = Object.keys(SPEEDS) as Speed[];
+  return (
+    <div className="card stack tables-best">
+      <h2 style={{ margin: 0 }}>Your best scores</h2>
+      <p className="muted" style={{ margin: 0 }}>
+        Most right in {minutesName(minutes)}.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Tables</th>
+            {speeds.map((s) => (
+              <th key={s} scope="col">
+                {SPEEDS[s].label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.tables.join(",")}>
+              <th scope="row">{capitalise(describeTables(r.tables))}</th>
+              {speeds.map((s) => (
+                <td key={s}>{r.best[s] ?? <span className="muted">–</span>}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 const PAD = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "⌫", "0", "OK"];
 
-function Game({ tables, speed, onFinish }: { tables: number[]; speed: Speed; onFinish: (game: TablesGame) => void }) {
+function Game({ tables, speed, minutes, onFinish }: Choice & { onFinish: (game: TablesGame) => void }) {
+  const length = gameMs(minutes);
   const [question, setQuestion] = useState<TablesQuestion>(() => nextQuestion(tables, null));
   const [typed, setTyped] = useState("");
   const [shown, setShown] = useState<{ ok: boolean } | null>(null);
-  const [left, setLeft] = useState(GAME_MS);
+  const [left, setLeft] = useState(length);
   const score = useRef({ right: 0, asked: 0, missed: [] as string[] });
   const [right, setRight] = useState(0);
-  const endsAt = useRef(0);
   useSuniScreen({
-    screen: `The times tables game: answering as many as they can in 2 minutes from the ${tables.join(", ")} times tables. On screen: ${factOf(question)} = ?`,
+    screen: `The times tables game: answering as many as they can in ${minutesName(minutes)} from the ${tables.join(", ")} times tables. On screen: ${factOf(question)} = ?`,
     noHelp: true,
   });
   const done = useRef(false);
   const pause = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // The latest finish, so the page re-drawing (it does, every answer) doesn't restart the clock.
+  const finish = useRef(onFinish);
+  useEffect(() => {
+    finish.current = onFinish;
+  }, [onFinish]);
   const end = useCallback(() => {
     if (done.current) return;
     done.current = true;
     if (pause.current) clearTimeout(pause.current);
-    onFinish({ at: Date.now(), tables, speed, ...score.current });
-  }, [onFinish, tables, speed]);
+    finish.current({ at: Date.now(), tables, speed, minutes, ...score.current });
+  }, [tables, speed, minutes]);
 
+  // The clock starts once, when the game does: nothing it depends on changes during a game.
   useEffect(() => {
-    endsAt.current = Date.now() + GAME_MS;
+    const endsAt = Date.now() + length;
     const tick = setInterval(() => {
-      const remaining = Math.max(0, endsAt.current - Date.now());
+      const remaining = Math.max(0, endsAt - Date.now());
       setLeft(remaining);
       if (remaining === 0) end();
     }, 200);
@@ -264,7 +337,7 @@ function Game({ tables, speed, onFinish }: { tables: number[]; speed: Speed; onF
       clearInterval(tick);
       if (pause.current) clearTimeout(pause.current);
     };
-  }, [end]);
+  }, [end, length]);
 
   const submit = useCallback(() => {
     if (shown || !typed || done.current) return;
@@ -313,7 +386,7 @@ function Game({ tables, speed, onFinish }: { tables: number[]; speed: Speed; onF
         <span className="tables-right">✅ {right}</span>
       </div>
       <div className="progress" aria-hidden>
-        <div style={{ width: `${(left / GAME_MS) * 100}%` }} />
+        <div style={{ width: `${(left / length) * 100}%` }} />
       </div>
       <p className="tables-question" aria-live="polite">
         {factOf(question)} = <span className={`tables-answer ${shown ? (shown.ok ? "right" : "wrong") : ""}`}>{typed || " "}</span>
