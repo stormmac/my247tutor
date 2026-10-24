@@ -37,6 +37,28 @@ function useCentreChildren(parent: boolean): CentreChild[] {
   return children;
 }
 
+/** The way to "What should my child know?": what a child should be able to do by the end of each year. */
+function KnowLink({ profile }: { profile: LearnerProfile }) {
+  const name = profile.name;
+  return (
+    <Link
+      href={`/parent/know?year=${profile.yearLevel}&curriculum=${curriculumOf(profile.curriculum)}`}
+      className="home-section section-practice know-link no-print"
+    >
+      <h2>
+        <span className="section-icon" aria-hidden>
+          📚
+        </span>{" "}
+        What should my child know?
+      </h2>
+      <div className="row spread" style={{ flexWrap: "wrap", gap: 8 }}>
+        <p style={{ margin: 0 }}>Pick a subject and a year to see everything {name} should be able to do by the end of it.</p>
+        <span className="btn">See the summary →</span>
+      </div>
+    </Link>
+  );
+}
+
 export default function ParentPage() {
   const { profile, setProfile, loaded } = useProfile();
   const account = useAccount();
@@ -85,6 +107,7 @@ export default function ParentPage() {
           </div>
           <ReportButtons learnerId={atCentre.profile.id} name={atCentre.name} />
         </div>
+        <KnowLink profile={{ ...atCentre.profile, name: atCentre.name }} />
         <WellbeingAlert profile={atCentre.profile} />
         <SuniNotes learnerId={atCentre.profile.id} name={atCentre.name} />
         <ParentSummary profile={atCentre.profile} />
@@ -130,6 +153,7 @@ export default function ParentPage() {
         <ReportButtons learnerId={profile.id} name={profile.name} />
       </div>
 
+      <KnowLink profile={profile} />
       <WellbeingAlert profile={profile} onChange={setProfile} />
       {account.user && <SuniNotes learnerId={profile.id} name={profile.name} />}
       <ParentSummary profile={profile} />
