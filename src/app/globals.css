@@ -2899,6 +2899,19 @@ button.planner-box {
   border-left-color: var(--teacher);
   background: var(--teacher-tint);
 }
+.planner-box.draggable {
+  cursor: grab;
+}
+/* Where an activity being dragged to homework can go. */
+.planner-drop {
+  outline: 2px dashed var(--teacher);
+  outline-offset: -3px;
+  border-radius: 10px;
+}
+.planner-drop.over {
+  background: var(--teacher-tint);
+  outline-style: solid;
+}
 button.planner-box.filled:hover {
   box-shadow: 0 0 0 2px var(--teacher);
 }

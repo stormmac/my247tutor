@@ -258,19 +258,23 @@ export function addSetWork(lesson: WeeklyLesson, items: SetWorkItem[], profile: 
 /**
  * Brings the lesson's set work in line with `open`, all the open set work in its subject: parts
  * not started yet follow a teacher's changes (a new activity in the box, homework or not) or go
- * when the work was taken back, then new work is added. Parts already started stay as they are.
+ * when the work was taken back, then new work is added. Parts already started keep their activity,
+ * but follow a move to homework.
  */
 export function syncSetWork(lesson: WeeklyLesson, open: SetWorkItem[], profile: LearnerProfile): WeeklyLesson {
   const byId = new Map(open.map((w) => [w.id, w]));
   let changed = false;
   const parts = lesson.parts.flatMap((p): LessonPart[] => {
-    if (p.kind !== "set" || !p.setWorkId || p.results.length) return [p];
+    if (p.kind !== "set" || !p.setWorkId) return [p];
+    // Started work stays as it is, except that it can be moved to homework and back.
+    const started = p.results.length > 0;
     const w = byId.get(p.setWorkId);
     if (!w) {
+      if (started) return [p];
       changed = true;
       return [];
     }
-    if (!w.redo && w.subtopicId !== p.subtopicId) {
+    if (!started && !w.redo && w.subtopicId !== p.subtopicId) {
       changed = true;
       return [setPart(lesson, w, profile) ?? []].flat();
     }

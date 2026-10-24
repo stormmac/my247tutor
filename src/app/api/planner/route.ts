@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
-import { planMistakesHomework, plannerWeek, planSlot, unplanSlot } from "@/lib/auth/planner";
-import { PlanWorkSchema, UnplanWorkSchema } from "@/lib/auth/rules";
+import { moveToHomework, planMistakesHomework, plannerWeek, planSlot, unplanSlot } from "@/lib/auth/planner";
+import { MoveWorkSchema, PlanWorkSchema, UnplanWorkSchema } from "@/lib/auth/rules";
 import { requireUser } from "@/lib/auth/users";
 import { weekOf } from "@/lib/learner/lesson";
 
@@ -30,6 +30,17 @@ export async function POST(request: NextRequest) {
       : await planMistakesHomework(result.user, { ...plan, note: plan.note || null });
   if ("error" in added) return Response.json({ error: added.error }, { status: added.status });
   return Response.json(added);
+}
+
+/** Moves an activity students haven't finished to homework. */
+export async function PATCH(request: NextRequest) {
+  const result = await requireUser(request);
+  if ("response" in result) return result.response;
+  const parsed = MoveWorkSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return Response.json({ error: parsed.error.issues[0]?.message ?? "Check the details." }, { status: 400 });
+  const moved = await moveToHomework(result.user, parsed.data);
+  if ("error" in moved) return Response.json({ error: moved.error }, { status: moved.status });
+  return Response.json(moved);
 }
 
 /** Empties a session box for students in a session. */
